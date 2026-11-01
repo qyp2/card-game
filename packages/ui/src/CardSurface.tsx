@@ -20,6 +20,7 @@ export function CardSurface({ card, label, className = '', ...props }: CardSurfa
       {card.manaCost && <div className="card-mana">{card.manaCost}</div>}
     </div>
     {card.cardTypes.length > 0 && <div className="card-type">{card.cardTypes.join(' ')}</div>}
+    {card.rulesText && <div className="card-text">{card.rulesText}</div>}
     {card.cardTypes.includes('Creature') && <div className="card-stats">{card.power}/{card.toughness}</div>}
   </div>;
 }

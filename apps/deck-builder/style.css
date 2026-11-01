@@ -1,40 +1,574 @@
-:root { font-family: system-ui, sans-serif; color: #edeaf6; background: #14151d; line-height: 1.5; color-scheme: dark; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-main { max-width: 1600px; margin: auto; padding: 2rem; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
-h1 { font-size: clamp(1.8rem, 4vw, 3rem); margin: .3rem 0; line-height: 1.15; }
-h2 { margin-top: 0; } h2 small { color: #b2acc8; font-size: .85rem; font-weight: normal; }
-h3 { margin-bottom: .6rem; }
-.eyebrow { color: #cab6ff; letter-spacing: .14em; font-size: .75rem; font-weight: 700; }
-p { margin: .6rem 0; } a { color: #d5c3ff; }
-button, input, select, textarea { font: inherit; border: 1px solid #56526b; border-radius: .4rem; padding: .5rem .7rem; }
-button { background: #3c3158; color: #fff; cursor: pointer; }
-button:hover:not(:disabled) { background: #554377; } button:disabled { opacity: .45; cursor: default; }
-input, select, textarea { background: #161720; color: inherit; max-width: 100%; }
-label { display: grid; gap: .25rem; font-size: .85rem; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #d6b9ff; outline-offset: 2px; }
-.account { background: #222330; border: 1px solid #3b3b50; padding: 1rem; border-radius: .7rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-.account form { display: flex; flex-wrap: wrap; gap: .7rem; align-items: end; width: 100%; }
-.account small { flex-basis: 100%; color: #c0bcd0; }
-.workbench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 410px); gap: 2rem; align-items: start; }
-.filters { display: flex; flex-wrap: wrap; align-items: end; gap: .7rem; margin-bottom: 1rem; }
-.filters label:first-child { flex: 1; min-width: 180px; }
-.checkbox { display: flex; align-items: center; padding: .5rem 0; }
-.catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 1rem; }
-.catalog-grid article { background: #222330; border: 1px solid #3b3b50; border-radius: .7rem; padding: 1rem; display: flex; flex-direction: column; align-items: start; gap: .4rem; overflow-wrap: anywhere; }
-.catalog-grid article p { font-size: .8rem; margin: .2rem 0; } .catalog-grid article small { color: #c0bcd0; }
-.catalog-grid article button { margin-top: auto; }
-.card-id { color: #b9abc9; font-family: monospace; }
-aside { background: #222330; padding: 1.3rem; border: 1px solid #3b3b50; border-radius: .7rem; }
-aside section { border-top: 1px solid #48465b; margin-top: 1.3rem; padding-top: .5rem; }
-.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
-.validation { font-size: .9rem; }.validation ul { padding-left: 1.2rem; color: #ffcdba; }
-.deck-list, .saved-decks { list-style: none; padding: 0; }
-.deck-list li { display: flex; gap: .4rem; align-items: center; padding: .6rem 0; border-bottom: 1px solid #3b3b50; }
-.deck-list li div { flex: 1; min-width: 0; overflow-wrap: anywhere; }.deck-list small { display: block; color: #b9abc9; font-size: .7rem; }
-.deck-list button { padding: .2rem .5rem; }.saved-decks button { text-align: left; width: 100%; margin-top: .4rem; overflow-wrap: anywhere; }
-.primary-link { display: block; padding: .7rem; background: #654397; color: white; border-radius: .4rem; text-align: center; text-decoration: none; }
-.hint { font-size: .8rem; color: #c0bcd0; }.error { background: #632e3a; padding: .8rem; border-radius: .4rem; }.notice { background: #254438; padding: .8rem; border-radius: .4rem; }
-textarea { width: 100%; font-family: monospace; resize: vertical; }
-@media (max-width: 900px) { main { padding: 1rem; }.workbench { grid-template-columns: 1fr; } aside { grid-row: 1; } header { align-items: start; } }
+/* ───────────────────────────────────────────────────────────────────────────
+   Deck builder.
+
+   A workshop, not a table: the catalog is the shelf, the aside is the bench.
+   Same ink/brass/parchment palette as the game client so a deck looks the same
+   in both places.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 460px at 12% -6%, #172a21 0%, transparent 62%),
+    var(--ink-900);
+  color: var(--parchment-dim);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  color: var(--parchment);
+  line-height: 1.2;
+}
+
+h1 {
+  margin: 0.3rem 0 0.5rem;
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
+}
+
+h2 {
+  margin: 0 0 0.9rem;
+  font-size: 1.2rem;
+}
+
+h2 small {
+  margin-left: 0.4rem;
+  font-family: var(--font-data);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+
+p {
+  margin: 0.6rem 0;
+}
+
+a {
+  color: var(--brass-bright);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--parchment);
+}
+
+code {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: #0b1511;
+  font-family: var(--font-data);
+  font-size: 0.78em;
+  color: var(--brass-bright);
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+
+button,
+input,
+select,
+textarea {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+button {
+  background: #16261f;
+  color: var(--parchment-dim);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+
+button:hover:not(:disabled) {
+  border-color: #3a5a4a;
+  background: #1d3229;
+  color: var(--parchment);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  background: #0b1511;
+  color: var(--parchment);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #5c6f65;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+
+/* ── Page header (the workspace header above is shared chrome) ────────────── */
+
+main > header:not(.workspace-header) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-bottom: 1.6rem;
+  padding: 2.4rem 0 1.6rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+main > header:not(.workspace-header) > div {
+  max-width: 62ch;
+}
+
+main > header:not(.workspace-header) p {
+  margin: 0;
+  color: var(--parchment-dim);
+}
+
+main > header:not(.workspace-header) > a {
+  flex: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--brass-dim);
+  border-radius: var(--radius-sm);
+  background: #16261f;
+  color: var(--parchment);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+main > header:not(.workspace-header) > a:hover {
+  border-color: var(--brass);
+  background: #1d3229;
+}
+
+.eyebrow {
+  margin-bottom: 0.35rem;
+  font-family: var(--font-data);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+/* ── Account strip ────────────────────────────────────────────────────────── */
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1.4rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #14231c, #0d1813);
+  box-shadow: var(--shadow-panel);
+  font-size: 0.82rem;
+}
+
+.account strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--parchment);
+}
+
+.account > span {
+  color: var(--muted);
+}
+
+.account form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.7rem;
+  width: 100%;
+}
+
+.account small {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+/* ── Workbench layout ─────────────────────────────────────────────────────── */
+
+.workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 400px);
+  gap: 1.6rem;
+  align-items: start;
+}
+
+/* ── Catalog ──────────────────────────────────────────────────────────────── */
+
+.catalog {
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.7rem;
+  margin-bottom: 1.1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #0d1813;
+}
+
+.filters label:first-child {
+  flex: 1;
+  min-width: 190px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--parchment-dim);
+}
+
+.checkbox input {
+  width: auto;
+  padding: 0;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 0.9rem;
+}
+
+.catalog-grid article {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #14231c, #0d1813);
+  box-shadow: var(--shadow-panel);
+  overflow-wrap: anywhere;
+  transition: border-color 0.14s, transform 0.14s;
+}
+
+.catalog-grid article:hover {
+  border-color: #3a5a4a;
+  transform: translateY(-2px);
+}
+
+.catalog-grid article .card {
+  align-self: center;
+  margin-bottom: 0.15rem;
+}
+
+.catalog-grid article p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--parchment-dim);
+}
+
+.catalog-grid article small {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.catalog-grid article button {
+  width: 100%;
+  margin-top: auto;
+  border-color: var(--brass-dim);
+  background: #1a2413;
+  color: var(--brass-bright);
+  font-size: 0.78rem;
+}
+
+.catalog-grid article button:hover:not(:disabled) {
+  border-color: var(--brass);
+  background: #24301a;
+  color: var(--parchment);
+}
+
+.card-id {
+  font-family: var(--font-data);
+  font-size: 0.68rem !important;
+  letter-spacing: 0.02em;
+  color: #5c6f65 !important;
+}
+
+/* ── Deck editor aside ────────────────────────────────────────────────────── */
+
+aside {
+  position: sticky;
+  top: 1rem;
+  padding: 1.1rem 1.2rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #14231c, #0d1813);
+  box-shadow: var(--shadow-panel);
+}
+
+aside section {
+  margin-top: 1.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+aside section > p {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.8rem 0;
+}
+
+.toolbar button {
+  flex: 1;
+  min-width: 8rem;
+  font-size: 0.8rem;
+}
+
+/* ── Validation ───────────────────────────────────────────────────────────── */
+
+.validation {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #0b1511;
+  font-size: 0.78rem;
+}
+
+.validation strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-family: var(--font-data);
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  color: var(--brass-bright);
+}
+
+.validation p {
+  margin: 0;
+  color: var(--success);
+}
+
+.validation ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #e8a79c;
+}
+
+/* ── Deck list ────────────────────────────────────────────────────────────── */
+
+.deck-list,
+.saved-decks {
+  padding: 0;
+  list-style: none;
+}
+
+.deck-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.deck-list li div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.deck-list li strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--parchment);
+}
+
+.deck-list small {
+  display: block;
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  color: #5c6f65;
+}
+
+.deck-list li > span {
+  min-width: 1.4rem;
+  font-family: var(--font-data);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--brass-bright);
+}
+
+.deck-list button {
+  padding: 0.15rem 0.45rem;
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.saved-decks button {
+  width: 100%;
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+/* ── Primary call to action ───────────────────────────────────────────────── */
+
+.primary-link {
+  display: block;
+  margin-top: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid var(--brass);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #d8b45c, #b08c33);
+  color: #1a1408;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.primary-link:hover {
+  background: linear-gradient(180deg, #e8cb7d, #c19a3c);
+  color: #1a1408;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────────── */
+
+.hint {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.error,
+.notice {
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+}
+
+.error {
+  border: 1px solid #6b3a33;
+  border-left: 3px solid var(--danger);
+  background: #2a1714;
+  color: #f0c4bb;
+}
+
+.notice {
+  border: 1px solid #2f5a45;
+  border-left: 3px solid var(--success);
+  background: #12241b;
+  color: #b6dcc4;
+}
+
+/* ── Text import / export ─────────────────────────────────────────────────── */
+
+textarea {
+  width: 100%;
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  main {
+    padding: 0 1rem 3rem;
+  }
+
+  .workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  aside {
+    position: static;
+    grid-row: 1;
+  }
+
+  main > header:not(.workspace-header) {
+    align-items: start;
+    padding-top: 1.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .catalog-grid article {
+    transition: none;
+  }
+
+  .catalog-grid article:hover {
+    transform: none;
+  }
+}

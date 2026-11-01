@@ -47,6 +47,13 @@ describe('separate admin session and API logic', () => {
     current = session('new'); resolve(response({ protocolVersion: 1, message: 'Expired' }, 401)); await expect(pending).rejects.toThrow('Expired'); expect(ended).not.toHaveBeenCalled();
     const logout = api.logout(); current = session('newer'); resolve(response({}, 200)); await logout; expect(ended).not.toHaveBeenCalled();
   });
+  it('calls the default fetch without rebinding it to the API instance', async () => {
+    const receivers: unknown[] = [];
+    vi.stubGlobal('fetch', function (this: unknown) { receivers.push(this); return Promise.resolve(response({ protocolVersion: 1, account: session().account })); });
+    const api = new AdminApi(() => session(), vi.fn(), undefined, () => now);
+    await api.get('/api/admin/me', AdminIdentityResponseSchema);
+    expect(receivers).toHaveLength(1); expect(receivers[0]).not.toBeInstanceOf(AdminApi);
+  });
   it('clears the current login on 401 and on failed sign-out without exposing raw server errors', async () => {
     const ended = vi.fn(), fetcher = vi.fn().mockResolvedValue(response({ privateError: 'internal secret' }, 401));
     const api = new AdminApi(() => session(), ended, fetcher, () => now); await expect(api.get('/api/admin/me', AdminIdentityResponseSchema)).rejects.toThrow('session ended'); expect(ended).toHaveBeenCalledTimes(1);

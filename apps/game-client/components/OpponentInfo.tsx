@@ -28,11 +28,29 @@ export default function OpponentInfo() {
       className={`opponent-info ${isTargetable ? 'targetable' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={handleClick}
     >
-      <h3>Opponent</h3>
-      <p>Life: {opponent.life}</p>
-      <p>Hand: {handCount} cards</p>
-      <p>Deck: {opponent.deckCount}</p>
-      <p>Graveyard: {opponent.graveyard.length}</p>
+      <div className="seat-head">
+        <h3>Opponent</h3>
+      </div>
+      <div className="seat-body">
+        <div className="life-seal">
+          <span className="life-value">{opponent.life}</span>
+          <span className="life-label">Life</span>
+        </div>
+        <dl className="seat-stats">
+          <div>
+            <dt>Hand</dt>
+            <dd>{handCount} cards</dd>
+          </div>
+          <div>
+            <dt>Deck</dt>
+            <dd>{opponent.deckCount}</dd>
+          </div>
+          <div>
+            <dt>Graveyard</dt>
+            <dd>{opponent.graveyard.length}</dd>
+          </div>
+        </dl>
+      </div>
     </div>
   );
 }

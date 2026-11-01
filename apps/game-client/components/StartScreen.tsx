@@ -38,35 +38,61 @@ export default function StartScreen({ decksUrl }: { decksUrl?: string } = {}) {
 
   return (
     <div className="start-screen">
-      <h1>Multiplayer Card Game</h1>
-      {decksUrl ? <a href={decksUrl}>Build or edit a deck</a> : <p>Deck navigation needs the server's workspace settings.</p>}
-      {handoff.kind !== 'none' && <div role="status">
-        <p>{handoff.kind === 'invalid' ? 'The deck link is invalid.' : !session?.account ? 'Sign in with the account that saved this deck. It will be selected after ownership is checked.' : deckError ? 'The requested deck could not be selected. See the error below.' : 'Checking the requested deck against your saved decks.'}</p>
-        <button onClick={() => { setHandoff({ kind: 'none' }); consumeDeckHandoff(); setDeckError(null); }}>Dismiss deck link</button>
-      </div>}
-      {handoffNotice && <p role="status">{handoffNotice}</p>}
-      {session?.account && <div className="deck-selection">
-        <label>Deck <select disabled={loading || handoff.kind !== 'none'} value={deckId} onChange={event => { setDeckId(event.target.value); setHandoffNotice(''); }}>
-          <option value="">No saved deck selected</option>
-          {decks.map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}
-        </select></label>
-        <button onClick={() => setRefresh(value => value + 1)}>Refresh decks</button>
-        {loading && <p role="status">Loading saved decks…</p>}
-        {deckError && <p role="alert">{deckError}</p>}
-      </div>}
-      <button disabled={loading || handoff.kind !== 'none'} onClick={() => createRoom(deckId || undefined)}>Create New Room</button>
-      <div>
-        <input
-          type="text"
-          placeholder="Enter Room ID to join"
-          value={joinId}
-          onChange={(e) => setJoinId(e.target.value)}
-        />
-        <button onClick={() => joinRoom(joinId.trim(), deckId || undefined)} disabled={!joinId.trim() || loading || handoff.kind !== 'none'}>
-          Join Room
-        </button>
-      </div>
-      {roomId && <p>Your Room ID: <strong>{roomId}</strong></p>}
+      <section className="lobby-hero">
+        <div className="lobby-backs" aria-hidden="true">
+          <span className="card-back" />
+          <span className="card-back" />
+          <span className="card-back" />
+        </div>
+        <h1>Multiplayer Card Game</h1>
+        <p className="lobby-lede">
+          Two players, one table. Open a room and share the code, or join a table someone
+          already opened.
+        </p>
+        {decksUrl ? <a href={decksUrl}>Build or edit a deck</a> : <p>Deck navigation needs the server's workspace settings.</p>}
+      </section>
+
+      <section className="lobby-actions">
+        <div className="lobby-block">
+          <h2>Open a table</h2>
+          <p>Start a room and send the code to your opponent.</p>
+          <button disabled={loading || handoff.kind !== 'none'} onClick={() => createRoom(deckId || undefined)}>Create New Room</button>
+        </div>
+
+        <div className="lobby-block">
+          <h2>Join a table</h2>
+          <p>Enter the room code your opponent shared.</p>
+          <div className="join-row">
+            <input
+              type="text"
+              placeholder="Enter Room ID to join"
+              value={joinId}
+              onChange={(e) => setJoinId(e.target.value)}
+            />
+            <button onClick={() => joinRoom(joinId.trim(), deckId || undefined)} disabled={!joinId.trim() || loading || handoff.kind !== 'none'}>
+              Join Room
+            </button>
+          </div>
+        </div>
+
+        {handoff.kind !== 'none' && <div className="lobby-block lobby-notice" role="status">
+          <p>{handoff.kind === 'invalid' ? 'The deck link is invalid.' : !session?.account ? 'Sign in with the account that saved this deck. It will be selected after ownership is checked.' : deckError ? 'The requested deck could not be selected. See the error below.' : 'Checking the requested deck against your saved decks.'}</p>
+          <button onClick={() => { setHandoff({ kind: 'none' }); consumeDeckHandoff(); setDeckError(null); }}>Dismiss deck link</button>
+        </div>}
+        {handoffNotice && <p role="status">{handoffNotice}</p>}
+
+        {session?.account && <div className="deck-selection">
+          <label>Deck <select disabled={loading || handoff.kind !== 'none'} value={deckId} onChange={event => { setDeckId(event.target.value); setHandoffNotice(''); }}>
+            <option value="">No saved deck selected</option>
+            {decks.map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}
+          </select></label>
+          <button onClick={() => setRefresh(value => value + 1)}>Refresh decks</button>
+          {loading && <p role="status">Loading saved decks…</p>}
+          {deckError && <p role="alert">{deckError}</p>}
+        </div>}
+
+        {roomId && <p className="lobby-room">Your Room ID: <strong>{roomId}</strong></p>}
+      </section>
     </div>
   );
 }

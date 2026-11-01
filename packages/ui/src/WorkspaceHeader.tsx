@@ -19,9 +19,9 @@ export function WorkspaceHeader({ navigation, current, account, activeRoomId, br
   activeRoomId?: string | null; breadcrumb?: string; accountMenu?: ReactNode;
 }) {
   return <header className="workspace-header">
-    <div className="workspace-brand"><strong>Card Game</strong><span className={'environment environment-' + (navigation?.purpose ?? 'unknown')}>{navigation ? navigation.label + ' · ' + navigation.purpose : 'Environment unavailable'}</span></div>
+    <div className="workspace-brand"><strong>Card Game</strong><span className={'environment environment-' + (navigation?.purpose ?? 'unknown')}>{navigation ? navigation.label : 'Environment unavailable'}</span></div>
     <nav aria-label="Workspaces">{navigation && workspaceLinks(navigation, account?.role === 'admin').map(link => <a key={link.id} href={link.href} aria-current={current === link.id ? 'page' : undefined}
-      {...(activeRoomId ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}{activeRoomId ? ' ↗' : ''}</a>)}</nav>
+      {...(activeRoomId ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav>
     {!!navigation?.extraPages?.some(page => page.workspace === current && (!page.adminOnly || account?.role === 'admin')) && <nav className="workspace-pages" aria-label="Workspace pages">{navigation.extraPages.filter(page => page.workspace === current && (!page.adminOnly || account?.role === 'admin')).map(page => <a key={page.id} href={page.href} {...(activeRoomId ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{page.label}</a>)}</nav>}
     <div className="workspace-context"><span>{breadcrumb ?? current}</span>{activeRoomId && <span>Active room: {activeRoomId}</span>}<details className="workspace-account"><summary>{account?.username ?? 'Guest'}</summary>{accountMenu ?? <p>Use this workspace's account controls below.</p>}</details>
       {account?.role === 'admin' && <span className="lab-unavailable" title="Scenario tools arrive in Milestone 7.">Test Lab — unavailable</span>}

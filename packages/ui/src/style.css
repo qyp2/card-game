@@ -1,21 +1,287 @@
-.card { background: #e94560; color: #fff; border-radius: 6px; padding: .5rem; width: 100px; min-height: 70px; cursor: pointer; user-select: none; transition: transform .1s; }
-.card:hover { transform: translateY(-4px); }
-.card.tapped { opacity: .6; transform: rotate(90deg); }
-.card-name { font-weight: bold; font-size: .8rem; margin-bottom: .25rem; }
-.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .25rem; }
-.card-mana { font-size: .7rem; color: #ffd700; white-space: nowrap; }
-.card-type { font-size: .7rem; color: #ddd; margin-bottom: .25rem; }
-.card-stats { font-size: .75rem; }
-.workspace-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem; padding: 1rem; background: #202135; color: #eee; border-bottom: 1px solid #575369; margin-bottom: 1rem; }
-.workspace-header .workspace-brand, .workspace-header nav, .workspace-header .workspace-context { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
-.workspace-header a { color: #d6c5ff; padding: .35rem .5rem; text-decoration: none; border-radius: .3rem; }
-.workspace-header a[aria-current="page"] { background: #574574; color: #fff; }
-.workspace-header a:focus-visible { outline: 3px solid #e2c9ff; }
-.workspace-header .workspace-context { width: 100%; font-size: .8rem; color: #cbc6db; }
-.workspace-header .environment { padding: .15rem .5rem; border: 1px solid #8d829d; border-radius: .3rem; font-size: .8rem; }
-.workspace-header .environment-lab { background: #703c17; color: #fff; }
-.workspace-header .lab-unavailable { color: #b9adc9; }
-.workspace-header .workspace-pages { width: 100%; border-top: 1px solid #575369; }
-.workspace-header .workspace-account { position: relative; }
-.workspace-header .workspace-account summary { cursor: pointer; }
-.workspace-header .workspace-account[open] { flex-basis: 100%; padding: .5rem; border: 1px solid #777087; border-radius: .4rem; }
+/* ───────────────────────────────────────────────────────────────────────────
+   Shared surface layer.
+
+   Three front ends import this file: the game client, the deck workshop and
+   the administration console. It owns exactly three things — the design
+   tokens, the printed card face, and the workspace header — so the product
+   reads as one object rather than three unrelated tools.
+
+   No web fonts: the server's Content-Security-Policy allows only
+   `font-src 'self' https: data:`, so every stack below is a deliberate
+   system stack rather than a downloaded family.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Ink — table felt, panels, chrome. */
+  --ink-900: #070d0a;
+  --ink-800: #0b1511;
+  --ink-700: #101d17;
+  --ink-600: #16261f;
+  --ink-500: #1d3229;
+  --line: #2a4438;
+  --line-soft: #1c3027;
+
+  /* Brass — the single saturated accent in the whole product. */
+  --brass: #c19a3c;
+  --brass-bright: #e8cb7d;
+  --brass-dim: #7d6529;
+
+  /* Paper — card faces and body copy on dark. */
+  --parchment: #f1e8d6;
+  --parchment-dim: #c2c9bd;
+  --muted: #7c9086;
+
+  /* Signals. */
+  --danger: #c25a4c;
+  --info: #6ea6c4;
+  --success: #6fae86;
+
+  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-ui: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 3px;
+  --radius: 6px;
+  --radius-lg: 12px;
+
+  --shadow-panel: 0 20px 44px -32px #000;
+  --shadow-card: 0 1px 0 #ffffff1f inset, 0 14px 26px -16px #000;
+}
+
+/* ── The printed card face ──────────────────────────────────────────────────
+   A static object: no hover lift, no pointer cursor. The game client adds
+   those on the zones where a card is actually actionable, so the same face
+   can sit in a read-only catalog without pretending to be a button. */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 132px;
+  aspect-ratio: 5 / 7;
+  padding: 4px;
+  border: 1px solid #46604f;
+  border-radius: 10px;
+  background: linear-gradient(158deg, #33473c 0%, #1b2c24 38%, #0c1712 100%);
+  box-shadow: var(--shadow-card);
+  color: var(--parchment);
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  line-height: 1.3;
+  overflow: hidden;
+  user-select: none;
+}
+
+.card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem;
+  padding: 0.22rem 0.3rem 0.2rem;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #4a5f4f, #2b3d33);
+  border-bottom: 1px solid #0a120e;
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.005em;
+  overflow-wrap: anywhere;
+}
+
+.card-mana {
+  flex: none;
+  font-family: var(--font-data);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--brass-bright);
+  white-space: nowrap;
+}
+
+.card-type {
+  padding: 0.16rem 0.3rem;
+  background: #16241d;
+  border-bottom: 1px solid #0a120e;
+  color: #b6c4b6;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-text {
+  flex: 1;
+  min-height: 0;
+  margin-top: 3px;
+  padding: 0.3rem 0.34rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #f1e8d6, #ddd1b8);
+  color: #2b2a22;
+  font-size: 0.58rem;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.card-stats {
+  align-self: flex-end;
+  margin-top: auto;
+  padding: 0.1rem 0.34rem;
+  border: 1px solid #46604f;
+  border-radius: var(--radius-sm);
+  background: #0c1712;
+  color: var(--parchment);
+  font-family: var(--font-data);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+/* ── Workspace header ──────────────────────────────────────────────────────
+   One bar across all three workspaces. The environment chip is the only
+   place colour is allowed to shout, because it is the one piece of state a
+   demo audience must never misread. */
+
+.workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1.1rem;
+  padding: 0.65rem 1.15rem;
+  background: linear-gradient(180deg, #101d17, #0a1310);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 #ffffff0a inset, 0 12px 24px -22px #000;
+  color: var(--parchment-dim);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+}
+
+.workspace-header .workspace-brand,
+.workspace-header nav,
+.workspace-header .workspace-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.workspace-header .workspace-brand {
+  gap: 0.6rem;
+}
+
+.workspace-header .workspace-brand strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--parchment);
+}
+
+.workspace-header .environment {
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--brass-dim);
+  border-radius: var(--radius-sm);
+  background: #0c1712;
+  color: var(--brass-bright);
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workspace-header .environment-lab {
+  border-color: #8a5a2a;
+  background: #3a2410;
+  color: #f0c48a;
+}
+
+.workspace-header nav {
+  gap: 0.15rem;
+}
+
+.workspace-header a {
+  padding: 0.32rem 0.55rem;
+  border-radius: var(--radius-sm);
+  color: var(--parchment-dim);
+  text-decoration: none;
+  transition: background 0.14s, color 0.14s;
+}
+
+.workspace-header a:hover {
+  background: #ffffff0d;
+  color: var(--parchment);
+}
+
+.workspace-header a[aria-current="page"] {
+  background: #ffffff12;
+  box-shadow: inset 0 -2px 0 var(--brass);
+  color: var(--parchment);
+}
+
+.workspace-header a:focus-visible {
+  outline: 2px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+
+.workspace-header .workspace-context {
+  margin-left: auto;
+  gap: 0.85rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.workspace-header .lab-unavailable {
+  color: #8d7f6a;
+  font-style: italic;
+}
+
+.workspace-header .workspace-pages {
+  flex-basis: 100%;
+  gap: 0.15rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.workspace-header .workspace-account {
+  position: relative;
+}
+
+.workspace-header .workspace-account summary {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--parchment-dim);
+  cursor: pointer;
+  list-style: none;
+}
+
+.workspace-header .workspace-account summary::-webkit-details-marker {
+  display: none;
+}
+
+.workspace-header .workspace-account summary::after {
+  content: " ▾";
+  color: var(--brass);
+}
+
+.workspace-header .workspace-account[open] {
+  flex-basis: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #0c1712;
+}
+
+.workspace-header .workspace-account[open] summary {
+  margin-bottom: 0.5rem;
+  border-color: var(--brass-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-header a {
+    transition: none;
+  }
+}

@@ -16,12 +16,21 @@ export default function Home({ identity, decksUrl }: { identity: SessionInfo | n
     }).catch(() => { /* A stale/unavailable room never becomes a resume link. */ });
     return () => controller.abort();
   }, [identity?.sessionId]);
-  return <main className="home-screen"><h1>Welcome to Card Game</h1><p>Build a deck, join a table, or continue your game.</p>
-    <nav aria-label="Home shortcuts"><a href="/play">Play / create or join a room</a>{decksUrl && <> · <a href={decksUrl}>Build or edit decks</a></>}</nav>
-    {resume && <p><a href={'/play/rooms/' + encodeURIComponent(resume)}>Resume room {resume}</a></p>}
-    {!identity && <p>Use the account menu to sign in once for Home, Play and Decks. Browsing and drafting are public.</p>}
-    <h2>Your decks</h2>{error && <p role="alert">{error}</p>}
-    {decks.length ? <ul>{decks.map(deck => <li key={deck.id}><strong>{deck.name}</strong> · <a href={'/play?deckId=' + encodeURIComponent(deck.id)} target="_blank" rel="noopener noreferrer">Play this deck in a new tab</a></li>)}</ul> : <p>No saved decks loaded yet. Open Decks to get started.</p>}
-    <p>Active games stay in their own tabs. Only a room owned by this game tab can be resumed here.</p>
+  return <main className="home-screen">
+    <section className="home-hero">
+      <div className="lobby-backs" aria-hidden="true">
+        <span className="card-back" /><span className="card-back" /><span className="card-back" />
+      </div>
+      <h1>Welcome to Card Game</h1>
+      <p>Build a deck, join a table, or continue your game.</p>
+      <nav aria-label="Home shortcuts"><a href="/play">Play / create or join a room</a>{decksUrl && <> · <a href={decksUrl}>Build or edit decks</a></>}</nav>
+      {resume && <p className="home-resume"><a href={'/play/rooms/' + encodeURIComponent(resume)}>Resume room {resume}</a></p>}
+      {!identity && <p className="home-note">Use the account menu to sign in once for Home, Play and Decks. Browsing and drafting are public.</p>}
+    </section>
+    <section className="home-decks">
+      <h2>Your decks</h2>{error && <p role="alert">{error}</p>}
+      {decks.length ? <ul>{decks.map(deck => <li key={deck.id}><strong>{deck.name}</strong> · <a href={'/play?deckId=' + encodeURIComponent(deck.id)} target="_blank" rel="noopener noreferrer">Play this deck in a new tab</a></li>)}</ul> : <p>No saved decks loaded yet. Open Decks to get started.</p>}
+      <p className="home-note">Active games stay in their own tabs. Only a room owned by this game tab can be resumed here.</p>
+    </section>
   </main>;
 }

@@ -24,23 +24,55 @@ export default function PlayerInfo() {
 
   if (!player) return <div className="player-info">You</div>;
 
+  const mana = Object.entries(player.mana).filter(([, v]) => v > 0);
+
   return (
     <div
       className={`player-info ${isTargetable ? 'targetable' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={handleClick}
     >
-      <h3>You {isMyTurn ? '(your turn)' : ''}</h3>
-      <p>Life: {player.life}</p>
-      <p>
-        Mana:{' '}
-        {Object.entries(player.mana)
-          .filter(([, v]) => v > 0)
-          .map(([color, v]) => `${color}:${v}`)
-          .join(' ') || 'none'}
-      </p>
-      <p>Deck: {player.deckCount}</p>
-      <p>Graveyard: {player.graveyard.length}</p>
-      {room?.status === 'playing' && <p>Land plays: {room.turnHistory?.landPlays?.[myPlayerId!] ?? 0}/{room.landPlayLimit}</p>}
+      <div className="seat-head">
+        <h3>You {isMyTurn ? '(your turn)' : ''}</h3>
+        {isMyTurn && <span className="seat-turn">Active</span>}
+      </div>
+      <div className="seat-body">
+        <div className="life-seal">
+          <span className="life-value">{player.life}</span>
+          <span className="life-label">Life</span>
+        </div>
+        <dl className="seat-stats">
+          <div>
+            <dt>Deck</dt>
+            <dd>{player.deckCount}</dd>
+          </div>
+          <div>
+            <dt>Graveyard</dt>
+            <dd>{player.graveyard.length}</dd>
+          </div>
+          {room?.status === 'playing' && (
+            <div>
+              <dt>Land plays</dt>
+              <dd>{room.turnHistory?.landPlays?.[myPlayerId!] ?? 0}/{room.landPlayLimit}</dd>
+            </div>
+          )}
+        </dl>
+      </div>
+      <div className="mana-pool">
+        {mana.length > 0 ? (
+          mana.map(([color, value]) => (
+            <span
+              key={color}
+              className={`mana-pip mana-${color}`}
+              title={`${value} ${color} mana`}
+              aria-label={`${value} ${color} mana`}
+            >
+              {value}
+            </span>
+          ))
+        ) : (
+          <span className="mana-empty">No mana available</span>
+        )}
+      </div>
     </div>
   );
 }

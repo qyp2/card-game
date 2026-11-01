@@ -3,7 +3,10 @@ import { validAdminSession } from './session';
 
 interface Schema<T> { safeParse(input: unknown): { success: true; data: T } | { success: false } }
 export class AdminApi {
-  constructor(private readonly session: () => AuthResponse | null, private readonly ended: () => void, private readonly fetcher: typeof fetch = fetch, private readonly now = Date.now) {}
+  // Wrapped, not passed by reference: `this.fetcher(...)` would otherwise invoke the
+  // browser's `fetch` with the AdminApi instance as its receiver, which throws
+  // "Illegal invocation" because `fetch` requires `this` to be the window.
+  constructor(private readonly session: () => AuthResponse | null, private readonly ended: () => void, private readonly fetcher: typeof fetch = (...args) => fetch(...args), private readonly now = Date.now) {}
   private async failure(response: Response, expectedSessionId?: string): Promise<Error> {
     if (response.status === 401 && expectedSessionId && this.session()?.sessionId === expectedSessionId) this.ended();
     try { const parsed = AuthErrorSchema.safeParse(await response.json()); if (parsed.success) return new Error(parsed.data.message); } catch {}
