@@ -1,25 +1,5 @@
-# deploy/systemd/
+# systemd — implementation slot
 
-**Status:** empty. Planned in Phase 2.
+No unit installed. Future cardgame.service uses a non-login account that reads root-owned code/dependencies/static files and writes only runtime data. Plan sandbox directives, resource budgets, bounded shutdown/restart and external credentials; justify native/runtime exceptions.
 
-## Belongs here
-
-- `cardgame.service` — unit file for the Node server.
-
-## Required directives
-
-Recorded in the plan (Phase 2 table). Summary:
-
-- `User=cardgame`, `Group=cardgame`
-- `NoNewPrivileges=yes`, `ProtectSystem=strict`, `ProtectHome=yes`
-- `PrivateTmp=yes`, `PrivateDevices=yes`
-- `RestrictAddressFamilies=AF_INET AF_INET6`
-- `ReadWritePaths=/opt/cardgame/data`
-- `MemoryMax=512M`
-- `Environment=HOST=127.0.0.1` (nginx terminates TLS in front)
-
-## Verification
-
-- `systemctl status cardgame`
-- `systemd-analyze security cardgame.service` — record the exposure score
-- Reboot and confirm the service returns
+Current Node entry point does not consume HOST: implement explicit loopback binding first. Record runtime/working directory, permissions, listeners, reboot/restart, logs and matching-version recovery. systemd-analyze security is supporting evidence rather than a standalone pass score. Budget collectors separately.

@@ -1,14 +1,7 @@
-# deploy/firewall/
+# Firewall — implementation slot
 
-**Status:** empty. Planned in Phase 2.
+No policy installed. Isolated profile: restrict SSH management, expose game HTTPS on host-only interface, keep Node/metrics private. Allow 80 only if redirect is intended. Disconnect staging access and verify routes before campaigns.
 
-## Belongs here
+Demo profile needs outbound connector access and a distinct policy; the tunnel does not require public inbound origin ports. Check container publication rather than assuming host firewall coverage.
 
-- `ufw.sh` — default-deny rules, allow 22 and 443 only.
-- `ssh-hardening.md` — key-only auth, `PermitRootLogin no`, fail2ban setup.
-
-## Verification
-
-- `ufw status verbose`
-- `ss -tulpn` shows only 22, 443, and loopback 3000
-- `nmap -p-` from the Kali VM shows only the expected ports
+Proof: actual adapters/routes/listeners/effective rules and allowed/denied connections from relevant networks.

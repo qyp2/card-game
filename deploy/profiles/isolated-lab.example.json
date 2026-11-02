@@ -1,0 +1,29 @@
+{
+  "http": {
+    "trustProxy": "loopback"
+  },
+  "origins": [
+    "https://game.lab.test"
+  ],
+  "navigation": {
+    "instanceId": "security-lab",
+    "purpose": "lab",
+    "label": "Isolated security lab",
+    "home": "https://game.lab.test/home",
+    "play": "https://game.lab.test/play",
+    "decks": "https://game.lab.test/deck-builder/",
+    "admin": null,
+    "lab": null,
+    "extraPages": []
+  },
+  "storage": {
+    "databasePath": "data/security-lab/card-game.sqlite"
+  },
+  "logging": {
+    "deltaPath": "data/security-lab/deltas.jsonl",
+    "auditPath": "data/security-lab/admin-audit.jsonl"
+  },
+  "inspectionEnabled": false,
+  "fixturesEnabled": false,
+  "debugMode": "off"
+}

@@ -23,7 +23,7 @@ notes/
 docs/development/
 docs/superpowers/
 
-# Security lab (see lab/README.md): never commit evidence or key material.
+# Security lab (see lab/README.md): never commit raw evidence or key material.
 lab/**/__pycache__/
 lab/**/*.pyc
 lab/**/.venv/
@@ -31,6 +31,13 @@ lab/findings/evidence/*
 !lab/findings/evidence/.gitkeep
 lab/crypto/*.key
 lab/crypto/*.pem
+# Local lab/demo settings and generated private evidence.
+lab/**/*.local.json
+deploy/profiles/*.local.json
+deploy/cloudflare/secrets/
+lab/runs/
+data/**/*.sqlite*
+data/**/*.jsonl*
 *.pcap
 *.pcapng
 

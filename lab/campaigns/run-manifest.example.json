@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "template-not-executed",
+  "runId": "TO_RECORD",
+  "profile": "isolated-lab",
+  "targetId": "isolated-game",
+  "commit": "TO_RECORD",
+  "configHash": "TO_RECORD",
+  "snapshotRef": "TO_RECORD",
+  "startedAtUtc": null,
+  "finishedAtUtc": null,
+  "toolVersions": {},
+  "limits": {
+    "maxDurationSeconds": null,
+    "maxRequestsPerSecond": null,
+    "maxPayloadBytes": null,
+    "maxParallelism": null
+  },
+  "caseIds": [],
+  "evidence": [],
+  "result": "not-run"
+}

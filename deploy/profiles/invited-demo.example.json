@@ -1,0 +1,29 @@
+{
+  "http": {
+    "trustProxy": "loopback"
+  },
+  "origins": [
+    "https://demo.example.com"
+  ],
+  "navigation": {
+    "instanceId": "invited-demo",
+    "purpose": "lab",
+    "label": "Invited demo",
+    "home": "https://demo.example.com/home",
+    "play": "https://demo.example.com/play",
+    "decks": "https://demo.example.com/deck-builder/",
+    "admin": null,
+    "lab": null,
+    "extraPages": []
+  },
+  "storage": {
+    "databasePath": "data/invited-demo/card-game.sqlite"
+  },
+  "logging": {
+    "deltaPath": "data/invited-demo/deltas.jsonl",
+    "auditPath": "data/invited-demo/admin-audit.jsonl"
+  },
+  "inspectionEnabled": false,
+  "fixturesEnabled": false,
+  "debugMode": "off"
+}

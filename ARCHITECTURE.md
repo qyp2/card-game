@@ -982,6 +982,8 @@ The [Deck Builder supplement](docs/deck-builder-architecture.md) explains struct
 
 ## Appendix G. Navigation, Public Sessions and Planned Test Lab
 
+The separate [security-lab architecture](docs/security-lab-architecture.md) and [learning scaffold](lab/README.md) describe planned isolated nginx hosting, telemetry and assessment plus a separate optional invited tunnel demo. These are structure/decisions, not installed infrastructure or verified detection evidence.
+
 **Milestone 6 implemented:** Home/Play/room routes, shared workspace navigation, account controls and server-owned environment/destination metadata now connect the independent apps. An active game retains its tab/socket; workspace actions open another tab. URLs request a deck/room and never establish authority. Home shows actual owned decks and a verified cached-room resume affordance.
 
 Public account access uses an HttpOnly host-only browser-family cookie with fixed expiry and Origin/custom-header/CSRF protection. Game tabs receive separate bounded bearer credentials and seat ownership; admin keeps its fresh short-lived bearer on a separate origin. Local tab, browser-family and account-wide public logout are explicit. Legacy bearer APIs remain supported. Migration 003 stores parent/purpose fields and binds a persistent database to its configured instance ID/purpose; old rows retain legacy semantics. Socket rejoin checks the ownership record even if an old engine player ID happens to match.

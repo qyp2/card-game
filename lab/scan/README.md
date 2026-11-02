@@ -1,22 +1,5 @@
-# lab/scan/
+# Scanner runners — implementation slot
 
-**Status:** empty. Planned in Phase 5.
+No tools executed. Select dependency/SBOM, TLS, HTTP baseline and bounded active checks to answer a case, rather than requiring every scanner.
 
-Vulnerability and dependency scanning runners.
-
-## Belongs here
-
-| Script | Tool | Target |
-|---|---|---|
-| `trivy.sh` | Trivy | Filesystem and container image |
-| `npm-audit.sh` | `npm audit --json` | Node dependency tree |
-| `zap-baseline.sh` | OWASP ZAP | Running HTTPS endpoint |
-| `zap-active.sh` | OWASP ZAP | Active scan (lab only) |
-| `nuclei.sh` | Nuclei | Template-based checks |
-
-## Notes
-
-- `npm audit` on this dependency tree will be noisy. Results are triaged, not blindly "fixed" —
-  record accepted-risk decisions in the findings register.
-- ZAP active scanning is intrusive. Lab VM only.
-- Every run writes a timestamped report into `../findings/evidence/`.
+Future wrappers (Trivy/npm audit/ZAP/Nuclei as needed) validate isolated inventory/redirect scope, record tool/database versions and limits, retain private raw output and report errors/inconclusive results honestly. Offline CVE checks need staged databases or recorded staging analysis. No active scans target the demo domain. Scanner hits are triage candidates, not automatic findings.

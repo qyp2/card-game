@@ -1,376 +1,108 @@
-# Security lab plan — Linux-hosted card game as a pentest target
+# Security lab plan — learn, demonstrate, assess and improve
 
-**Prepared:** 21 October 2026
-**Status, 26 October 2026:** Phase 1 accounts/session boundary implemented through platform Milestone 2, with the user's focused-test adjustment. Deployment, monitoring, IDS, pentest campaigns and remediation evidence remain planned. See the [completion report](phase-2-status-2026-10-26.md).
-**Scope:** Turn the existing card game into a deliberately-hosted, deliberately-tested target for Linux security auditing, network analysis, intrusion detection, and observability work.
+**Revised:** 2 November 2026. **Delivery status:** structure and planning only for the Linux lab. Platform accounts, private player views, SQLite account/session/deck storage, admin UI and shared public sessions already exist. Installed Linux hardening, monitoring, detection and campaigns are not completed by this scaffold.
 
-This plan is separate from the rules-fidelity roadmap in
-[`implementation-plan-2026-10-07.md`](implementation-plan-2026-10-07.md). It changes no game
-rules. It adds an account system, a deployment profile, a monitoring stack, and a test lab.
+## Revised goal
 
-**Platform roadmap update, 29 October 2026:** planned platform Milestones 6–7 add navigation/session continuity and an admin Scenario Builder in an isolated application lab; the original platform UI revamp moves to Milestone 8. See the [platform plan](platform-plan-2026-10-24.md) and [navigation/scenario supplement](navigation-test-lab-plan.md). These tools prepare reproducible development targets and exported fixtures. They do not complete this plan's Linux/network isolation, deployment, monitoring, IDS or pentest/remediation phases; those retain their numbering and evidence requirements.
+First learn to run and explain the existing game behind nginx locally. Build a repeatable isolated security target, then demonstrate one complete assess → detect → investigate → fix → retest story. An optional domain through Cloudflare Tunnel is a separate invited-demo deployment. Detailed automation and tool configuration follow after this structure is reviewed.
 
----
+The game does not need full public-product readiness, advanced animation or the admin Scenario Builder before this work. Keep game rules unchanged. Platform Milestone 7 is application scenario tooling, not this plan's Phase 7 report.
 
-## 1. Goal
+Start at [lab/README](../lab/README.md), the [architecture decisions](security-lab-architecture.md) and [beginner runbooks](../lab/runbooks/README.md).
 
-Demonstrate, on one coherent codebase, the following competencies:
+## Two deployment profiles
 
-| Competency | Where it is demonstrated |
-|---|---|
-| Password management | Phase 1 — Argon2id hashing, policy, rotation, no-secret-logging |
-| Secure coding practice | Phase 1 + Phase 6 — auth boundary, input validation, output redaction |
-| Encryption | Phase 2 (TLS termination), Phase 6 (log encryption at rest) |
-| Linux security-audit tooling (Bash/Python) | Phase 2 + Phase 5 — `lynis`, `auditd`, `aide`, `ss`, `nftables` |
-| TCP/IP and Ethernet | Phase 5 — capture and dissect the HTTP-upgrade → WebSocket path |
-| Vulnerability scanning | Phase 5 — Trivy, `npm audit`, ZAP, Nuclei |
-| IDS/IPS | Phase 4 — Suricata with custom rules for this application's traffic |
-| PromQL / Grafana | Phase 3 — metrics endpoint, dashboards, alert rules |
-| Pentest methodology | Phase 5 + Phase 6 — recon → exploit → detect → remediate → re-scan |
+| Profile | Path | Purpose | Assessment scope |
+|---|---|---|---|
+| Isolated lab | Kali → host-only Ubuntu nginx HTTPS → loopback Node | Linux, TLS, packet analysis, application security and detection | Explicitly inventoried lab endpoints; bounded campaigns |
+| Invited demo | Browser → domain / Cloudflare → cloudflared → nginx → Node | Show a playable game and learn the proxy path | Functional checks only; no active scanners or flood tests |
 
-## 2. Non-goals
+Direct tunnel → Node is an optional later variant, not another required stack. Never tunnel the vulnerable assessment VM. Use separate instance IDs, databases, accounts, logs and secrets. A label alone is not isolation.
 
-- **Not** a rewrite of the game engine. `GameEngine` remains the single public API.
-- **Not** a claim of production readiness. The target is a lab VM on an isolated network.
-- **Not** a from-scratch IDS or scanner. Real tools (Suricata, ZAP, Trivy) are used; the
-  custom Python work is the Socket.IO fuzzer, which no off-the-shelf tool covers.
-- Private-view work from [`development/0.3-private-views.md`](development/0.3-private-views.md)
-  was implemented by platform Milestone 1. F02 can serve as a historical finding with
-  before/after regression evidence; a pentest campaign must assess the current code rather
-  than assume the original disclosure is still present.
+Offline operation means no internet route during a campaign. Provision pinned dependencies/images/scanner databases beforehand using a recorded staging/import process, then disconnect staging access and verify routes. A demo tunnel requires internet and cannot satisfy the offline profile.
 
-## 3. Why this target
+## Current baseline
 
-The following table records the original pre-milestone baseline. Milestone 1 addressed player-view disclosure; Milestone 2 replaces client-trusted identity and permissive origins with scoped sessions, validation, Helmet and auth rate limits. Platform Milestone 3 adds account/session/deck persistence and logrotate configuration. Rooms remain ephemeral; Linux rotation installation/scheduling still needs deployment verification. The baseline is historical evidence, not a list of currently reproducible findings.
+Implemented by platform work: versioned protocol/private views, account authentication, scoped game/admin sessions, fixed expiry/revocation, HttpOnly public browser families with CSRF protection, tab seat ownership, SQLite account/session/deck storage, saved decks, admin inspection and audit outbox, trusted navigation metadata.
 
-| Existing condition | Location | Security relevance |
+Rooms/seats remain ephemeral. Node listen-host configuration, a metrics listener, JSON security telemetry and lab tooling are still implementation tasks. Historical permissive CORS, unauthenticated identity and private-view disclosure are historical findings only; assess the current commit before making a finding.
+
+Existing [nginx examples](../deploy/nginx/README.md) and logrotate policy are source artifacts, not installed-host proof.
+
+## Delivery order and phase boundaries
+
+Keep phase numbers for traceability, but run a small Phase 5 baseline immediately after Phase 2. Logging/metrics/detection then enrich a repeat campaign; do not wait for the entire dashboard stack to start assessment.
+
+| Phase | Next deliverable | Evidence before calling it implemented |
 |---|---|---|
-| `cors: { origin: '*' }` | `apps/server/src/index.ts` | Permissive cross-origin policy |
-| No authentication on any socket event | `apps/server/src/index.ts` | Identity is a client-supplied UUID |
-| Client-generated `playerId` in `sessionStorage` | `apps/game-client/session.ts` | Trivially forgeable identity |
-| Unredacted `roomSnapshot` (F02) | `ARCHITECTURE.md` §1.2 | Opponent hand/deck disclosure |
-| `InMemoryStore` only | `apps/server/src/rooms/state-store.ts` | No persistence, no session expiry at baseline |
-| Unbounded `appendFileSync` delta log | `apps/server/src/rooms/sync-service.ts` | Disk-fill denial of service |
-| No `helmet`, no rate limiting | `apps/server/src/index.ts` | Missing standard hardening |
-| `parseActionPacket` is the only input boundary | `apps/server/src/rooms/action-packet.ts` | Single validation choke point |
-
-## 4. Ordering constraint
-
-**Phase 1 must precede Phase 5.** Without authentication, every pentest finding reduces to
-"there is no auth," and the report becomes one finding repeated. With accounts in place the
-findings become distinct and individually gradeable: auth bypass, session fixation, IDOR on
-`roomId`, seat impersonation, credential stuffing, token replay.
-
-## 5. Lab topology
-
-```mermaid
-flowchart TB
-    subgraph host["Windows host"]
-        subgraph net["Host-only network 192.168.56.0/24 — no internet, no bridged adapter"]
-            K["Kali VM<br/>192.168.56.10<br/>attacker"]
-            T["Ubuntu Server 24.04<br/>192.168.56.20<br/>target"]
-        end
-    end
-    K -->|"nmap / ZAP / socket fuzz"| T
-    T --> N["nginx :443<br/>TLS + WebSocket upgrade"]
-    N --> A["node :3000<br/>card-game"]
-    A --> M["/metrics"]
-    A --> L["structured logs"]
-    M --> P["Prometheus"]
-    L --> P
-    S["Suricata"] --> P
-    P --> G["Grafana"]
-```
-
-**Hard rule:** host-only adapter. No port forwarding, no bridged mode, no internet route on
-the target. Nothing in this plan may be executed against a host that was not built for it.
-
----
-
-## Phase 1 — Account system
-
-**Implemented:** [auth architecture and policy](authentication-architecture.md), [evidence](phase-2-status-2026-10-26.md). Admin API access was also pulled forward at the user's request; the UI remains platform Phase 4. Sessions remain in memory, with expiry, rotation and revocation.
-
-**Dependency:** none. **Blocks:** Phase 5.
-
-### Work
-
-1. Add `apps/server/src/auth/` with `password.ts`, `session.ts`, `account-store.ts`, `routes.ts`.
-2. Hash with Argon2id (`argon2` package). Parameters recorded in a new server-only `apps/server/src/config.ts` under an
-   `authConfig` block, not hardcoded at call sites.
-3. Registration and login over HTTP (`POST /api/auth/register`, `POST /api/auth/login`),
-   returning an opaque session token. Do not put credentials in the Socket.IO handshake.
-4. Authenticate the socket handshake with the session token; derive `PlayerId` from the
-   account, not from the client. Keep `apps/server/src/rooms/reconnect.ts` intact — it already separates
-   socket identity from player identity, which is the right shape.
-5. Session lifecycle: expiry, rotation on login, revocation on logout, and a bounded
-   in-memory session table behind the existing `StateStore` interface.
-6. Password policy: minimum length, no composition rules, rejection of known-breached
-   passwords (offline list). Document the reasoning — this is a graded decision.
-7. Ensure no password, hash, or token reaches `packages/engine/src/shared/game-logger.ts`. Add a redaction
-   helper and a test that asserts it.
-
-### Acceptance gate
-
-- Register → login → create room → play a turn → logout → token rejected.
-- Two accounts cannot occupy the same seat; a forged `playerId` in the handshake is ignored.
-- A test asserts that a log line produced during login contains no credential material.
-- Typechecks, builds and focused auth/client/runtime/architecture checks pass. The user waived browser smoke, further long socket tests and a blocking full-suite run for this delivery; the report records that adjusted gate. Full regression remains available through `npm run verify`.
-
----
-
-## Phase 2 — Linux deployment and host hardening
-
-**Dependency:** Phase 1.
-
-### Work
-
-| Item | Detail |
-|---|---|
-| Runtime | Node 22 via NodeSource; `npm ci && npm run build` on the target |
-| Service user | `cardgame` system account, `/usr/sbin/nologin`, owns only `/opt/cardgame/apps/server/dist`, `/opt/cardgame/apps/game-client/dist`, and `/opt/cardgame/data` |
-| systemd unit | `NoNewPrivileges=yes`, `ProtectSystem=strict`, `ProtectHome=yes`, `PrivateTmp=yes`, `PrivateDevices=yes`, `RestrictAddressFamilies=AF_INET AF_INET6`, `ReadWritePaths=/opt/cardgame/data`, `MemoryMax=512M` |
-| Binding | Make the listen host explicit in `apps/server/src/index.ts` (`HOST` env, default `127.0.0.1` behind nginx) |
-| Reverse proxy | nginx, TLS 1.2+, `proxy_set_header Upgrade $http_upgrade` and `Connection "upgrade"` for Socket.IO |
-| Firewall | `ufw` default deny incoming; allow 22 and 443 only |
-| SSH | key-only, `PermitRootLogin no`, `PasswordAuthentication no`, fail2ban |
-| Audit | `auditd` watch rules on `/opt/cardgame`; `aide` baseline database |
-| Log rotation | `logrotate` for `data/deltas.jsonl` — this also mitigates the disk-fill finding |
-
-### Deliverables
-
-- `deploy/cardgame.service`
-- `deploy/nginx.conf`
-- `deploy/ufw.sh`
-- `deploy/auditd/cardgame.rules`
-- `deploy/README.md` with the exact provisioning sequence
-
-### Acceptance gate
-
-- `systemctl status cardgame` active; service survives reboot.
-- `systemd-analyze security cardgame.service` score recorded (target: exposure below 4.0).
-- `ss -tulpn` shows only 22, 443, and loopback 3000.
-- `lynis audit system` report captured as a baseline artifact.
-- `curl https://<target>/` succeeds; plain HTTP redirects to HTTPS.
+| 1 — auth foundation | Verify current controls and document current scopes | Existing platform reports plus focused regressions for changed behavior |
+| 2 — learn / host | Node locally, nginx HTTP, local TLS, service user, firewall, snapshots/restore | Record each runbook checkpoint, actual listeners/routes and successful two-client path |
+| 5a — early baseline | One bounded auth/ownership assessment, manual raw-log/PCAP triage | Exact scope/commit, reproducible test and controls; finding or explicit negative result |
+| 3 — metrics / telemetry | Boundary counters, histogram, private scrape and security JSON events | Correct series, bounded labels, scrape reachability and redaction controls |
+| 4 — network detection | Proven wire and loopback IDS rules using a pinned parser | Small PCAP proof first; attack/control samples, layer and known limitations |
+| 4.5 — log investigation | Alloy → Loki plus source/time/request context | Positive ingestion control, synthetic-secret redaction, documented investigation queries |
+| 5b — repeat assessment | Stateful Socket.IO and HTTP cases plus selected host/dependency/TLS checks | Campaign manifest, case matrix, raw private evidence and reviewed findings |
+| 6 — remediate / retest | Fix confirmed issues and rerun affected cases/controls | Linked commit, before/after artifacts, regression evidence and dispositions |
+| 7 — communicate | Rebuild guide, findings report, detection coverage, sanitized walkthrough | Another person can follow the report; all claims distinguish tested from planned |
 
----
+### Phase 2 details to settle later
 
-## Phase 3 — Observability (Prometheus, PromQL, Grafana)
+Use the supported runtime tested by CI, pin tool/package/image versions, record native dependency compatibility and the provisioning source. Service account reads application/dependency/static files; only runtime data is writable. Node and management listeners remain private. Select either explicit port-80 redirect service or refusal; firewall and acceptance must agree.
 
-**Dependency:** Phase 2.
-
-### Work
+Define SSH access from the host/management subnet, an actual systemd unit, resource budgets for the entire stack, audit/AIDE baselines, log rotation and restore drills. Existing application backup/migration guidance remains authoritative: take pre-upgrade backups with the matching old release.
 
-1. Add `prom-client`; expose `GET /metrics` on the loopback interface only.
-2. Instrument at existing boundaries — do not scatter counters through the engine:
-   - `cardgame_actions_total{action,result}` — from the `playerAction` handler
-   - `cardgame_action_duration_seconds` — histogram around `executePlayerAction`
-   - `cardgame_rooms_active` — gauge from `store.listRooms()`
-   - `cardgame_socket_connections` — gauge on connect/disconnect
-   - `cardgame_auth_attempts_total{result}` — from Phase 1
-   - `cardgame_delta_log_bytes` — from `sync-service.ts`
-3. `deploy/monitoring/docker-compose.yml` with Prometheus, Grafana, and Suricata.
-4. Provisioned Grafana dashboard: action throughput, rejection rate, room count, auth
-   failures, action latency p95, delta log growth.
-5. Alert rules with documented PromQL, for example:
-   - `rate(cardgame_actions_total{result="rejected"}[5m]) > 5` — action flooding
-   - `rate(cardgame_auth_attempts_total{result="failure"}[5m]) > 10` — credential stuffing
-   - `cardgame_delta_log_bytes > 5e8` — disk-fill approach
-   - `cardgame_socket_connections > 50` — connection exhaustion
+### Phases 3–4.5 details to settle later
 
-### Acceptance gate
-
-- `/metrics` scraped successfully; all series present in Prometheus.
-- Dashboard renders live data during a two-client game.
-- Each alert rule fires when triggered manually and resolves when the condition clears.
-- PromQL queries are documented in `deploy/monitoring/README.md` with expected output.
+Instrument server boundaries, not game-rule modules. Proposed metrics retain the existing names: actions by bounded action/result, action duration, active rooms, connections, auth outcomes and delta-log bytes. Normalize unknown actions to a fixed value; do not label by raw input, account, room or token. Establish baseline traffic before choosing thresholds and alert durations.
 
----
-
-## Phase 4 — Detection (Suricata IDS/IPS)
+Use the [telemetry contract](../lab/contracts/telemetry.md). Pin Suricata and prove WebSocket decoding under the actual masking/compression/fragmentation/transport settings. Wire sees encrypted visitor traffic only in the direct nginx lab; loopback sees the proxy hop. Authenticated identity and failed-join semantics belong to application evidence first. This is IDS; IPS needs a separate inline/blocking experiment.
 
-**Dependency:** Phase 3.
+Ship journald, nginx, auditd and sensor EVE through Alloy to Loki. Prometheus stores numerical series; Loki stores searchable records. Raw logs can be investigated before Loki exists. A cross-source workflow is not an automatic raw-log SQL join.
 
-### Work
+### Phase 5 scope
 
-1. Deploy Suricata on the target, monitoring the host-only interface.
-2. Write custom rules for this application's traffic, not just generic signatures:
-   - repeated `playerAction` frames above a threshold within a window
-   - `joinRoom` failures in sequence (room enumeration)
-   - oversized WebSocket frames
-   - requests carrying a `playerId` that does not match the authenticated session
-   - TLS handshake anomalies and cipher downgrade attempts
-3. Ship Suricata `eve.json` into Prometheus (via a small exporter) so alerts appear on the
-   same Grafana dashboard as application metrics.
-4. Document each rule with its intent, the attack it detects, and a false-positive note.
+Use [campaign and result templates](../lab/campaigns/README.md), [fuzzer boundaries](../lab/contracts/fuzzing.md) and the [case matrix](../lab/campaigns/case-matrix.md). Include anonymous, guest, account, sibling-tab and admin subjects. Inventory endpoints and credentials by reference, never by secret value.
 
-### Acceptance gate
+Begin with one meaningful ownership test and its benign control. Add selected recon/TLS, host audit, dependency analysis, browser-cookie/CSRF, revocation, malformed input and bounded resource tests. Raw wire framing requires separate lower-level tools; a valid Socket.IO client does not create every malformed frame.
 
-- Each custom rule fires during a scripted reproduction of its target behaviour.
-- Alerts appear in Grafana within the scrape interval.
-- Rules produce no alerts during a normal two-player game (false-positive check).
+All active campaigns use the isolated profile. A test attempt triggering a detector is detection evidence, not automatically a vulnerability. Never manufacture a current finding to satisfy an alert quota. Historical vulnerable commits, if used, must be separately identified and isolated.
 
----
+### Phase 6 scope
 
-## Phase 5 — Pentest
+Fix confirmed findings; do not schedule already-implemented CORS, Helmet or private projections as new work. Record accepted risk, false positives and unresolved issues honestly.
 
-**Dependency:** Phases 1–4. **Executed from the Kali VM only.**
+Encryption is an optional separately designed learning slice after the first remediation loop. AES-GCM already authenticates ciphertext. Specify nonce/key lifecycle, rotation, envelope version and tamper handling; log deletion/reordering requires its own threat model. Existing JSONL readers and rotation need an explicit integration decision before formats change.
 
-### Phases and tools
+## Learning ramp
 
-| Step | Tools | Evidence captured |
-|---|---|---|
-| Recon | `nmap -sV -sC -p-`, `whatweb`, `nikto` | Port/service inventory |
-| TLS | `testssl.sh`, `sslyze` | Cipher and protocol findings |
-| Web/app | OWASP ZAP baseline + active, Burp Community | ZAP HTML report |
-| Socket.IO fuzzing | custom Python client (`python-socketio`) | Script + findings |
-| Info disclosure | socket client reading `roomSnapshot` | Captured payload showing opponent hand |
-| DoS | `hping3`, action-flood script | Rate-limit behaviour, resource graphs |
-| Packet analysis | `tcpdump` + Wireshark | PCAP of handshake, upgrade, WS frames |
-| Host audit | `lynis`, `auditd`, `aide`, `ss -tulpn` | Audit reports |
-| Dependencies | `trivy fs`, `npm audit`, `grype` | SBOM + CVE list |
-
-### The Socket.IO fuzzer
-
-This is the differentiating deliverable. ZAP and Burp do not understand the Socket.IO
-protocol, so a purpose-built client is required. It lives in `lab/fuzz/` with its own
-`requirements.txt`.
-
-Test cases:
-
-1. Malformed `actionId` values and unknown action names.
-2. `roomId` for a room the account never joined (IDOR).
-3. Oversized payloads and deeply nested `data` objects.
-4. Rapid-fire actions to test rate limiting and engine stability.
-5. Replayed packet with a substituted `playerId`.
-6. Actions sent out of turn / without priority.
-7. `getOptions` for a card in another player's hand.
-
-### Findings register
-
-Every finding is recorded in `lab/findings/register.md` with: ID, title, severity (CVSS),
-affected component, reproduction steps, evidence path, detection status (which Suricata rule
-or Grafana alert caught it), remediation commit, and re-test result.
-
-### Acceptance gate
-
-- Every finding has reproduction steps that a second person can follow.
-- Every finding has a severity and an evidence artifact.
-- At least one finding is detected by the Phase 4 rules — proving detection works, not just
-  scanning.
-
----
-
-## Phase 6 — Remediation and re-scan
-
-**Dependency:** Phase 5.
-
-### Work
-
-1. Fix findings in reviewable commits, one finding per commit where practical.
-2. Expected fixes, in likely priority order:
-   - Redact `roomSnapshot` per player (this is the deferred F02 /
-     [`0.3-private-views.md`](development/0.3-private-views.md) work — implement it here with
-     a single projection service used by both snapshots and deltas)
-   - Restrict CORS to the known origin
-   - Add `helmet` and a Content-Security-Policy
-   - Add per-socket and per-account rate limiting
-   - Bound and rotate `data/deltas.jsonl`
-   - Encrypt the delta log at rest (AES-256-GCM, key from systemd `LoadCredential`) with an
-     HMAC integrity check — this is the "encryption" deliverable
-   - Tighten `parseActionPacket` validation
-3. Re-run the full Phase 5 toolset and record before/after for each finding.
-
-### Acceptance gate
-
-- Each finding's re-test shows the issue closed, with the new evidence attached.
-- The full test suite, both typechecks, and the production build still pass.
-- No regression in gameplay: a two-client game completes end to end.
-
----
-
-## Phase 7 — Writeup
-
-**Dependency:** Phase 6.
-
-Deliverables:
-
-- `docs/security-lab-report.md` — methodology, findings table, remediation, lessons learned
-- `lab/README.md` — how to rebuild the lab from scratch
-- Grafana dashboard export (JSON) committed to `deploy/monitoring/`
-- PCAP walkthrough: Ethernet → IP → TCP → HTTP upgrade → WebSocket frames, annotated
-- A short "what I would do differently" section — this is what distinguishes a report from a
-  checklist
-
----
-
-## Repository layout
-
-```
-deploy/
-  cardgame.service
-  nginx.conf
-  ufw.sh
-  auditd/cardgame.rules
-  monitoring/
-    docker-compose.yml
-    prometheus.yml
-    grafana/            # provisioned datasource + dashboard JSON
-    alerts.yml
-    README.md
-lab/
-  fuzz/                 # Python Socket.IO fuzzer + requirements.txt
-  audit/                # Bash wrappers around lynis/auditd/aide, JSON output
-  scan/                 # trivy, npm audit, ZAP, nuclei runners
-  crypto/               # log encryption + HMAC verification tool
-  findings/
-    register.md
-    evidence/
-  README.md
-apps/server/src/auth/        # Phase 1
-```
-
-`lab/` and `deploy/` are additive. Application paths use the workspace layout established by platform Phase 0.
-
----
-
-## Sizing
-
-Rough, part-time. These are not commitments.
-
-| Phase | Effort |
-|---|---|
-| 1 — Account system | 2–3 days |
-| 2 — Deployment + hardening | 1 day |
-| 3 — Observability | 1 day |
-| 4 — Detection | 1–2 days |
-| 5 — Pentest | 3–5 days |
-| 6 — Remediation + re-scan | 2–3 days |
-| 7 — Writeup | 1–2 days |
-| **Total** | **~2 weeks** |
-
-Phases 1–3 alone (about 4 days) already support a "secure coding + observability" story.
-Phases 4–6 are what make it a security project.
-
----
-
-## Risks and mitigations
-
-| Risk | Mitigation |
-|---|---|
-| Target exposed beyond the lab | Host-only adapter; verify with `ip a` and `nmap` from outside before starting |
-| Findings collapse into "no auth" | Phase 1 precedes Phase 5 |
-| Scanner noise treated as findings | Triage every result; record accepted-risk decisions explicitly |
-| Detection rules never fire | Phase 4 gate requires a scripted reproduction per rule |
-| Report shows findings without fixes | Phase 6 is mandatory; re-scan evidence required |
-| Game regressions from hardening | Full suite + two-client end-to-end game in every phase gate |
-
----
-
-## Out of scope
-
-- Internet-facing deployment
-- Multi-tenant accounts, OAuth, MFA (possible later extension)
-- Persistence migration off `InMemoryStore` (separate concern; noted in `ARCHITECTURE.md` §1.2)
-- Game rules changes
-- Mobile or native clients
+1. Start the built game through Node and explain what runs where.
+2. Put nginx in front using HTTP on the private network.
+3. Add locally trusted TLS; verify the API and Socket.IO transport.
+4. Freeze a VM snapshot and record the first bounded campaign.
+5. Add one metric, one panel and one alert before expanding.
+6. Prove one Suricata rule with attack and benign PCAPs.
+7. Add Alloy/Loki and a time/source/request-based investigation.
+8. Fix a finding, retest and publish a sanitized walkthrough.
+9. Optionally build a separate invited domain demo.
+
+No fixed calendar commitment: this is a first pass through several tools. Instrumentation, capture/parser discovery, native installs and correlation design need their own checkpoints.
+
+## Verification and evidence
+
+The standing local code gate remains focused logic, short relevant integration, architecture checks and affected typechecks/builds. No browser smoke, long socket/full-suite run is required by this scaffold. Actual host/TLS, two-client walkthrough and tool detections must later be observed and recorded; a build does not prove them.
+
+Record commit, config hash, tool versions, VM snapshot, UTC timestamps, target/profile, result and evidence locations. Keep raw captures and credentials private. Publish reviewed text/JSON extracts only. Use positive logging controls alongside synthetic-secret redaction checks.
+
+Each detector records attack sample, benign sample, expected/observed result, latency, blind spots and missed/dropped-event handling. One quiet normal match is an initial check, not a false-positive-rate measurement.
+
+## Structure and ownership
+
+- [deploy/profiles](../deploy/profiles/README.md): application override examples and separation requirements.
+- [deploy](../deploy/README.md): eventual runtime/proxy/hardening and monitoring artifacts.
+- [lab/inventory](../lab/inventory/README.md): scope and target identity.
+- [lab/contracts](../lab/contracts/README.md): telemetry and independent fuzzer boundaries.
+- [lab/runbooks](../lab/runbooks/README.md): learning/provisioning/campaign steps.
+- [lab/campaigns](../lab/campaigns/README.md): case matrix and reproducibility.
+- [lab/findings](../lab/findings/README.md): register, finding template and publication boundary.
+
+Detailed executable deployment/scanner/fuzzer configurations remain future work. No tools are installed, services started, secrets provisioned or targets scanned by this structure.

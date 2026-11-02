@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "planning-example-not-enforced",
+  "targets": [
+    {
+      "id": "isolated-game",
+      "profile": "isolated-lab",
+      "instanceId": "security-lab",
+      "baseUrl": "https://game.lab.test",
+      "expectedAddress": "192.168.56.20",
+      "credentialRef": "external:lab-test-accounts",
+      "snapshotRef": "TO_RECORD",
+      "allowedActivities": [
+        "bounded-http-and-socket-assessment"
+      ],
+      "outOfScope": [
+        "other-hosts",
+        "external-networks"
+      ]
+    },
+    {
+      "id": "invited-demo",
+      "profile": "invited-demo",
+      "instanceId": "invited-demo",
+      "baseUrl": "https://demo.example.com",
+      "credentialRef": "external:demo-test-accounts",
+      "allowedActivities": [
+        "functional-demo"
+      ],
+      "outOfScope": [
+        "active-scanning",
+        "flooding",
+        "fuzzing"
+      ]
+    }
+  ]
+}

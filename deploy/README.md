@@ -5,6 +5,8 @@ Deployment and host-hardening artifacts for the Linux target described in
 
 **Status:** most host-hardening artifacts remain scaffolding. Platform Milestone 3 adds `logrotate/deltas`; its Linux installation/rotation checks remain deployment work. Database backup/restore instructions are in the [storage supplement](../docs/persistence-deck-architecture.md#operations-and-failure-modes).
 
+The [revised lab plan](../docs/security-lab-plan.md) begins with Node → nginx HTTP → local TLS and a small isolated assessment. [Profiles](profiles/README.md) separate that target from an optional invited [Cloudflare demo](cloudflare/README.md). [Beginner runbooks](../lab/runbooks/README.md) and monitoring/campaign templates supply structure; executable host/tool setup remains future work.
+
 Platform Milestone 4 adds the [dedicated admin-origin nginx example](nginx/admin.conf.example), durable admin auditing and configuration profiles. The logrotate policy now covers diagnostic and admin-audit JSONL files. See [admin setup/deployment](../docs/admin-architecture.md#running-and-deployment) and [configuration precedence](../docs/configuration-architecture.md). nginx/TLS installation and Linux validation are not claimed by the local logic/build checks.
 
 ## Workspace build and runtime paths
@@ -45,7 +47,7 @@ Platform Milestone 5 adds the separate public builder. Its [nginx location fragm
 | `nginx/admin.conf.example` | Separate admin static origin, API proxy, TLS/CSP placeholders | Platform 4; host validation pending |
 | `firewall/` | `ufw` rules and SSH hardening script | 2 |
 | `auditd/` | `auditd` watch rules and `aide` baseline procedure | 2 |
-| `monitoring/` | Prometheus, Grafana, Suricata compose stack | 3, 4 |
+| `monitoring/` | Planning slots for Prometheus/Grafana, Suricata/EVE exporter, Alloy/Loki | 3, 4, 4.5 |
 | `logrotate/deltas` | Daily/10 MiB delta-log rotation policy; seven archives, service-owned files | Platform 3; host verification in security-lab 2 |
 
 ## Rules
