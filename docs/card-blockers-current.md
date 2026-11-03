@@ -1,6 +1,6 @@
 # Current workbook card blockers
 
-Audit of engine snapshot `105dce59`, superseding blocker conclusions in the earlier workbook, query and rule-contract delivery reports. This audit adds test-only recipes and documentation; it does not register cards or change mechanics.
+Audit of engine snapshot `105dce59`, superseding blocker conclusions in the earlier workbook, query and rule-contract delivery reports. This audit adds test-only recipes and documentation; it does not register cards or change mechanics. The owner clarification section records subsequent cost and causal-outcome decisions.
 
 Source: local ignored `tem/六界之峰.xlsx`, SHA-256 `27b91d995e22fb8540a04c78a73d41f64daa08b216b275aceb1f282723a64d7d`. Include 炎獸, 幻影木偶, 風獸, 冰龍, 上使 and 蒼巨人. BP01, 虛界靈 and 雙色補充包 remain excluded from new implementation. Existing excluded definitions are retained.
 
@@ -18,6 +18,22 @@ Other labels, which can overlap:
 - **Registered:** a matching name exists in the explicit catalog. This is a coverage fact, not certification of workbook fidelity or balance.
 
 An ability is not ready merely because one clause works. A card moves to U only after every dependency is cleared; a registered card can still have fidelity gaps.
+
+## Owner clarifications and implementation direction — 4 November 2026
+
+These rulings refine this audit; the engine capabilities below remain those of snapshot `105dce59` until the corresponding implementation is delivered.
+
+**Effective cost.** For 幻影木偶, every mana-cost query returns zero while it is in the graveyard and its printed phase/board conditions hold. This includes eligibility/threshold queries, not merely the amount paid to cast it. Leaving that zone or losing the condition restores the ordinary effective value. Use one room-aware effective-cost resolver and derive total mana value from its structured cost; preserve the printed blueprint separately for inspection or explicitly printed-cost queries. Cast payment starts from that effective cost, then applies payment adjustments once. This ruling does not itself grant ordinary graveyard casting. The phantom card's cost wording is settled; its shared query consumer is a technical gap.
+
+**Deck policy.** The proposed validation design uses an owned, schema-validated config file for format bounds and per-card numeric/unlimited/excluded exceptions. Compile it into the same shared validation policy for the builder and server; the server's policy remains authoritative when saving and starting a game. The existing format/eligibility JSON and pure validator are the starting point. Extend the numeric copy-limit mapping rather than give the builder independent hardcoded exceptions or trust a browser-supplied policy.
+
+**Once per game.** Extend the room's structured use counters/history and existing usage identities, with a pure availability query. Use a stable ability identity plus an explicit scope (physical card, current incarnation, player or shared group). A physical-card key must survive zone changes; ordinary current-incarnation turn keys are not sufficient. Increment exactly once when the declared use is committed, not during availability queries. Specify trigger consumption separately (enqueue versus successful resolution). Reset game-period counts on a new match; reconnecting must not reset them. Reuse/generalize `gameRuleUses` and turn-history machinery instead of scanning display logs or adding a parallel modifier-only counter.
+
+**Sources and causes.** Damage, rule/effect changes, state changes and departures should share a serializable cause/source contract. Extend the current event identities, `BatchCause`, source snapshots and proposed-event transaction. Preserve source card UUID/revision, ability and stack identity, controller-at-cause, parent/root cause, affected object identity, change reason and actual outcome. Changes from game rules can have a system cause without a source card. Carry causality through replacements and state-based lethal checks; keeping only the last source string on a damage event cannot reliably answer “this effect killed that creature.” Record actual damage after prevention, retain source information when the source leaves, and distinguish sacrifice/destroy/lethal departure. Contributions from multiple simultaneous or persistent causes need an explicit attribution rule rather than guessing from event order.
+
+**SOUL.** The owner does not want a distinct soul-death type for now. For the relevant exile wording, represent it as “if this effect kills X, send X to exile.” This is a source-scoped outcome/destination rule, not a global rule that every kill exiles. Where the intended action is an exile destination, replace the lethal departure before a graveyard move; do not emit a fictitious graveyard arrival and exile afterward. A follow-up such as 鬼斧's bonus can query the attributed kill outcome independently of its final destination. Existing other zero-life rescue wording still needs its own interception behavior. The blocker family below is therefore **CAUSE**, not a new SOUL mechanic.
+
+These are shared infrastructure directions. They settle intent and ownership; they do not by themselves mark all dependent cards U before runtime consumers and focused proofs exist.
 
 ## Current coverage
 
@@ -62,7 +78,7 @@ Generic counter storage and prevention are available. That does not certify the 
 | DECK | Copy-limit eligibility/config mapping, distinguished from existing validator support |
 | COST | Card-specific color-conversion payment permissions, distinct from cast-price adjustment |
 | VALUE | Effective mana value versus payment; selected-result-card fields; sums/division/floor/rounding |
-| SOUL | Cause-attributed zero-life departures and zero-life replacement semantics |
+| CAUSE | Shared source/cause attribution, lethal outcomes, source-scoped exile destinations and zero-life interception |
 | REVEAL | Captured windows, larger bounds, destination/selection/order workflows and repetition |
 | USAGE | Ordinary per-game ability limits, shared/dynamic limits or nonstacking composition proof |
 | EVENT | Off-zone source discovery and tap/draw-step/life-change/reveal provenance events |
@@ -90,18 +106,18 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 
 | Row | Card | Status | Families | Current disposition |
 |---:|---|---|---|---|
-| 2 | 幻影木偶* | B/W | DECK, VALUE | Twenty-copy policy is not mapped. Conditional cast pricing is supported, but clarify whether graveyard “cost considered as” changes effective mana value, grants ordinary graveyard casting/timing, or only changes payment. A price setter alone grants no zone permission. Attack-triggered graveyard deployment is supported. |
-| 6 | 幻影巨人 | W | VALUE | Mill, attack-triggered graveyard deployment and conditional payment setters are supported. Resolve the meaning of graveyard “cost considered as” and whether it grants normal casting permission; effective mana-value changes or ordinary graveyard casting would need new consumers. Do not infer those permissions merely from the cost text. |
-| 8 | 赫拉鬼火術 | B | SOUL | Need cause-attributed zero-life departures so only creatures soul-destroyed by this particular stat reduction are exiled. Ordinary destruction is not equivalent. |
+| 2 | 幻影木偶* | B | DECK, VALUE | Owner confirmed all mana-cost queries see zero while the graveyard/phase/board conditions hold. Need the shared effective-cost consumer and twenty-copy config mapping. Conditional cast pricing and attack-triggered graveyard deployment already exist; cost text does not grant ordinary graveyard casting. |
+| 6 | 幻影巨人 | B | VALUE | Mill, attack-triggered graveyard deployment and conditional payment setters are supported. Apply the shared effective-cost model to its graveyard base/conditional setters; current mana-value queries still read the printed value. No ordinary graveyard casting permission follows merely from this text. |
+| 8 | 赫拉鬼火術 | B | CAUSE | Need lethal outcomes attributed to this stat reduction and a source-scoped exile destination. No distinct soul-death event/type is required; ordinary unqualified destruction does not supply the attribution. |
 | 10 | 幻影木偶工廠 | B | REVEAL, USAGE | Five-card window, move every matching creature to graveyard, order the remainder on top, and a once-per-game alternative. Existing reveal-to-hand/bottom and ability turn limits do not cover this. |
 | 11 | 赫拉的營寨 | B/W | EVENT, USAGE | Player life-loss events exist; creature life/max-life reduction is not a general event. Both routes must share one draw per turn. Clarify which creature life changes qualify. |
 | 12 | 幻像祭壇 | B | ENTRY | Exact milled-card recovery and black/type filters are now supported. Only atomic tapped entry remains; an entry trigger that later taps is observably different. |
 | 13 | 幻影夢人 | B | EVENT, PAY | Need draw-step trigger and optional pay-two-life-then-draw branch. Life as an announced ability cost alone does not implement this triggered payment decision. |
-| 14 | 幻影木偶 鬼斧 | B | SOUL | Permanent max-life reduction and turn-long bonus exist. Need an outcome tied to this reduction soul-destroying its target before awarding the bonus. |
+| 14 | 幻影木偶 鬼斧 | B | CAUSE | Permanent max-life reduction and turn-long bonus exist. Need an attributed kill outcome caused by this reduction before awarding the bonus; no separate soul-death classification. |
 | 15 | 幻影木偶 鬼火 | U | — | Existing optional mill result capture, black noncreature-type filter and exact-card recovery compose on entry and attack. Seven focused recipe tests cover this card and the scythe; definition/registration still to deliver. |
 | 17 | 死亡組裝 | B/W | TOKEN | Multi-target friendly destruction is supported. Token creation, including the token's attack ability, is missing. Clarify whether successful destruction of all three is a prerequisite rather than only an instruction sequence. |
 | 18 | 幻影木偶軍團長 | B | EXPIRY | Graveyard deployment exists. The +4 bonus must expire at this battle's end; end-of-turn expiry is not equivalent. |
-| 19 | 幻影木偶智者* | W/P | VALUE, USAGE | Graveyard payment setter and phase/tribe/board-count stat conditions exist. Settle effective-cost/ordinary-casting intent and prove the printed nonstacking anthem across multiple copies; source-qualified grants must not be assumed to deduplicate. |
+| 19 | 幻影木偶智者* | B/P | VALUE, USAGE | Graveyard payment setter and phase/tribe/board-count stat conditions exist. Need the shared effective-cost view for the graveyard setter and proof of the printed nonstacking anthem across multiple copies. This text alone grants no ordinary graveyard casting permission. |
 | 20 | 赫拉幻影術 | W | VALUE | Phase-dependent mana-value filtering and graveyard deployment are supported. Clarify “ignore all graveyard card effects”: printed-cost-only selection may use the existing fixed mana value; blanket suppression would require additional behavior. No unconditional engine blocker is established until this ruling. |
 | 21 | 幻影魔鐮 鬼火 | U | — | Restricted attachment, +2 attack and granted attack-triggered exact-mill recovery compose with existing consumers; the grant stops when the weapon leaves. Live definition/registration still to deliver. |
 | 22 | 幻影魔神 赫拉尼亞* | B/W | EVENT, PAY, VALUE | Discover the discarded card itself from hand/library, offer return versus optional paid deployment, and read that exact discarded card's mana value for the temporary reduction. Mill result membership alone supplies no selected-result-card mana-value accessor. Clarify trigger origin/timing when authored. |
@@ -145,7 +161,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 20 | 極光龍宮 | B/W/P | COUNTER, PAY | Aurora contract, selected-counter removal payment and an explicitly deferred special-summon origin. A resolving counter-removal effect must not stand in for payment. |
 | 21 | 極光龍后 亞雅隆 | B/W/P | COUNTER | Need full per-recipient prevention grant semantics. Clarify the first ability's activation condition/timing; the workbook labels this apparent 4/8 creature as Land. Turn-long untargetability is already expressible. |
 | 22 | 極北龍帝 亞瑟 | B/W | DAMAGE, VALUE | Count and multiply exist. Need defined per-dragon damage assignment and half-damage arithmetic/rounding; clarify repeated five-damage packets versus one summed packet and odd damage. |
-| 23 | 巨龍之墓 | B/W/P | COUNTER, SOUL | Aurora contract plus replacing a zero-life state-based departure with optional artifact destruction and healing. Ordinary damage regeneration is not this replacement; clarify what life recovery means after max-life reduction. |
+| 23 | 巨龍之墓 | B/W/P | COUNTER, CAUSE | Aurora contract plus replacing a zero-life state-based departure with optional artifact destruction and healing. Ordinary damage regeneration is not this replacement; clarify what life recovery means after max-life reduction. |
 | 24 | 寒巢之主 亞蕾雅 | B | PAY, EXPIRY | Charge and creature-entry behavior exist. Need atomic four-counter payment and battle-lifetime protection for both players, rather than a turn-long approximation. |
 | 25 | 諸界六皇 冬機之卡斯拿斯 | B/W | IMMUNITY, EVENT | Need immunity against opposing spell/creature effects, not just targeting. Also tap-triggered recovery during opponent attack phase; clarify 回復 and qualifying source effects. |
 
@@ -200,10 +216,10 @@ A complete fidelity certification of the 68 registered matches is outside this m
 ## Suggested delivery order
 
 1. Author and register the two proven Ghostfire recipes with their own release tests. That would raise definition coverage to **70/142**, leaving **72** missing, without a new engine mechanic.
-2. Correct unlimited-copy config and extend the existing numeric copy-limit mapping. Settle effective-cost/graveyard-permission intent for the phantom cards; do not implement ordinary graveyard casting solely because cost text mentions that zone.
+2. Correct unlimited-copy config and extend the existing numeric copy-limit mapping. Implement the confirmed effective-cost view for the phantom cards; ordinary graveyard casting remains a separate permission, not implied by cost text.
 3. Add focused slices for atomic entry, ordinary per-game usage and shared captured-reveal workflows. Reuse the existing query/parser contract rather than create standalone zone-specific filters.
 4. Prove and, where needed, complete the counter-owned Aurora/霜器 lifecycle; add counter payments. Reassess all dependent rows together, without treating partial coverage as full readiness.
-5. Deliver cause-attributed soul outcomes, missing events/payments and combat lifetimes; then the broader host storage, ritual, random/cross-owner and immunity mechanics. Recount U after each complete tested slice rather than summing overlapping card-family counts.
+5. Deliver source-attributed kill outcomes, missing events/payments and combat lifetimes; then the broader host storage, ritual, random/cross-owner and immunity mechanics. Recount U after each complete tested slice rather than summing overlapping card-family counts.
 
 Ask the deferred wording questions when their cards enter implementation. This audit records the delivery dependencies; the proposed mechanics remain future work.
 
