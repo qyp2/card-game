@@ -1,0 +1,69 @@
+{
+  "id": "heavenly-gate",
+  "name": "天域之門",
+  "manaCost": "{1}{Y}{Y}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "subTypes": [],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "① 配置時：我方玩家生命值恢復1點，並抽一張牌。② 主：犧牲場上的此遺跡，或從手牌棄置此卡，生產1點雷屬性能量。",
+  "onEnterEffects": [
+    {
+      "action": "MODIFY_LIFE",
+      "params": {
+        "amount": 1
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    },
+    {
+      "action": "DRAW",
+      "params": {
+        "amount": 1
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    }
+  ],
+  "abilities": [
+    {
+      "id": "discard-for-yellow",
+      "type": "activated",
+      "allowedZones": ["hand"],
+      "castSpeed": "sorcery",
+      "immediate": true,
+      "cost": { "discardSelf": true },
+      "effects": [
+        {
+          "action": "ADD_MANA",
+          "params": { "color": "yellow", "amount": 1 },
+          "targeting": { "type": "self", "required": false }
+        }
+      ]
+    },
+    {
+      "id": "sacrifice-for-yellow",
+      "type": "activated",
+      "cost": {
+        "sacrifice": true
+      },
+      "castSpeed": "sorcery",
+      "effectId": "ADD_MANA",
+      "params": {
+        "color": "yellow",
+        "amount": 1
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    }
+  ]
+}

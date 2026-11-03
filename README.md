@@ -25,6 +25,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Lab learning path, runbooks and evidence templates](lab/README.md) — isolated nginx assessment and a separate optional invited tunnel demo; implementation remains planned.
 - [Card JSON field reference and commented examples](packages/engine/src/library/README.md)
 - [Workbook card readiness and complete named-row inventory](docs/workbook-card-readiness-2026-11-03.md)
+- [Data-only card implementation and deferred-card audit](docs/workbook-data-only-batch-2026-11-03.md)
 - [Platform roadmap](docs/platform-plan-2026-10-24.md)
 - [Navigation and Test Lab roadmap](docs/navigation-test-lab-plan.md)
 - [Current navigation, shared sign-in and migration](docs/navigation-session-architecture.md)

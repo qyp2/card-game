@@ -1,0 +1,108 @@
+{
+  "id": "shadowwood-sword",
+  "name": "影木劍",
+  "manaCost": "{B}{B}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "subTypes": [
+    "Equipment"
+  ],
+  "colors": [
+    "black"
+  ],
+  "rulesText": "裝備條件：「幻影木偶」僕從。裝備僕從攻擊力+1。① 裝備中；攻擊時：對手一張僕從的最大生命值永久-1。",
+  "attachmentRequirements": {
+    "type": "permanent",
+    "controller": "self",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "幻影木偶"
+    ],
+    "required": true,
+    "minTargets": 1,
+    "maxTargets": 1
+  },
+  "abilities": [
+    {
+      "id": "attach",
+      "type": "activated",
+      "cost": {},
+      "castSpeed": "sorcery",
+      "effectId": "ATTACH",
+      "targeting": {
+        "type": "permanent",
+        "controller": "self",
+        "cardTypes": [
+          "Creature"
+        ],
+        "subTypes": [
+          "幻影木偶"
+        ],
+        "required": true,
+        "minTargets": 1,
+        "maxTargets": 1
+      }
+    },
+    {
+      "id": "equipped-creature",
+      "type": "static",
+      "effects": [
+        {
+          "layer": 7,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "STAT_DELTA",
+            "power": 1
+          }
+        },
+        {
+          "layer": 6,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "ABILITY",
+            "add": [
+              {
+                "id": "shadowwood-sword-attack",
+                "type": "triggered",
+                "castSpeed": "instant",
+                "triggerCondition": "ON_ATTACK",
+                "trigger": {
+                  "subject": "self"
+                },
+                "effects": [
+                  {
+                    "action": "CREATE_CONTINUOUS_EFFECT",
+                    "params": {
+                      "effect": {
+                        "type": "STAT_DELTA",
+                        "toughness": -1
+                      },
+                      "duration": "PERMANENT"
+                    },
+                    "targeting": {
+                      "type": "permanent",
+                      "controller": "opponent",
+                      "cardTypes": [
+                        "Creature"
+                      ],
+                      "required": true,
+                      "minTargets": 1,
+                      "maxTargets": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

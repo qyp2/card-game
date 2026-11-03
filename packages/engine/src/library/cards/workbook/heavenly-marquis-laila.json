@@ -1,0 +1,50 @@
+{
+  "id": "heavenly-marquis-laila",
+  "name": "天域三侯 萊拉",
+  "manaCost": "{1}{Y}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "上使"
+  ],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "① 速：無效對手即將發動的魔法卡效果並棄置該卡片。然後，將此僕從除外",
+  "power": 0,
+  "toughness": 2,
+  "abilities": [
+    {
+      "id": "counter-and-exile",
+      "type": "activated",
+      "castSpeed": "instant",
+      "cost": {},
+      "effects": [
+        {
+          "action": "COUNTER",
+          "params": {},
+          "targeting": {
+            "type": "spell",
+            "controller": "opponent",
+            "required": true,
+            "minTargets": 1,
+            "maxTargets": 1
+          }
+        },
+        {
+          "action": "MOVE_ZONE",
+          "params": {
+            "origin": "battlefield",
+            "destination": "exile"
+          },
+          "targeting": {
+            "type": "self",
+            "subject": "source",
+            "required": false
+          }
+        }
+      ]
+    }
+  ]
+}

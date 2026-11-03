@@ -1,4 +1,14 @@
 // Explicit content manifest: add new definitions here; validated by the catalog.
+import frostGiant from './workbook/frost-giant.json';
+import frostSoul from './workbook/frost-soul.json';
+import heavenlyGate from './workbook/heavenly-gate.json';
+import heavenlyGatekeeper from './workbook/heavenly-gatekeeper.json';
+import heavenlyLance from './workbook/heavenly-lance.json';
+import heavenlyMarquisLaila from './workbook/heavenly-marquis-laila.json';
+import heavenlyPatrol from './workbook/heavenly-patrol.json';
+import shadowwoodSword from './workbook/shadowwood-sword.json';
+import thunderDevouringHolySword from './workbook/thunder-devouring-holy-sword.json';
+import vitalityWoodStaff from './workbook/vitality-wood-staff.json';
 import card0 from './development/ability-counter-fixture.json';
 import card1 from './workbook/abyss-illusionist.json';
 import card2 from './st01a/achilles-blood-temple.json';
@@ -80,6 +90,16 @@ import card77 from './workbook/worlds-sin-emperor.json';
 import card78 from './workbook/worlds-traveler.json';
 
 const cards: Record<string, unknown> = {
+  'frost-giant': frostGiant,
+  'frost-soul': frostSoul,
+  'heavenly-gate': heavenlyGate,
+  'heavenly-gatekeeper': heavenlyGatekeeper,
+  'heavenly-lance': heavenlyLance,
+  'heavenly-marquis-laila': heavenlyMarquisLaila,
+  'heavenly-patrol': heavenlyPatrol,
+  'shadowwood-sword': shadowwoodSword,
+  'thunder-devouring-holy-sword': thunderDevouringHolySword,
+  'vitality-wood-staff': vitalityWoodStaff,
   'ability-counter-fixture': card0,
   'abyss-illusionist': card1,
   'achilles-blood-temple': card2,

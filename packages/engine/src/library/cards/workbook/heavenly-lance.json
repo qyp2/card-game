@@ -1,0 +1,102 @@
+{
+  "id": "heavenly-lance",
+  "name": "天域長槍",
+  "manaCost": "{Y}{Y}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "subTypes": [
+    "Equipment"
+  ],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "裝備條件：無。裝備僕從攻擊力+1。① 裝備中；攻擊時：我方玩家生命值恢復1點，抽一張牌。",
+  "attachmentRequirements": {
+    "type": "permanent",
+    "controller": "self",
+    "cardTypes": [
+      "Creature"
+    ],
+    "required": true,
+    "minTargets": 1,
+    "maxTargets": 1
+  },
+  "abilities": [
+    {
+      "id": "attach",
+      "type": "activated",
+      "cost": {},
+      "castSpeed": "sorcery",
+      "effectId": "ATTACH",
+      "targeting": {
+        "type": "permanent",
+        "controller": "self",
+        "cardTypes": [
+          "Creature"
+        ],
+        "required": true,
+        "minTargets": 1,
+        "maxTargets": 1
+      }
+    },
+    {
+      "id": "equipped-creature",
+      "type": "static",
+      "effects": [
+        {
+          "layer": 7,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "STAT_DELTA",
+            "power": 1
+          }
+        },
+        {
+          "layer": 6,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "ABILITY",
+            "add": [
+              {
+                "id": "heavenly-lance-attack",
+                "type": "triggered",
+                "castSpeed": "instant",
+                "triggerCondition": "ON_ATTACK",
+                "trigger": {
+                  "subject": "self"
+                },
+                "effects": [
+                  {
+                    "action": "MODIFY_LIFE",
+                    "params": {
+                      "amount": 1
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  },
+                  {
+                    "action": "DRAW",
+                    "params": {
+                      "amount": 1
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

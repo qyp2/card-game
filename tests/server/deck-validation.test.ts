@@ -1,13 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { CatalogResponseSchema, validateDeck, type DeckInput } from '@card-game/protocol';
+import { CatalogResponseSchema, newScenario, validateDeck, type DeckInput } from '@card-game/protocol';
 import { buildCatalog } from '@server/catalog/catalog';
 import { DeckService, InvalidDeckError } from '@server/decks/deck-service';
 import { InMemoryDeckStore } from '@server/decks/deck-store';
 import { getBlueprint } from '@library/card-catalog';
+import { buildScenarioRoom, scenarioRandom } from '@engine/scenario-setup';
+import { randomUUID } from 'node:crypto';
 
 const catalog = buildCatalog();
 const valid: DeckInput = { name: 'Constructed', format: 'standard', cards: [{ cardId: 'land-red', quantity: 56 }, { cardId: 'empire-servant', quantity: 4 }] };
 describe('shared deck rules and catalog boundary', () => {
+  it('constructs a lab scenario using the new canonical cards', () => {
+    const ids = ['frost-giant', 'frost-soul', 'heavenly-gate', 'heavenly-gatekeeper', 'heavenly-lance', 'heavenly-marquis-laila', 'heavenly-patrol', 'shadowwood-sword', 'thunder-devouring-holy-sword', 'vitality-wood-staff'];
+    const scenario = newScenario(); scenario.openingHandSize = 0;
+    scenario.players[0].battlefield = ids.map(cardId => ({ cardId, quantity: 1 }));
+    const room = buildScenarioRoom('workbook-data-only', ['player1', 'player2'], scenario, { uuid: randomUUID, random: scenarioRandom(1) });
+    expect(room.battlefield.map(card => card.blueprint.id)).toEqual(ids);
+    expect(room.battlefield.every(card => card.state.ownerId === 'player1' && card.state.controllerId === 'player1')).toBe(true);
+  });
+  it.each([
+    'heavenly-lance', 'thunder-devouring-holy-sword', 'heavenly-gatekeeper', 'heavenly-patrol', 'frost-soul',
+    'heavenly-marquis-laila', 'shadowwood-sword', 'vitality-wood-staff', 'frost-giant', 'heavenly-gate',
+  ])('publishes new workbook card %s for deck and scenario consumers', cardId => {
+    expect(catalog.get(cardId)).toMatchObject({ id: cardId, deckLegal: true, copyLimit: 4 });
+    expect(validateDeck({ ...valid, cards: [{ cardId: 'land-red', quantity: 59 }, { cardId, quantity: 1 }] }, catalog).valid).toBe(true);
+  });
   it('permits an explicit repeatable land while enforcing minimum/maximum and four copies', () => {
     expect(validateDeck(valid, catalog).valid).toBe(true);
     for (const quantity of [1, 59, 251]) expect(validateDeck({ ...valid, cards: [{ cardId: 'land-red', quantity }] }, catalog).valid).toBe(false);

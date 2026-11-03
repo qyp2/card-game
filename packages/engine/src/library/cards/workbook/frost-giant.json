@@ -1,0 +1,17 @@
+{
+  "id": "frost-giant",
+  "name": "冰霜巨人",
+  "manaCost": "{2}{W}{W}{W}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "霜巨人"
+  ],
+  "colors": [
+    "white"
+  ],
+  "rulesText": "--",
+  "power": 8,
+  "toughness": 8
+}

@@ -1,0 +1,62 @@
+{
+  "id": "heavenly-patrol",
+  "name": "天域巡邏兵",
+  "manaCost": "{Y}{Y}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "上使"
+  ],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "① (效果回合一次)「天使皇 亞拉里亞」增加充能指數時，抽一張牌",
+  "power": 2,
+  "toughness": 1,
+  "abilities": [
+    {
+      "id": "emperor-charge-draw",
+      "type": "triggered",
+      "triggerCondition": "ON_COUNTER_CHANGED",
+      "limitPerTurn": 1,
+      "trigger": {
+        "subject": "any",
+        "controller": "any",
+        "condition": {
+          "all": [
+            {
+              "op": "eq",
+              "left": {
+                "path": "event.payload.card.blueprint.name"
+              },
+              "right": "天使皇 亞拉里亞"
+            },
+            {
+              "op": "eq",
+              "left": {
+                "path": "event.payload.counterType"
+              },
+              "right": "charge"
+            },
+            {
+              "op": "gt",
+              "left": {
+                "path": "event.payload.amount"
+              },
+              "right": 0
+            }
+          ]
+        }
+      },
+      "effectId": "DRAW",
+      "params": {
+        "amount": 1
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    }
+  ]
+}

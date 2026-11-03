@@ -1,0 +1,108 @@
+{
+  "id": "thunder-devouring-holy-sword",
+  "name": "吞雷聖劍",
+  "manaCost": "{Y}{Y}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "subTypes": [
+    "Equipment"
+  ],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "裝備條件：「上使」僕從。裝備僕從攻擊力+2。① 裝備中；攻擊時：我方玩家生命值恢復3點，抽一張牌。",
+  "attachmentRequirements": {
+    "type": "permanent",
+    "controller": "self",
+    "cardTypes": [
+      "Creature"
+    ],
+    "required": true,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "subTypes": [
+      "上使"
+    ]
+  },
+  "abilities": [
+    {
+      "id": "attach",
+      "type": "activated",
+      "cost": {},
+      "castSpeed": "sorcery",
+      "effectId": "ATTACH",
+      "targeting": {
+        "type": "permanent",
+        "controller": "self",
+        "cardTypes": [
+          "Creature"
+        ],
+        "required": true,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "subTypes": [
+          "上使"
+        ]
+      }
+    },
+    {
+      "id": "equipped-creature",
+      "type": "static",
+      "effects": [
+        {
+          "layer": 7,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "STAT_DELTA",
+            "power": 2
+          }
+        },
+        {
+          "layer": 6,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "ABILITY",
+            "add": [
+              {
+                "id": "thunder-devouring-holy-sword-attack",
+                "type": "triggered",
+                "castSpeed": "instant",
+                "triggerCondition": "ON_ATTACK",
+                "trigger": {
+                  "subject": "self"
+                },
+                "effects": [
+                  {
+                    "action": "MODIFY_LIFE",
+                    "params": {
+                      "amount": 3
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  },
+                  {
+                    "action": "DRAW",
+                    "params": {
+                      "amount": 1
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

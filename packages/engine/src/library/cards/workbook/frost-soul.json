@@ -1,0 +1,64 @@
+{
+  "id": "frost-soul",
+  "name": "冰霜之魂",
+  "manaCost": "{W}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "冰龍"
+  ],
+  "colors": [
+    "white"
+  ],
+  "rulesText": "① 召喚時：我方場上有被放置極光指示物的「冰龍」僕從，就可以抽一張牌。",
+  "power": 1,
+  "toughness": 1,
+  "abilities": [
+    {
+      "id": "aurora-entry-draw",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "subject": "self"
+      },
+      "interveningIf": {
+        "op": "gt",
+        "left": {
+          "numeric": {
+            "kind": "query",
+            "id": "counterTotal",
+            "args": {
+              "scope": {
+                "zones": [
+                  "battlefield"
+                ],
+                "controller": "self",
+                "cardTypes": [
+                  "Creature"
+                ],
+                "subTypes": [
+                  "冰龍"
+                ]
+              },
+              "counterType": "aurora"
+            }
+          }
+        },
+        "right": 0
+      },
+      "effectId": "DRAW",
+      "params": {
+        "amount": 1
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      },
+      "choice": {
+        "kind": "optional",
+        "prompt": "抽一張牌？"
+      }
+    }
+  ]
+}

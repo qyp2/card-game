@@ -1,0 +1,79 @@
+{
+  "id": "heavenly-gatekeeper",
+  "name": "天域門衛",
+  "manaCost": "{1}{Y}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "上使"
+  ],
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "① 防禦/破壞時：我方玩家生命值恢復1點，抽一張牌",
+  "power": 1,
+  "toughness": 4,
+  "abilities": [
+    {
+      "id": "block-recovery",
+      "type": "triggered",
+      "triggerCondition": "ON_BLOCK",
+      "trigger": {
+        "subject": "self"
+      },
+      "effects": [
+        {
+          "action": "MODIFY_LIFE",
+          "params": {
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        },
+        {
+          "action": "DRAW",
+          "params": {
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "destroyed-recovery",
+      "type": "triggered",
+      "triggerCondition": "ON_DESTROY",
+      "trigger": {
+        "subject": "self"
+      },
+      "effects": [
+        {
+          "action": "MODIFY_LIFE",
+          "params": {
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        },
+        {
+          "action": "DRAW",
+          "params": {
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      ]
+    }
+  ]
+}

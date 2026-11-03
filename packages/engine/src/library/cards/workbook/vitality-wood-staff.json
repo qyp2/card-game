@@ -1,0 +1,115 @@
+{
+  "id": "vitality-wood-staff",
+  "name": "生機木杖",
+  "manaCost": "{1}{G}{G}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "subTypes": [
+    "Equipment"
+  ],
+  "colors": [
+    "green"
+  ],
+  "rulesText": "裝備條件：無。裝備僕從攻擊力+2。① 召喚時：可以破棄我方所有手牌。然後，抽取與對手手牌相同數量的卡片。",
+  "attachmentRequirements": {
+    "type": "permanent",
+    "controller": "self",
+    "cardTypes": [
+      "Creature"
+    ],
+    "required": true,
+    "minTargets": 1,
+    "maxTargets": 1
+  },
+  "abilities": [
+    {
+      "id": "attach",
+      "type": "activated",
+      "cost": {},
+      "castSpeed": "sorcery",
+      "effectId": "ATTACH",
+      "targeting": {
+        "type": "permanent",
+        "controller": "self",
+        "cardTypes": [
+          "Creature"
+        ],
+        "required": true,
+        "minTargets": 1,
+        "maxTargets": 1
+      }
+    },
+    {
+      "id": "equipped-creature",
+      "type": "static",
+      "effects": [
+        {
+          "layer": 7,
+          "scope": {
+            "attachedToSource": true
+          },
+          "effect": {
+            "type": "STAT_DELTA",
+            "power": 2
+          }
+        }
+      ]
+    }
+  ],
+  "onEnterEffects": [
+    {
+      "action": "DISCARD_HAND",
+      "params": {},
+      "targeting": {
+        "type": "self",
+        "required": false
+      },
+      "choice": {
+        "kind": "options",
+        "min": 0,
+        "max": 1,
+        "prompt": "棄置所有手牌，然後抽取與對手手牌相同數量的牌？",
+        "options": [
+          {
+            "id": "replace-hand",
+            "label": "棄置所有手牌，然後抽牌",
+            "effects": [
+              {
+                "action": "DISCARD_HAND",
+                "params": {},
+                "targeting": {
+                  "type": "self",
+                  "required": false
+                }
+              },
+              {
+                "action": "DRAW",
+                "params": {
+                  "amount": {
+                    "numeric": {
+                      "kind": "query",
+                      "id": "count",
+                      "args": {
+                        "scope": {
+                          "zones": [
+                            "hand"
+                          ],
+                          "controller": "opponent"
+                        }
+                      }
+                    }
+                  }
+                },
+                "targeting": {
+                  "type": "self",
+                  "required": false
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
