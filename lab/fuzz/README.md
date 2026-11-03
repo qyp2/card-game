@@ -4,12 +4,33 @@
 
 Python Socket.IO client that speaks the protocol directly, because ZAP and Burp do not.
 
+## Why a purpose-built client
+
+Socket.IO is not WebSocket. It is a framing layer over Engine.IO: packet-type bytes,
+namespaces, acknowledgement IDs, JSON payloads and an HTTP long-polling fallback. A generic
+proxy can replay bytes but cannot *construct* a valid `playerAction` event, so it never reaches
+the application logic where the findings live.
+
+## Why Python rather than the repo's own client
+
+The repository already depends on `socket.io-client` (`apps/game-client`) and `socket.io`
+(`apps/server`), so a Node/TypeScript fuzzer would be less work. It would also reuse the same
+client library and likely the same shared Zod schemas the server validates with — an attacker
+that inherits the defender's assumptions can mask bugs. `python-socketio` is an independent
+implementation of the protocol.
+
+**Cost:** protocol knowledge is maintained in two places, and this directory can silently drift
+from the real event contract. **Mitigation:** a contract test asserting that the fuzzer's event
+names and payload shapes still match `packages/protocol`. Drift must fail a test, not surface
+during a campaign.
+
 ## Belongs here
 
 - `requirements.txt` — `python-socketio[client]`, `requests`, `rich`
 - `client.py` — authenticated connection helper (reuses Phase 1 login)
 - `cases/` — one module per test case
 - `run.py` — runner that emits JSON results
+- `contract.test.ts` (or equivalent) — asserts event names/payload shapes against `packages/protocol`
 
 ## Test cases
 

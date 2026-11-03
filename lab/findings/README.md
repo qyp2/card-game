@@ -19,7 +19,7 @@ Every finding records:
 | Component | File or endpoint affected |
 | Reproduction | Steps a second person can follow |
 | Evidence | Path under `evidence/` |
-| Detected by | Suricata rule id or Grafana alert name, or `none` |
+| Detected by | Suricata rule id, Grafana alert name, or a Loki correlation query — or `none` |
 | Remediation | Commit hash |
 | Re-test | Pass / fail with date |
 
@@ -28,3 +28,6 @@ Every finding records:
 - Evidence is redacted before it is committed — no tokens, keys, or real credentials.
 - A finding without reproduction steps is not a finding.
 - A finding without a re-test result stays open.
+- A finding detected only by a counter is weaker evidence than one with a log query attached.
+  Record which layer observed it (wire, loopback, application metric, log correlation) and
+  which did not; a detection gap is itself a finding.

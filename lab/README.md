@@ -15,6 +15,10 @@ Offensive and audit tooling for the Linux target described in
 | `crypto/` | Delta-log encryption + HMAC verification tool | 6 |
 | `findings/` | Findings register and evidence artifacts | 5, 6 |
 
+Detection tooling lives in [`../deploy/monitoring/`](../deploy/monitoring/README.md), not here:
+Prometheus/Grafana (Phase 3), per-interface Suricata (Phase 4) and Loki log correlation
+(Phase 4.5). This directory produces the attacks; that one produces the evidence.
+
 ## Rules
 
 - **Run only against the lab VM.** Host-only network, no exceptions. See plan §5.

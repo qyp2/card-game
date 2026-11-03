@@ -2,6 +2,7 @@
 
 **Prepared:** 21 October 2026
 **Status, 26 October 2026:** Phase 1 accounts/session boundary implemented through platform Milestone 2, with the user's focused-test adjustment. Deployment, monitoring, IDS, pentest campaigns and remediation evidence remain planned. See the [completion report](phase-2-status-2026-10-26.md).
+**Revised, 2 November 2026:** Phase 4 rewritten around what Suricata can actually observe through TLS termination; new Phase 4.5 adds log aggregation and cross-source correlation (Loki) so findings can be triaged, not merely counted; Phase 5 records why the fuzzer is a separate Python implementation; a learning ramp is added for a first pass through the stack. No phase has been executed beyond Phase 1.
 **Scope:** Turn the existing card game into a deliberately-hosted, deliberately-tested target for Linux security auditing, network analysis, intrusion detection, and observability work.
 
 This plan is separate from the rules-fidelity roadmap in
@@ -24,8 +25,9 @@ Demonstrate, on one coherent codebase, the following competencies:
 | Linux security-audit tooling (Bash/Python) | Phase 2 + Phase 5 — `lynis`, `auditd`, `aide`, `ss`, `nftables` |
 | TCP/IP and Ethernet | Phase 5 — capture and dissect the HTTP-upgrade → WebSocket path |
 | Vulnerability scanning | Phase 5 — Trivy, `npm audit`, ZAP, Nuclei |
-| IDS/IPS | Phase 4 — Suricata with custom rules for this application's traffic |
+| IDS/IPS | Phase 4 — Suricata with custom rules, split by what each network layer can observe |
 | PromQL / Grafana | Phase 3 — metrics endpoint, dashboards, alert rules |
+| Log aggregation and correlation | Phase 4.5 — Loki over `journald`, `auditd`, `eve.json` and nginx logs, with cross-source queries |
 | Pentest methodology | Phase 5 + Phase 6 — recon → exploit → detect → remediate → re-scan |
 
 ## 2. Non-goals
@@ -34,6 +36,9 @@ Demonstrate, on one coherent codebase, the following competencies:
 - **Not** a claim of production readiness. The target is a lab VM on an isolated network.
 - **Not** a from-scratch IDS or scanner. Real tools (Suricata, ZAP, Trivy) are used; the
   custom Python work is the Socket.IO fuzzer, which no off-the-shelf tool covers.
+- **Not** a full SIEM. Phase 4.5 adds log aggregation and cross-source correlation in Grafana.
+  It does not add case management, threat-intelligence feeds, UEBA, or a second analytics
+  stack. The distinction is stated so the deliverable is not overclaimed.
 - Private-view work from [`development/0.3-private-views.md`](development/0.3-private-views.md)
   was implemented by platform Milestone 1. F02 can serve as a historical finding with
   before/after regression evidence; a pentest campaign must assess the current code rather
@@ -73,14 +78,26 @@ flowchart TB
     end
     K -->|"nmap / ZAP / socket fuzz"| T
     T --> N["nginx :443<br/>TLS + WebSocket upgrade"]
-    N --> A["node :3000<br/>card-game"]
+    N -->|"plaintext HTTP/WS"| A["node :3000<br/>card-game"]
     A --> M["/metrics"]
-    A --> L["structured logs"]
+    A --> L["structured logs<br/>journald"]
     M --> P["Prometheus"]
-    L --> P
-    S["Suricata"] --> P
+    S1["Suricata on eth1<br/>TLS metadata only"] --> E["eve.json exporter"]
+    S2["Suricata on lo<br/>plaintext WS frames"] --> E
+    E --> P
+    L --> LO["Loki"]
+    AU["auditd"] --> LO
+    S1 --> LO
+    S2 --> LO
+    NG["nginx access/error"] --> LO
     P --> G["Grafana"]
+    LO --> G
 ```
+
+Two sensors, not one. TLS terminates at nginx, so a sensor on the host-only interface sees
+ciphertext; the plaintext WebSocket stream only exists on loopback. Phase 4 assigns every rule
+to the layer that can actually observe it. Prometheus carries counts; Loki carries the records
+needed to triage them.
 
 **Hard rule:** host-only adapter. No port forwarding, no bridged mode, no internet route on
 the target. Nothing in this plan may be executed against a host that was not built for it.
@@ -184,37 +201,111 @@ the target. Nothing in this plan may be executed against a host that was not bui
 - Dashboard renders live data during a two-client game.
 - Each alert rule fires when triggered manually and resolves when the condition clears.
 - PromQL queries are documented in `deploy/monitoring/README.md` with expected output.
+- Every `rate()` window is at least four times the configured scrape interval, and the
+  interval is recorded next to the alert rules.
 
 ---
 
-## Phase 4 — Detection (Suricata IDS/IPS)
+## Phase 4 — Network detection (Suricata IDS/IPS)
 
 **Dependency:** Phase 3.
 
+### Constraint: what Suricata can actually see
+
+The topology terminates TLS at nginx (`Kali → :443 nginx → :3000 node`). A sensor on the
+host-only interface therefore sees ciphertext. Application-layer rules — `playerAction` frame
+rates, `playerId`/session mismatches, `joinRoom` enumeration — are **not implementable on that
+interface**, because those fields live inside the encrypted WebSocket stream. An earlier draft
+of this phase asked for exactly that; it was not buildable.
+
+Detection is therefore split by layer, and every rule is assigned to the layer that can
+observe it:
+
+| Layer | Sensor | Observes | Rules |
+|---|---|---|---|
+| Wire (TLS) | Suricata on `eth1` (host-only) | IP/TCP/TLS metadata, record sizes, connection rates | port and service scans, TLS version and cipher anomalies, connection floods, oversized TLS records |
+| Loopback (plaintext) | Suricata on `lo` | nginx→node HTTP and WebSocket frames in clear | oversized WebSocket frames, `joinRoom` failure sequences, HTTP request anomalies |
+| Application | Prometheus metrics and structured logs | authenticated identity, action semantics | action flooding, auth failure bursts, seat/identity mismatch, IDOR attempts |
+
+Rules that need authenticated identity are application-layer by definition: the session
+binding is established inside the Node process, not on the wire. Do not attempt to reconstruct
+it from packets.
+
 ### Work
 
-1. Deploy Suricata on the target, monitoring the host-only interface.
-2. Write custom rules for this application's traffic, not just generic signatures:
-   - repeated `playerAction` frames above a threshold within a window
-   - `joinRoom` failures in sequence (room enumeration)
-   - oversized WebSocket frames
-   - requests carrying a `playerId` that does not match the authenticated session
-   - TLS handshake anomalies and cipher downgrade attempts
-3. Ship Suricata `eve.json` into Prometheus (via a small exporter) so alerts appear on the
-   same Grafana dashboard as application metrics.
-4. Document each rule with its intent, the attack it detects, and a false-positive note.
+1. Deploy Suricata in IDS mode on both `eth1` and `lo` (separate instances, or one `af-packet`
+   configuration per interface). Record which interface each rule is bound to.
+2. Write custom rules, each tagged with its layer from the table above:
+   - wire: TLS handshake anomalies, cipher downgrade attempts, connection-rate floods
+   - loopback: oversized WebSocket frames, `joinRoom` failure sequences (room enumeration)
+   - application (Prometheus alert rules, not Suricata): repeated `playerAction` frames above
+     a threshold, `playerId` that does not match the authenticated session
+3. Ship Suricata `eve.json` into Prometheus via a small exporter so network alerts appear on
+   the same Grafana dashboard as application metrics. The exporter is lossy by design — it
+   emits counters and last-seen timestamps, not raw alert records. Raw records go to the log
+   pipeline in Phase 4.5.
+4. Document each rule with its intent, the attack it detects, the interface it runs on, and a
+   false-positive note.
 
 ### Acceptance gate
 
-- Each custom rule fires during a scripted reproduction of its target behaviour.
+- Each custom rule fires during a scripted reproduction of its target behaviour, on the
+  interface named in its documentation.
+- Application-layer detections fire from Prometheus alert rules, not Suricata signatures.
 - Alerts appear in Grafana within the scrape interval.
 - Rules produce no alerts during a normal two-player game (false-positive check).
+- The plan records, per rule, why that layer is the only one that can observe the behaviour.
+
+---
+
+## Phase 4.5 — Log aggregation and correlation (Loki)
+
+**Dependency:** Phase 4. **Blocks:** Phase 5 — findings must be detectable and triageable.
+
+### Why this phase exists
+
+Phases 3 and 4 produce numbers and alerts. Neither preserves the evidence needed to answer
+"which account, from which address, at what time, and what did the request contain?" That
+evidence lives in logs, and before this phase nothing ships those logs anywhere queryable.
+Without it a Phase 5 finding can be *noticed* but not *triaged*, and the findings register's
+"Detected by" column can only ever name a counter.
+
+This is deliberately not a full SIEM. It is log aggregation plus cross-source correlation in
+the Grafana instance already standing up in Phase 3.
+
+### Work
+
+1. Add Loki and Promtail (or Grafana Alloy) to `deploy/monitoring/docker-compose.yml`.
+2. Ship four sources, each with a distinct label set:
+   - `journald` — the `cardgame` unit's stdout/stderr (structured application logs)
+   - `auditd` — `/var/log/audit/audit.log` (kernel audit trail from Phase 2)
+   - `suricata` — `eve.json` (raw alert records, not the exporter's counters)
+   - `nginx` — access and error logs (client address, TLS version, status)
+3. Add Loki as a Grafana datasource and build a "Security events" dashboard with at least
+   three cross-source correlation queries, for example:
+   - authentication failures in application logs joined by source address to nginx 4xx
+     responses and Suricata alerts
+   - `auditd` writes under `/opt/cardgame/data` correlated with delta-log growth
+   - one account appearing in both a Suricata alert and an application rejection
+4. Define retention explicitly. Loki retention is a configuration value, not a default;
+   record the chosen window and its disk cost.
+5. Redaction check: confirm no password, hash, session token or CSRF token reaches Loki.
+   Phase 1's redaction helper covers application logs; verify it end to end through the
+   pipeline rather than assuming it survives shipping.
+
+### Acceptance gate
+
+- All four sources are queryable in Grafana with the expected labels.
+- Each correlation query returns a non-empty result during a scripted attack.
+- A deliberate credential-bearing log line is confirmed absent from Loki.
+- Retention is configured and documented with its disk cost.
+- The findings register can cite a log query, not only a metric, as detection evidence.
 
 ---
 
 ## Phase 5 — Pentest
 
-**Dependency:** Phases 1–4. **Executed from the Kali VM only.**
+**Dependency:** Phases 1–4.5. **Executed from the Kali VM only.**
 
 ### Phases and tools
 
@@ -236,6 +327,24 @@ This is the differentiating deliverable. ZAP and Burp do not understand the Sock
 protocol, so a purpose-built client is required. It lives in `lab/fuzz/` with its own
 `requirements.txt`.
 
+**Why Python, and what it costs.** Socket.IO is not WebSocket: it is a framing layer over
+Engine.IO with packet-type bytes, namespaces, acknowledgement IDs, JSON payloads and an HTTP
+long-polling fallback. A generic proxy can replay bytes but cannot *construct* a valid
+`playerAction` event, so it never reaches the application logic where the interesting findings
+live. That alone justifies a purpose-built client.
+
+The choice of Python is a second, separate argument: **independence**. The repository already
+depends on `socket.io-client` in `apps/game-client` and `socket.io` in `apps/server`, so a
+Node/TypeScript fuzzer would be less work. But it would reuse the same client library and
+likely the same shared Zod schemas the server validates with, and an attacker that inherits
+the defender's assumptions can mask bugs. `python-socketio` is an independent implementation
+of the protocol.
+
+The cost is real: protocol knowledge is maintained in two places, and `lab/fuzz/` can silently
+drift from the real event contract. Mitigation is a contract test that asserts the fuzzer's
+event names and payload shapes still match `packages/protocol`; a drift failure is a test
+failure, not a surprise during a campaign.
+
 Test cases:
 
 1. Malformed `actionId` values and unknown action names.
@@ -249,8 +358,9 @@ Test cases:
 ### Findings register
 
 Every finding is recorded in `lab/findings/register.md` with: ID, title, severity (CVSS),
-affected component, reproduction steps, evidence path, detection status (which Suricata rule
-or Grafana alert caught it), remediation commit, and re-test result.
+affected component, reproduction steps, evidence path, detection status (which Suricata rule,
+Grafana alert or Loki correlation query caught it, and which layer did not), remediation
+commit, and re-test result.
 
 ### Acceptance gate
 
@@ -258,6 +368,7 @@ or Grafana alert caught it), remediation commit, and re-test result.
 - Every finding has a severity and an evidence artifact.
 - At least one finding is detected by the Phase 4 rules — proving detection works, not just
   scanning.
+- At least one finding is triaged from a Phase 4.5 log query, not only from a counter.
 
 ---
 
@@ -301,6 +412,31 @@ Deliverables:
 - PCAP walkthrough: Ethernet → IP → TCP → HTTP upgrade → WebSocket frames, annotated
 - A short "what I would do differently" section — this is what distinguishes a report from a
   checklist
+- A detection-coverage table: for each finding, which layer observed it (wire, loopback,
+  application metric, log correlation) and which did not. Gaps are findings too.
+
+---
+
+## Learning ramp
+
+This plan assumes no prior exposure to Prometheus, PromQL, Grafana or Suricata. The phases are
+ordered for delivery; this is the order to *learn* them, and it front-loads the parts that
+unblock everything else.
+
+| Step | Do this | Why here |
+|---|---|---|
+| 1 | Add `prom-client`, expose `/metrics`, `curl` it | Nothing downstream works until the text format is familiar |
+| 2 | Query it in the Prometheus expression browser at `:9090` | `rate`, `sum by`, `histogram_quantile` cover most of PromQL; the UI is the fastest feedback loop |
+| 3 | Point Grafana at Prometheus, build one panel by hand | Learn the query editor before automating it |
+| 4 | Convert that panel to provisioned JSON | Reproducibility is the point of the lab |
+| 5 | Write one alert rule, trigger it, watch it fire and resolve | `for:` duration and resolution behaviour are the parts people get wrong |
+| 6 | Install Suricata in IDS mode on `lo`, read `eve.json` with `jq` | Loopback is plaintext, so rules are easy to verify before adding TLS |
+| 7 | Write one rule that matches your own traffic | Rule syntax is learned by matching something you can see |
+| 8 | Add the `eve.json` exporter | The glue between detection and dashboards |
+| 9 | Add Loki and one correlation query | Log correlation is the step that turns alerts into triage |
+
+Steps 1–5 are a weekend. Step 6 onward is where the time goes, mostly on rule syntax and on
+discovering which interface actually sees what you assumed it saw.
 
 ---
 
@@ -313,10 +449,13 @@ deploy/
   ufw.sh
   auditd/cardgame.rules
   monitoring/
-    docker-compose.yml
+    docker-compose.yml  # Prometheus, Grafana, Loki, Promtail, Suricata
     prometheus.yml
-    grafana/            # provisioned datasource + dashboard JSON
+    grafana/            # provisioned datasources + dashboard JSON
     alerts.yml
+    suricata/           # suricata.yaml + cardgame.rules, per-interface
+    exporter/           # eve.json -> Prometheus counters
+    loki/               # retention and scrape configuration
     README.md
 lab/
   fuzz/                 # Python Socket.IO fuzzer + requirements.txt
@@ -343,14 +482,17 @@ Rough, part-time. These are not commitments.
 | 1 — Account system | 2–3 days |
 | 2 — Deployment + hardening | 1 day |
 | 3 — Observability | 1 day |
-| 4 — Detection | 1–2 days |
+| 4 — Network detection | 1–2 days |
+| 4.5 — Log aggregation and correlation | 1 day |
 | 5 — Pentest | 3–5 days |
 | 6 — Remediation + re-scan | 2–3 days |
 | 7 — Writeup | 1–2 days |
 | **Total** | **~2 weeks** |
 
 Phases 1–3 alone (about 4 days) already support a "secure coding + observability" story.
-Phases 4–6 are what make it a security project.
+Phases 4–6 are what make it a security project. Phase 4.5 is the cheapest addition that turns
+alerts into evidence; without it the findings register can only cite counters. The learning
+ramp below is not included in these figures.
 
 ---
 
@@ -362,6 +504,10 @@ Phases 4–6 are what make it a security project.
 | Findings collapse into "no auth" | Phase 1 precedes Phase 5 |
 | Scanner noise treated as findings | Triage every result; record accepted-risk decisions explicitly |
 | Detection rules never fire | Phase 4 gate requires a scripted reproduction per rule |
+| Rules written for traffic the sensor cannot see | Phase 4 assigns every rule to a layer and records why that layer is the only one that can observe it |
+| Findings noticed but not triageable | Phase 4.5 ships raw records to Loki before Phase 5 begins |
+| Log pipeline leaks credentials | Phase 4.5 gate requires an end-to-end redaction check through the shipping path |
+| Log volume fills the lab disk | Retention is an explicit Phase 4.5 deliverable with its disk cost recorded |
 | Report shows findings without fixes | Phase 6 is mandatory; re-scan evidence required |
 | Game regressions from hardening | Full suite + two-client end-to-end game in every phase gate |
 
@@ -374,3 +520,5 @@ Phases 4–6 are what make it a security project.
 - Persistence migration off `InMemoryStore` (separate concern; noted in `ARCHITECTURE.md` §1.2)
 - Game rules changes
 - Mobile or native clients
+- Full SIEM capability: case management, threat-intelligence feeds, UEBA, long-term cold
+  storage, or a second analytics stack. Phase 4.5 is log aggregation and correlation only.
