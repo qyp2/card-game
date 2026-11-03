@@ -8,6 +8,7 @@ import { actionPermission } from '../shared/action-permissions';
 
 import { structuralTargetLegal, targetKey } from '../shared/target-legality';
 import { materializeAnnouncementCost } from './announcement-values';
+import { collectCards, matchesCardFilter } from '../shared/card-query';
 
 /**
  * Result of an activation check. A rejection always carries a reason, so callers
@@ -35,36 +36,15 @@ export class ActionValidator {
     public static canMeetCondition(room: GameRoom, playerId: PlayerId, condition?: ActionCondition): boolean {
         if (!condition) return true; // No conditions required
 
-        const player = room.players[playerId];
-        const opponentId = room.player1Id === playerId ? room.player2Id : room.player1Id;
+        if (!room.players[playerId]) return false;
 
         // 1. Check if "something exists somewhere"
         if (condition.zoneCheck) {
             const check = condition.zoneCheck;
-            let targetCards: CardInstance[] = [];
-
-            // Determine which player's zone to look into
-            if (check.ownedBy === 'self' || check.ownedBy === 'any') {
-                if (check.zone.includes('battlefield')) targetCards.push(...room.battlefield.filter(c => CardCharacteristicService.resolveController(room, c) === playerId));
-                if (check.zone.includes('graveyard')) targetCards.push(...player.graveyard);
-                if (check.zone.includes('hand')) targetCards.push(...player.hand);
-            }
-            if ((check.ownedBy === 'opponent' || check.ownedBy === 'any') && opponentId) {
-                const opponent = room.players[opponentId];
-                if (check.zone.includes('battlefield')) targetCards.push(...room.battlefield.filter(c => CardCharacteristicService.resolveController(room, c) === opponentId));
-                if (check.zone.includes('graveyard')) targetCards.push(...opponent.graveyard);
-                if (check.zone.includes('hand')) targetCards.push(...opponent.hand);
-            }
-
-            // Filter by Card Type if specified (e.g., must be a "Creature")
-            if (check.cardType) {
-                targetCards = targetCards.filter(c => CardCharacteristicService.resolveTypes(room, c).includes(check.cardType!));
-            }
-
-            // Filter by absolute Card ID if specified (e.g., must be a specific named card)
-            if (check.cardId) {
-                targetCards = targetCards.filter(c => c.blueprint.id === check.cardId);
-            }
+            const targetCards = collectCards(room, { zones: check.zone, zonePlayer: check.ownedBy }, playerId,
+                card => CardCharacteristicService.resolveController(room, card)).filter(card => matchesCardFilter(card,
+                    CardCharacteristicService.resolve(room, card), { allOf: [check.filter ?? {},
+                        ...(check.cardType ? [{ cardTypes: [check.cardType] }] : []), ...(check.cardId ? [{ ids: [check.cardId] }] : [])] }, playerId));
 
             const requiredCount = check.minCount ?? 1;
             if (targetCards.length < requiredCount) return false;

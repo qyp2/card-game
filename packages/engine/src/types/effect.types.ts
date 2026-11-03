@@ -5,6 +5,7 @@
 
 import type { CardType, CardZone, ManaCost, CardInstance, CardSnapshot, ActivatedAbility, TriggeredAbility } from './card.types';
 import type { GameRoom } from './game.room.types';
+import type { CardFilter, RelativePlayer } from './card-query.types';
 
 // ============================================================================
 // 1. Registry Key Types
@@ -59,6 +60,7 @@ export interface ActionCondition {
         cardType?: CardType;
         cardId?: string;
         minCount?: number;
+        filter?: CardFilter;
     };
     /** Open string for extensibility — new flags added without type changes */
     globalFlag?: string;
@@ -136,20 +138,12 @@ export type TargetValidator = (room: GameRoom, target: TargetPointer, effect: St
 // 6. Card Definition Types (for authored card JSON)
 // ============================================================================
 
-export interface TargetingDefinition {
-  summonKind?: 'cast' | 'effect';
+export interface TargetingDefinition extends CardFilter {
   /** Compare current resolved maximum health minus marked damage among matching battlefield cards. */
   extrema?: { field: 'remainingHealth'; order: 'min' };
-  /** Bounds for one named counter; an absent counter has total zero. */
-  counter?: { type: string; min?: number; max?: number };
   stackTypes?: StackItemType[];
   type: 'player' | 'permanent' | 'spell' | 'stack' | 'card' | 'self' | 'any';
   zones?: CardZone[];
-  power?: { min?: number; max?: number };
-  toughness?: { min?: number; max?: number };
-  cardTypes?: string[];
-  subTypes?: string[];           // filter by subtype (e.g. ['Servant'])
-  controller?: 'self' | 'opponent' | 'any';
   required: boolean;
   minTargets?: number;
   maxTargets?: number;
@@ -268,7 +262,7 @@ export type EffectChoice =
   | { kind: 'optional'; prompt?: string }
   | { kind: 'discard'; prompt?: string }
   | { kind: 'options' | 'ordering'; options: ModeDefinition[]; min?: number; max?: number; prompt?: string }
-  | { kind: 'search'; zone: CardZone; cardRefs?: { cardUuid: string; zoneRevision: number }[]; excludedNames?: string[]; allAvailable?: boolean; cardTypes?: string[]; subTypes?: string[]; min?: number; max?: number; prompt?: string; ordered?: boolean }
+  | (CardFilter & { kind: 'search'; zone: CardZone; zonePlayer?: RelativePlayer; cardRefs?: { cardUuid: string; zoneRevision: number }[]; allAvailable?: boolean; min?: number; max?: number; prompt?: string; ordered?: boolean })
   | { kind: 'selection'; criteria: TargetingDefinition; prompt?: string }
   | { kind: 'distribution'; total: number; field?: string; prompt?: string };
 

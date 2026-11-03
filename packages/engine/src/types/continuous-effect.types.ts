@@ -1,16 +1,13 @@
 import type { CardAbility, CardBlueprint, CardZone, ManaColor } from './card.types';
+import type { CardFilter } from './card-query.types';
 
-export interface EffectScope {
+export interface EffectScope extends CardFilter {
   attachedToSource?: boolean;
   self?: boolean;
   cardUuid?: string;
   zoneRevision?: number;
   objects?: { cardUuid: string; zoneRevision: number }[];
   zones?: CardZone[];
-  cardTypes?: string[];
-  subTypes?: string[];
-  colors?: ManaColor[];
-  controller?: 'self' | 'opponent' | 'any';
 }
 export type CharacteristicNumber = import('./numeric-value.types').NumericValue | { count: EffectScope; multiply?: number; add?: number };
 export interface PermissionRule {

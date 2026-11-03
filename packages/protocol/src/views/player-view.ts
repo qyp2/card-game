@@ -45,7 +45,7 @@ export interface NumericChoiceView extends ChoiceBase { kind: 'number'; range: {
 export type OwnedChoiceView = ListedChoiceView | NumericChoiceView;
 export type ChoiceView = OwnedChoiceView | { kind: 'waiting'; playerId: string };
 export interface PlayerStateView {
-  id: string; life: number; poison?: number; failedDraw?: boolean; mana: ManaPool;
+  id: string; life: number; failedDraw?: boolean; mana: ManaPool;
   hand: CardView[]; handCount: number; deckCount: number; graveyard: CardView[]; exile: CardView[];
 }
 export interface PlayerView extends Versioned {

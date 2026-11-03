@@ -63,7 +63,6 @@ export function planStateBasedActions(room: GameRoom, pending: GameMutation[] = 
   const batch: StateBasedBatch = { mutations: [], decisions: [], references: room.battlefield.map(ref), resumePriority: room.priorityPlayerId };
   const losses: PlayerLoss[] = Object.values(room.players).flatMap(player => [
     ...player.life <= 0 ? [{ playerId: player.id, reason: 'life_total' as const }] : [],
-    ...(player.poison ?? 0) >= 10 ? [{ playerId: player.id, reason: 'poison' as const }] : [],
     ...player.failedDraw ? [{ playerId: player.id, reason: 'failed_draw' as const }] : [],
   ]);
   const legends = new Map<string, CardInstance[]>();

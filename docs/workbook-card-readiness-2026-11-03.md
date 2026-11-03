@@ -2,6 +2,8 @@
 
 **Historical assessment:** the counts below describe commit 488195e. See the [subsequent data-only implementation and complete in-scope dispositions](workbook-data-only-batch-2026-11-03.md) for the ten added cards, clarified terms and explicit BP01/Void/dual-color exclusions.
 
+The [shared-query follow-up](card-query-architecture.md) subsequently removes the basic zone/filter blockers and adds another five cards.
+
 **Reviewed commit:** 488195e. Read-only workbook assessment; no cards/rules were changed. Local source: tem/六界之峰.xlsx (ignored author workbook, not a committed repository dependency). SHA-256: 27b91d995e22fb8540a04c78a73d41f64daa08b216b275aceb1f282723a64d7d.
 
 ## What the numbers mean

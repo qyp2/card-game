@@ -45,7 +45,7 @@ describe('SyncService', () => {
 
   describe('buildDelta + broadcast', () => {
     it('round-trips replacement choices, actual keyword results and event batches through JSONL', () => {
-      const source = creature('source', 'player1', 2, 8, ['Infect', 'Lifelink']);
+      const source = creature('source', 'player1', 2, 8, ['Lifelink']);
       room.battlefield = [source];
       room.replacementEffects = [
         { id: 'double', label: 'Double', operation: { type: 'damage_scale', factor: 2 } },
@@ -65,7 +65,7 @@ describe('SyncService', () => {
       const result = engine.executePlayerAction(choice.playerId, 'choose', { choiceId: choice.id, choices: ['prevent'] });
       expect(result.success).toBe(true);
       save(pending, result.success ? result.mutations! : []);
-      expect(engine.roomState.players.player2.poison).toBe(4);
+      expect(engine.roomState.players.player2.life).toBe(16);
       expect(engine.roomState.players.player1.life).toBe(24);
       const records = service.replay(room.roomId);
       const replayed = records.reduce((state, record) => applyDeltaChanges(state, record.changes), initial);
@@ -73,7 +73,7 @@ describe('SyncService', () => {
       const events = records.flatMap(record => record.batches?.flatMap(batch => batch.events) ?? []);
       expect(events.filter(event => event.eventId === 'DAMAGE_DEALT').map(event => event.payload.amount)).toEqual([4]);
       expect(events.filter(event => event.eventId === 'LIFE_GAINED').map(event => event.payload.amount)).toEqual([4]);
-      expect(events.some(event => event.eventId === 'MUTATION_APPLIED' && event.payload.mutation.type === 'ADD_POISON')).toBe(true);
+      expect(events.filter(event => event.eventId === 'LIFE_LOST').map(event => event.payload.amount)).toEqual([4]);
       engine.dispose();
     });
 

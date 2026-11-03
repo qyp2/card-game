@@ -1,5 +1,6 @@
 import type { CardInstance } from '../types/card.types';
 import type { CardCharacteristics, EffectScope } from '../types/continuous-effect.types';
+import { matchesCardFilter } from '../shared/card-query';
 export { validEffectScope } from '../shared/effect-scope-validation';
 
 /** Broad characteristic scopes default to the battlefield; object/zone scopes are explicit. */
@@ -16,11 +17,6 @@ export function scopeMatches(scope: EffectScope, card: CardInstance, value: Card
   if (scope.cardUuid && card.uuid !== scope.cardUuid) return false;
   if (scope.zoneRevision !== undefined && (card.state.zoneRevision ?? 0) !== scope.zoneRevision) return false;
   if (scope.objects && !scope.objects.some(o => o.cardUuid === card.uuid && o.zoneRevision === (card.state.zoneRevision ?? 0))) return false;
-  if (scope.zones?.length && !scope.zones.includes(card.state.zone)) return false;
-  if (scope.cardTypes?.length && !scope.cardTypes.some(t => value.cardTypes.includes(t))) return false;
-  if (scope.subTypes?.length && !scope.subTypes.some(t => value.subTypes.includes(t))) return false;
-  if (scope.colors?.length && !scope.colors.some(t => value.colors.includes(t))) return false;
-  if (scope.controller === 'self' && value.controllerId !== controller) return false;
-  if (scope.controller === 'opponent' && (!controller || value.controllerId === controller)) return false;
-  return true;
+  if (scope.zones && !scope.zones.includes(card.state.zone)) return false;
+  return matchesCardFilter(card, value, scope, controller);
 }

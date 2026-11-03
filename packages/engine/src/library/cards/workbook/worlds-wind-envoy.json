@@ -1,0 +1,36 @@
+{
+  "id": "worlds-wind-envoy",
+  "name": "諸界風靈使",
+  "manaCost": "{2}",
+  "colors": [
+    "green"
+  ],
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "幽爾"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "rulesText": "① 召喚時：從牌組頂部公開3張卡片，從中選擇一張「幽爾」卡片，加入手牌，其餘按喜好順序放置牌組底部",
+  "onEnterEffects": [
+    {
+      "action": "REVEAL_TOP",
+      "params": {
+        "amount": 3,
+        "min": 1,
+        "max": 1,
+        "filter": {
+          "subTypes": [
+            "幽爾"
+          ]
+        }
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    }
+  ]
+}

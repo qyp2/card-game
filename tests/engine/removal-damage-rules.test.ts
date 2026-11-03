@@ -85,14 +85,13 @@ describe('semantic removal and generic damage consumers', () => {
     engine.dispose();
   });
 
-  it('infect poisons players and wither puts counters on creatures instead of marked damage', () => {
-    const source = creature('source', 'player1', 2, 4, ['Infect']);
+  it('wither deals normal player damage and puts counters on creatures instead of marked damage', () => {
+    const source = creature('source', 'player1', 2, 4, ['Wither']);
     const victim = creature('victim', 'player2', 2, 10);
     const room = createTestRoom({ battlefield: [source, victim] });
     const engine = new GameEngine(room);
     engine.applyMutations(deal(room, 3));
-    expect(engine.roomState.players.player2.life).toBe(20);
-    expect(engine.roomState.players.player2.poison).toBe(3);
+    expect(engine.roomState.players.player2.life).toBe(17);
     engine.applyMutations(planDamage(engine.roomState, [{ source: captureSourceInformation(engine.roomState, source), recipient: { kind: 'permanent', cardUuid: 'victim', zoneRevision: 0 }, amount: 2, combat: false }]));
     expect(engine.roomState.battlefield[1].state.damageTaken).toBe(0);
     expect(engine.roomState.battlefield[1].state.counters['-1/-1']).toBe(2);

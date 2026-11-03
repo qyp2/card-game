@@ -32,7 +32,7 @@ function projectPlayerView(room: GameRoom, viewerId: string): PlayerView {
   return {
     protocolVersion: PROTOCOL_VERSION, viewerId, roomId: room.roomId, player1Id: room.player1Id, player2Id: room.player2Id,
     players: Object.fromEntries(Object.entries(room.players).map(([id, player]) => [id, {
-      id, life: player.life, ...(player.poison !== undefined ? { poison: player.poison } : {}), ...(player.failedDraw !== undefined ? { failedDraw: player.failedDraw } : {}),
+      id, life: player.life, ...(player.failedDraw !== undefined ? { failedDraw: player.failedDraw } : {}),
       mana: Object.fromEntries(MANA_COLORS.map(color => [color, player.mana[color]])) as typeof player.mana,
       hand: canSeeHand(viewerId, id) ? player.hand.map(card => buildCardView(room, viewerId, card, true)) : [],
       handCount: player.hand.length, deckCount: player.deck.length,

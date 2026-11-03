@@ -24,7 +24,6 @@ export type GameMutation =
   | { type: 'DESTROY_CARD' | 'SACRIFICE_CARD'; cardUuid: string; zoneRevision: number }
   | { type: 'REGENERATE_CARD'; cardUuid: string; zoneRevision: number }
   | { type: 'CHANGE_LIFE'; playerId: PlayerId; amount: number; replacementProcessed?: boolean }
-  | { type: 'ADD_POISON'; playerId: PlayerId; amount: number; replacementProcessed?: boolean }
   | { type: 'SET_FAILED_DRAW'; playerId: PlayerId; value: boolean }
   | { type: 'DRAW_CARDS'; playerId: PlayerId; amount: number }
   | { type: 'MARK_DAMAGE'; cardUuid: string; zoneRevision: number; amount: number }

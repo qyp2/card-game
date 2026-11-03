@@ -11,7 +11,6 @@ export type ProposedEvent =
   | { kind: 'zone_transfer' | 'destroy' | 'sacrifice' | 'discard'; move: ZoneMove }
   | { kind: 'draw'; playerId: string; move?: ZoneMove }
   | { kind: 'life_change'; playerId: string; amount: number; damageSource?: string; combat?: boolean; damageSourceInfo?: import('./card.types').CardSnapshot }
-  | { kind: 'poison'; playerId: string; amount: number }
   | { kind: 'counter_change'; card: ObjectReference; counterType: string; amount: number; sourceControllerId?: string; sourceInfo?: import('./card.types').CardSnapshot };
 
 /** Open interface: extensions augment the operation map and register their handler. */

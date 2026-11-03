@@ -1,0 +1,52 @@
+{
+  "id": "phantom-sapper",
+  "name": "幻影工兵",
+  "manaCost": "{B}{B}",
+  "colors": [
+    "black"
+  ],
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "幻影木偶"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "rulesText": "① 召喚時：從牌組頂部棄置三張卡片。然後，從墳墓選擇一張魔屬性僕從加入手牌",
+  "onEnterEffects": [
+    {
+      "action": "DISCARD_FROM_LIBRARY",
+      "params": {
+        "amount": 3
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    },
+    {
+      "action": "MOVE_ZONE",
+      "params": {
+        "origin": "graveyard",
+        "destination": "hand"
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      },
+      "choice": {
+        "kind": "search",
+        "zone": "graveyard",
+        "cardTypes": [
+          "Creature"
+        ],
+        "colors": [
+          "black"
+        ],
+        "min": 1,
+        "max": 1
+      }
+    }
+  ]
+}

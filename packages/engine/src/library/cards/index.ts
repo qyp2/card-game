@@ -1,4 +1,9 @@
 // Explicit content manifest: add new definitions here; validated by the catalog.
+import queryCard0 from './workbook/phantom-sapper.json';
+import queryCard1 from './workbook/worlds-wind-envoy.json';
+import queryCard2 from './workbook/heavenly-land-envoy-reila.json';
+import queryCard3 from './workbook/heavenly-seeker-yela.json';
+import queryCard4 from './workbook/wind-spirit-prophet.json';
 import frostGiant from './workbook/frost-giant.json';
 import frostSoul from './workbook/frost-soul.json';
 import heavenlyGate from './workbook/heavenly-gate.json';
@@ -90,6 +95,11 @@ import card77 from './workbook/worlds-sin-emperor.json';
 import card78 from './workbook/worlds-traveler.json';
 
 const cards: Record<string, unknown> = {
+  'phantom-sapper': queryCard0,
+  'worlds-wind-envoy': queryCard1,
+  'heavenly-land-envoy-reila': queryCard2,
+  'heavenly-seeker-yela': queryCard3,
+  'wind-spirit-prophet': queryCard4,
   'frost-giant': frostGiant,
   'frost-soul': frostSoul,
   'heavenly-gate': heavenlyGate,

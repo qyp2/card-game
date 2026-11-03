@@ -72,7 +72,7 @@ Workspace paths: unprefixed `engine/`, `library/`, `types/`, and `shared/` below
 | **Events** | `deriveAppliedEvents` | `engine/applied-events.ts`, `engine/event-bus.ts` | Canonical events from state diffs | Be hand-emitted by handlers |
 | **Triggers** | `TriggerManager` | `engine/trigger-manager.ts`, `trigger-matching.ts`, `trigger-scheduler.ts` | Discovery, matching, APNAP scheduling | Choose targets or resolve effects |
 | **Rules checkpoint** | `runRulesCheckpoint` | `engine/rules-checkpoint.ts` | SBA + trigger settlement loop | Own individual rules |
-| **State-based actions** | `planStateBasedActions` | `engine/state-based-planner.ts`, `state-based-actions.ts` | Lethal damage, life, poison, failed draw | Run outside the checkpoint |
+| **State-based actions** | `planStateBasedActions` | `engine/state-based-planner.ts`, `state-based-actions.ts` | Lethal damage, life, failed draw | Run outside the checkpoint |
 | **Effects** | `planStackResolution` | `engine/effect-resolver.ts`, `resolution-planning.ts`, `effect-registry.ts` | Plan values, orchestrate order, dispatch primitives | Know about phases |
 | **Replacement effects** | `planProposedMutations` | `engine/proposed-events.ts`, `replacement-rules.ts` | Redirect/cancel before commit | Run after commit |
 | **Choices** | `answerPendingChoice` | `engine/choice-continuation.ts`, `choices.ts`, `action-choices.ts`, `resolution-choices.ts` | Dispatch one pending decision | Be a generic workflow engine |

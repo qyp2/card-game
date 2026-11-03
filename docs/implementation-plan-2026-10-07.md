@@ -1,5 +1,7 @@
 # Implementation plan — MTG rules fidelity
 
+**3 November 2026 update:** [shared zone/card queries](card-query-architecture.md) replace duplicated lookup filters. Poison/Infect was removed because no authored card consumed it; the original feature lists below retain their historical scope.
+
 **Prepared:** 7 October 2026. **Audit baseline:** `8d6176c`. **Implementation status:** accepted 0.1, 0.2 and 0.4, Milestone 1, the accepted Milestone 2 turn/setup/mana slices, and the approved engine scopes of Milestones 3–7 are implemented and verified. Deferred Milestone 0/2 slices, deferred combat consumers, and Milestones 8–9 remain future work.
 
 The owner's priority is **broader MTG-style rules fidelity**. Build on the existing TypeScript engine, reducer, React client, and tests. First repair demonstrated correctness failures, then implement the foundational rule systems that many cards depend on. This is a staged route to a broadly compatible engine, not a claim that a small card demo represents full MTG coverage.

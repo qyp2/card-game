@@ -11,7 +11,8 @@ const catalog = buildCatalog();
 const valid: DeckInput = { name: 'Constructed', format: 'standard', cards: [{ cardId: 'land-red', quantity: 56 }, { cardId: 'empire-servant', quantity: 4 }] };
 describe('shared deck rules and catalog boundary', () => {
   it('constructs a lab scenario using the new canonical cards', () => {
-    const ids = ['frost-giant', 'frost-soul', 'heavenly-gate', 'heavenly-gatekeeper', 'heavenly-lance', 'heavenly-marquis-laila', 'heavenly-patrol', 'shadowwood-sword', 'thunder-devouring-holy-sword', 'vitality-wood-staff'];
+    const ids = ['frost-giant', 'frost-soul', 'heavenly-gate', 'heavenly-gatekeeper', 'heavenly-lance', 'heavenly-marquis-laila', 'heavenly-patrol', 'shadowwood-sword', 'thunder-devouring-holy-sword', 'vitality-wood-staff',
+      'phantom-sapper', 'worlds-wind-envoy', 'heavenly-land-envoy-reila', 'heavenly-seeker-yela', 'wind-spirit-prophet'];
     const scenario = newScenario(); scenario.openingHandSize = 0;
     scenario.players[0].battlefield = ids.map(cardId => ({ cardId, quantity: 1 }));
     const room = buildScenarioRoom('workbook-data-only', ['player1', 'player2'], scenario, { uuid: randomUUID, random: scenarioRandom(1) });
@@ -21,6 +22,7 @@ describe('shared deck rules and catalog boundary', () => {
   it.each([
     'heavenly-lance', 'thunder-devouring-holy-sword', 'heavenly-gatekeeper', 'heavenly-patrol', 'frost-soul',
     'heavenly-marquis-laila', 'shadowwood-sword', 'vitality-wood-staff', 'frost-giant', 'heavenly-gate',
+    'phantom-sapper', 'worlds-wind-envoy', 'heavenly-land-envoy-reila', 'heavenly-seeker-yela', 'wind-spirit-prophet',
   ])('publishes new workbook card %s for deck and scenario consumers', cardId => {
     expect(catalog.get(cardId)).toMatchObject({ id: cardId, deckLegal: true, copyLimit: 4 });
     expect(validateDeck({ ...valid, cards: [{ cardId: 'land-red', quantity: 59 }, { cardId, quantity: 1 }] }, catalog).valid).toBe(true);

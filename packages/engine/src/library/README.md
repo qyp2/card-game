@@ -106,7 +106,7 @@ This is a `castRequirements` object, not a whole card. The chosen alternative **
 | `cost` | The cost object below. |
 | `alternativeCosts` | Array of `{ id, label, cost }`; distinct nonempty IDs and labels. |
 | `additionalCost` | One cost object, always added to the selected route. |
-| `condition` | Optional action gate: `{ "zoneCheck": { "zone": ["graveyard"], "ownedBy": "self", "cardType": "Creature", "minCount": 1 } }`. `cardType` and `cardId` are optional filters; count defaults to 1. Current zone checking examines hand, battlefield and graveyard only. `ownedBy` accepts `self`, `opponent`, `any`; on the battlefield it uses effective control. |
+| `condition` | Optional action gate: `{ "zoneCheck": { "zone": ["graveyard"], "ownedBy": "self", "cardType": "Creature", "minCount": 1 } }`. Supports all six zones. `cardType` and `cardId` remain compatible; `filter` accepts the shared card filter below. Count defaults to 1. `ownedBy` accepts `self`, `opponent`, `any`; private zones use their containing player and battlefield/stack use control. |
 
 `condition.globalFlag` is a placeholder in the validator and does **not** enforce a condition. Do not use it to implement a rule. This action gate is also distinct from trigger `condition`/`interveningIf` below.
 
@@ -158,6 +158,7 @@ An effect object accepts exactly these supported input fields:
 | `minTargets`, `maxTargets` | Fixed integer bounds for chosen targets; max defaults to 1. Not X-expression fields. |
 | `controller` | `self`, `opponent`, `any`; omitted means unrestricted. Relative to the action/ability controller. |
 | `cardTypes`, `subTypes` | String arrays. Values within an array are OR; different filters combine with AND. `["Artifact", "Land"]` means Artifact **or** Land. |
+| `colors`, `ids`, `names`, `excludedNames`, `nameContains`, `owner`, `manaValue`, `allOf`, `anyOf`, `not` | Shared structural card filters; see below. Ownership is independent of current control. |
 | `zones` | Zone array for `type: "card"`; defaults to battlefield. It does not make `permanent` reach another zone. |
 | `power`, `toughness` | Optional `{ "min": number, "max": number }`, either bound can be omitted. Used for explicit targets. |
 | `counter` | `{ "type": "scorch", "max": 0 }` admits zero current Scorch; `min` and `max` are optional fixed bounds. An absent counter is zero. |
@@ -283,11 +284,23 @@ Operations: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `includes` (left array contain
 | `optional` | None | Yes/no to perform this effect. Targets required by the effect are still selected during announcement/scheduling. |
 | `options` | `options: [{ id, label, effects }]`, `min` default 1, `max` default 1 | Choose instruction branches during resolution. Chosen branches replace the wrapper effect. |
 | `ordering` | Same `options` shape | Order all supplied instruction branches during resolution; not the same as ordering cards in a library. |
-| `search` | `zone`, optional `cardTypes`, `subTypes`, `min` default 0, `max` default 1, `ordered` boolean | Select controller's cards from the entire represented zone. Selected cards become this effect's recipients. `ordered: true` retains the selected order. No top-N reveal window or remainder contract. |
+| `search` | `zone`, `zonePlayer` default `self`, shared card filters, `min` default 0, `max` default 1, `ordered` boolean | Select from any represented card zone. Private zones use the containing player; battlefield/stack use control. `zonePlayer` can explicitly select `opponent` or `any`. Selected cards become this effect's recipients. `ordered: true` retains selected order. `cardRefs` bounds a captured window by UUID and zone revision. |
 | `selection` | `criteria`: target definition | Choose recipients at resolution using these criteria. |
 | `distribution` | `total`: fixed number, `field` default `amount` | Divide a total among recipients; use `field: "damage"` with `MODIFY_STATS`. Explicit target groups collect this division during announcement/scheduling; otherwise it is a resolution choice. |
 
 An `options`/`ordering` branch cannot introduce fresh explicit targets; choose targets with action modes before stacking, or use an existing supported resolution selection. Choices are serializable instructions, not JavaScript callbacks. Announced numbers, mode selections, targets and payments each have their own existing timing; do not assume every prompt happens during resolution.
+
+### Shared card filtering across zones
+
+Search choices, targeting definitions, continuous/count scopes and action-zone conditions reuse one structural predicate. Use `cardTypes`, `subTypes`, `colors`, `ids` (canonical definition IDs), `names` (exact current names), `excludedNames`, `nameContains` (case-sensitive substring), `controller`, `owner`, `power`, `toughness`, `manaValue`, `counter` and `summonKind`. Arrays match any member; separate fields combine with AND. `allOf` and `anyOf` contain nested filters; `not` negates one filter. Stat and mana-value bounds use fixed `min`/`max`. Effective characteristics are used at evaluation time. A variable/query-based cost has no fixed `manaValue` in this contract and does not match a mana-value restriction.
+
+For example, this resolution choice finds any black creature in the controller's graveyard:
+
+```json
+{ "kind": "search", "zone": "graveyard", "cardTypes": ["Creature"], "colors": ["black"], "min": 1, "max": 1 }
+```
+
+Changing only `zone` reuses the same filter for library, hand, exile, battlefield or spell cards on the stack. A resolution search requires the minimum when enough cards exist, takes the available number when fewer exist, and skips an impossible mandatory choice when none exist so later instructions continue. This does not relax required targets during casting. Search is selection, so it does not automatically apply hexproof/shroud; explicit targeting does. Server-side collection does not grant a client access to hidden cards. Only the authorized chooser receives the projected choice and opaque option handles. See [card-query architecture](../../../../docs/card-query-architecture.md).
 
 ## 7. Static abilities and continuous operations
 
@@ -457,7 +470,7 @@ Inside `CREATE_REPLACEMENT_EFFECT.params.definition`, fields are `label` (string
 | `move_destination` | `to`: destination zone |
 | `cancel_event`, `regenerate` | None |
 
-`match` supports `kinds` (array of `damage`, `zone_transfer`, `destroy`, `sacrifice`, `discard`, `draw`, `life_change`, `poison`, `counter_change`), `cardTypes`, `from`, `to`, `combat`, and exact runtime `playerId`, `controllerId`, `card`/`source` references (`{ cardUuid, zoneRevision }`). A raw match does not have a relative `controller: "opponent"` field; use supported target binding rather than hardcoding match IDs. These are advanced existing engine contracts; see [replacement/prevention](../../../../docs/proposed-events-engine.md).
+`match` supports `kinds` (array of `damage`, `zone_transfer`, `destroy`, `sacrifice`, `discard`, `draw`, `life_change`, `counter_change`), `cardTypes`, `from`, `to`, `combat`, and exact runtime `playerId`, `controllerId`, `card`/`source` references (`{ cardUuid, zoneRevision }`). A raw match does not have a relative `controller: "opponent"` field; use supported target binding rather than hardcoding match IDs. These are advanced existing engine contracts; see [replacement/prevention](../../../../docs/proposed-events-engine.md).
 
 ## 10. Adding a card
 
@@ -519,7 +532,7 @@ Current custom-profile support targets the 24-card 炎獸 starter set. Creature 
 
 ### Starter bounded reveal
 
-`REVEAL_TOP` accepts `amount` from 1 to 3. It captures the exact library-top identities in top-to-bottom order (the server stores its top at the array end), plus the revealing source's resolved snapshot and ability controller. The ordinary form offers at most one `subTypes` match excluding `excludedNames`, moves it to hand, and asks for the remaining cards' bottom order. Choices keep exact identity and zone revision; a continuation never repeats a whole-library search.
+`REVEAL_TOP` accepts `amount` from 1 to 3. It captures the exact library-top identities in top-to-bottom order (the server stores its top at the array end), plus the revealing source's resolved snapshot and ability controller. The ordinary form accepts a shared `filter`, `min` (default 0) and `max` (default 1), moves the selected cards to hand, and asks for the remaining cards' bottom order. Existing top-level `subTypes`/`excludedNames` remain compatible when `filter` is absent. Use `min: 1` to require taking a matching card if one exists. Choices keep exact identity and zone revision; a continuation never repeats a whole-library search. This does not add larger reveal windows, other remainder destinations, category quotas or paid summoning.
 
 The Emperor form uses `disposition: "scorch"` and `matchingClauses: [{ "cardTypes": ["Creature"], "subTypes": ["炎獸"] }, { "cardTypes": ["Spell"], "subTypes": ["炎兵"] }]`. Each clause requires both a type and subtype match; the clauses are alternatives. It counts the captured cards once, places that many Scorch counters on one opposing Creature or Artifact, and returns every captured card to the bottom in the chosen order. Wrap the `REVEAL_TOP` effect in `choice: { "kind": "optional" }` for an optional entry reveal. Declining performs no reveal.
 

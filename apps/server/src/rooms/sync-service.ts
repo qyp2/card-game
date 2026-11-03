@@ -166,7 +166,6 @@ function mutationChanges(mutation: GameMutation, oldState: GameRoom, newState: G
     case 'UNATTACH_CARD': return [updateChange(cardStatePath(newState, mutation.cardUuid, '').replace(/\.$/, ''), oldState, newState)];
     case 'SET_BATTLE_PROTECTOR': return [updateChange(cardStatePath(newState, mutation.cardUuid, 'protectorId'), oldState, newState)];
     case 'CHANGE_LIFE': return [updateChange(`players.${mutation.playerId}.life`, oldState, newState)];
-    case 'ADD_POISON': return [updateChange(`players.${mutation.playerId}.poison`, oldState, newState)];
     case 'SET_FAILED_DRAW': return [updateChange(`players.${mutation.playerId}.failedDraw`, oldState, newState)];
     case 'DRAW_CARDS': return ['deck', 'hand', 'failedDraw'].map(key => updateChange(`players.${mutation.playerId}.${key}`, oldState, newState));
     case 'MARK_DAMAGE': return [updateChange(cardStatePath(newState, mutation.cardUuid, 'damageTaken'), oldState, newState)];
@@ -191,7 +190,7 @@ function mutationChanges(mutation: GameMutation, oldState: GameRoom, newState: G
       }
       const changes: DeltaChange[] = [];
       if (oldState.replacementEffects !== newState.replacementEffects) changes.push(updateChange('replacementEffects', oldState, newState));
-      for (const [id, player] of Object.entries(newState.players)) for (const key of ['life', 'poison', 'failedDraw'] as const) {
+      for (const [id, player] of Object.entries(newState.players)) for (const key of ['life', 'failedDraw'] as const) {
         if (oldState.players[id][key] !== player[key]) changes.push(updateChange(`players.${id}.${key}`, oldState, newState));
       }
       newState.battlefield.forEach((card, index) => {

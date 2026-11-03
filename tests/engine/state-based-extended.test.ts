@@ -128,10 +128,10 @@ describe('extended simultaneous state-based settlement', () => {
     expect(death?.payload.snapshot.card.state.counters).toEqual({ '+1/+1': 1, '-1/-1': 3 }); engine.dispose();
   });
 
-  it('settles simultaneous life, poison and failed-draw losses without iteration-order winners', () => {
-    const room = createTestRoom(); room.players.player1.life = 0; room.players.player2.poison = 10;
+  it('settles simultaneous life and failed-draw losses without iteration-order winners', () => {
+    const room = createTestRoom(); room.players.player1.life = 0; room.players.player2.failedDraw = true;
     const engine = new GameEngine(room); engine.applyMutations([{ type: 'SET_LAST_PASSED', playerId: null }]);
-    expect(engine.roomState.outcome).toMatchObject({ type: 'draw', losses: [{ playerId: 'player1', reason: 'life_total' }, { playerId: 'player2', reason: 'poison' }] }); engine.dispose();
+    expect(engine.roomState.outcome).toMatchObject({ type: 'draw', losses: [{ playerId: 'player1', reason: 'life_total' }, { playerId: 'player2', reason: 'failed_draw' }] }); engine.dispose();
     const failed = new GameEngine(createTestRoom());
     failed.applyMutations([{ type: 'DRAW_CARDS', playerId: 'player1', amount: 1 }, { type: 'DRAW_CARDS', playerId: 'player2', amount: 1 }]);
     expect(failed.roomState.outcome?.type).toBe('draw'); failed.dispose();

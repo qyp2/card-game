@@ -5,6 +5,8 @@ import type { StackObject, StackEffect, ModeDefinition, TargetPointer } from '..
 import { buildStackEffects, buildDynamicParams, revalidateTargets } from './resolution-planning';
 import { targetOptions } from './choices';
 import { targetKey, findTargetCard } from '../shared/target-legality';
+import { collectCards, matchesCardFilter } from '../shared/card-query';
+import type { CardInstance } from '../types/card.types';
 
 export function resolutionChoice(room: GameRoom, stackObj: StackObject, effect: StackEffect, index: number, results: ResolutionContinuation['results']): PendingChoice {
   const def = effect.choice!;
@@ -25,17 +27,24 @@ export function resolutionChoice(room: GameRoom, stackObj: StackObject, effect: 
     case 'options': case 'ordering': return { ...base, min: def.kind === 'ordering' ? def.options.length : def.min ?? 1, max: def.kind === 'ordering' ? def.options.length : def.max ?? 1,
       options: def.options.map(option => ({ id: option.id, label: option.label, value: option })) };
     case 'search': {
-      const player = room.players[stackObj.controllerId];
-      const cards = def.zone === 'battlefield' ? room.battlefield.filter(c => CardCharacteristicService.resolveController(room, c) === stackObj.controllerId)
-        : def.zone === 'library' ? player.deck : def.zone === 'hand' ? player.hand : def.zone === 'graveyard' ? player.graveyard : def.zone === 'exile' ? player.exile ?? [] : room.stack.filter(s => s.type === 'spell' && s.controllerId === stackObj.controllerId).map(s => s.source);
+      // Cache only for this immutable choice snapshot, never across committed mutations.
+      const values = new Map<string, ReturnType<typeof CardCharacteristicService.resolve>>();
+      const view = (card: CardInstance) => {
+        let value = values.get(card.uuid);
+        if (!value) { value = CardCharacteristicService.resolve(room, card); values.set(card.uuid, value); }
+        return value;
+      };
+      const cards = collectCards(room, { zones: [def.zone], zonePlayer: def.zonePlayer ?? 'self' }, stackObj.controllerId,
+        card => view(card).controllerId);
       const admitted = cards.filter(card => (!def.cardRefs || def.cardRefs.some(ref => ref.cardUuid === card.uuid && ref.zoneRevision === (card.state.zoneRevision ?? 0))) &&
-        !def.excludedNames?.includes(card.blueprint.name) && (!def.cardTypes?.length || def.cardTypes.some(type => CardCharacteristicService.resolveTypes(room, card).includes(type))) &&
-        (!def.subTypes?.length || def.subTypes.some(type => CardCharacteristicService.resolveSubTypes(room, card).includes(type))));
+        matchesCardFilter(card, view(card), def, stackObj.controllerId));
       const ordered = def.cardRefs ? [...admitted].sort((a,b) => def.cardRefs!.findIndex(ref => ref.cardUuid === a.uuid) - def.cardRefs!.findIndex(ref => ref.cardUuid === b.uuid)) : admitted;
-      const min = def.allAvailable ? ordered.length : def.min ?? 0, max = def.allAvailable ? ordered.length : def.max ?? 1;
+      // Take as many as available; retain an impossible mandatory minimum when empty so resolution skips it.
+      const min = def.allAvailable ? ordered.length : ordered.length ? Math.min(def.min ?? 0, ordered.length) : def.min ?? 0;
+      const max = def.allAvailable ? ordered.length : def.max ?? 1;
       return { ...base, kind: def.ordered ? 'ordering' : 'search',
         prompt: def.prompt ?? (def.ordered ? `Choose ${min === max ? min : `${min}–${max}`} cards in top-to-bottom order` : base.prompt),
-        min, max, options: ordered.map(card => ({ id: card.uuid, label: card.blueprint.name, value: { targetType: 'card', cardUuid: card.uuid, zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 } })) };
+        min, max, options: ordered.map(card => ({ id: card.uuid, label: view(card).name, value: { targetType: 'card', cardUuid: card.uuid, zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 } })) };
     }
     case 'selection': return { ...base, min: def.criteria.minTargets ?? (def.criteria.required ? 1 : 0), max: def.criteria.maxTargets ?? 1, options: targetOptions(room, stackObj.controllerId, stackObj.source, def.criteria, false) };
     case 'distribution': return { ...base, min: 0, max: effect.targets.length, total: def.total, options: effect.targets.map(target => {

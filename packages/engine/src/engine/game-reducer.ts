@@ -180,7 +180,6 @@ function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | Ope
       ? { status: 'committed', state: reduceDamageBatch(state, mutation.assignments, mutation.results) }
       : { status: 'rejected', state, reason: 'No valid damage assignments' };
     case 'CHANGE_LIFE': return !state.players[mutation.playerId] ? state : { ...state, players: { ...state.players, [mutation.playerId]: { ...state.players[mutation.playerId], life: state.players[mutation.playerId].life + mutation.amount } } };
-    case 'ADD_POISON': return !state.players[mutation.playerId] ? state : { ...state, players: { ...state.players, [mutation.playerId]: { ...state.players[mutation.playerId], poison: (state.players[mutation.playerId].poison ?? 0) + mutation.amount } } };
     case 'SET_FAILED_DRAW': return !state.players[mutation.playerId] ? state : { ...state, players: { ...state.players, [mutation.playerId]: { ...state.players[mutation.playerId], failedDraw: mutation.value } } };
     case 'DRAW_CARDS': {
       let next = state;

@@ -1,4 +1,4 @@
-import { MANA_COLORS } from '../types/card.types';
+import { validCardFilter } from './card-filter-validation';
 import type { EffectScope } from '../types/continuous-effect.types';
 
 /** Query arguments use the same scope contract as continuous effects. */
@@ -11,13 +11,10 @@ export function validEffectScope(value: unknown): value is EffectScope {
       case 'self': case 'attachedToSource': return typeof item === 'boolean';
       case 'cardUuid': return typeof item === 'string' && !!item;
       case 'zoneRevision': return revision(item);
-      case 'controller': return ['self', 'opponent', 'any'].includes(item as string);
       case 'zones': return strings(item) && item.every(zone => ['library', 'hand', 'battlefield', 'graveyard', 'exile', 'stack'].includes(zone));
-      case 'colors': return strings(item) && item.every(color => MANA_COLORS.includes(color as typeof MANA_COLORS[number]));
-      case 'cardTypes': case 'subTypes': return strings(item);
       case 'objects': return Array.isArray(item) && item.every(object => object && typeof object === 'object'
         && Object.keys(object).length === 2 && typeof object.cardUuid === 'string' && !!object.cardUuid && revision(object.zoneRevision));
-      default: return false;
+      default: return validCardFilter({ [key]: item });
     }
   });
 }

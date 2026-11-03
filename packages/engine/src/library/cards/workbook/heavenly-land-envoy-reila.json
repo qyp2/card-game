@@ -1,0 +1,39 @@
+{
+  "id": "heavenly-land-envoy-reila",
+  "name": "天域地界使 雷拉",
+  "manaCost": "{Y}{Y}",
+  "colors": [
+    "yellow"
+  ],
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "上使"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "rulesText": "① 召喚時：從牌組頂部公開3張卡片，從中選擇一張雷屬性地界加入手牌，其餘按喜好順序放置牌組底部",
+  "onEnterEffects": [
+    {
+      "action": "REVEAL_TOP",
+      "params": {
+        "amount": 3,
+        "min": 1,
+        "max": 1,
+        "filter": {
+          "cardTypes": [
+            "Land"
+          ],
+          "colors": [
+            "yellow"
+          ]
+        }
+      },
+      "targeting": {
+        "type": "self",
+        "required": false
+      }
+    }
+  ]
+}

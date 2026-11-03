@@ -5,6 +5,8 @@ import type { ChoiceAnswer, ChoiceOption, PendingChoice, ListedChoice, NumericCh
 import type { ActionData } from './action-registry';
 import { structuralTargetLegal, targetKey } from '../shared/target-legality';
 import { ModifierRegistry } from './modifier-registry';
+import { collectCards } from '../shared/card-query';
+import { CardCharacteristicService } from './card-characteristic-service';
 
 export function choiceCanComplete(choice: Pick<ListedChoice, 'kind' | 'options' | 'min' | 'max' | 'total' | 'minimumPerOption'> | Pick<NumericChoice, 'kind' | 'range'>): boolean {
   if (choice.kind === 'number') return Number.isSafeInteger(choice.range.min) && (choice.range.max === undefined || Number.isSafeInteger(choice.range.max) && choice.range.max >= choice.range.min);
@@ -17,16 +19,21 @@ export function choiceCanComplete(choice: Pick<ListedChoice, 'kind' | 'options' 
 }
 
 export function targetOptions(room: GameRoom, playerId: string, source: CardInstance, def: TargetingDefinition, targeted = true): ChoiceOption[] {
+  const cards = collectCards(room);
+  const byId = new Map(cards.map(card => [card.uuid, card]));
   const pointers: TargetPointer[] = def.type === 'any' ? [
     ...Object.keys(room.players).map(playerId => ({ targetType: 'player' as const, playerId })),
     ...room.battlefield.map(card => ({ targetType: 'permanent' as const, cardUuid: card.uuid, zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 })),
   ] : def.type === 'player' ? Object.keys(room.players).map(playerId => ({ targetType: 'player', playerId }))
     : def.type === 'spell' || def.type === 'stack' ? room.stack.map(object => ({ targetType: def.type, stackUuid: object.uuid }))
-    : [...room.battlefield, ...Object.values(room.players).flatMap(p => [...p.hand, ...p.graveyard, ...p.deck, ...p.exile ?? []])].map(card => ({ targetType: def.type, cardUuid: card.uuid,
+    : cards.map(card => ({ targetType: def.type, cardUuid: card.uuid,
       zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 }));
   return pointers.filter(pointer => structuralTargetLegal(room, playerId, pointer, def) && (!targeted || ModifierRegistry.canTarget(room, playerId, source, [pointer])))
-    .map(pointer => ({ id: targetKey(pointer), label: (pointer.playerId ? pointer.playerId === playerId ? 'You' : 'Opponent' : undefined) ?? pointer.stackUuid ??
-      [...room.battlefield, ...Object.values(room.players).flatMap(p => [...p.hand, ...p.graveyard, ...p.deck, ...p.exile ?? []])].find(c => c.uuid === pointer.cardUuid)?.blueprint.name ?? pointer.cardUuid!, value: pointer }));
+    .map(pointer => {
+      const card = byId.get(pointer.cardUuid!);
+      return { id: targetKey(pointer), label: (pointer.playerId ? pointer.playerId === playerId ? 'You' : 'Opponent' : undefined) ?? pointer.stackUuid ??
+        (card ? CardCharacteristicService.resolve(room, card).name : pointer.cardUuid!), value: pointer };
+    });
 }
 
 export function validateChoiceAnswer(choice: PendingChoice, data: ActionData): ChoiceAnswer | undefined {

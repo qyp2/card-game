@@ -8,8 +8,32 @@ import { PROTOCOL_VERSION } from '@card-game/protocol/version';
 import { gameReducer } from '@engine/game-reducer';
 import { decodeAbilityId } from '@server/projection/wire-identifiers';
 import { creature } from '../helpers/combat-fixture';
+import { resolutionChoice } from '@engine/resolution-choices';
+import { buildStackEffects } from '@engine/effect-resolver';
+import type { StackObject } from '@shared/effect.types';
 
 describe('player projection boundary', () => {
+  it('keeps filtered private-zone search choices visible only to the authorized chooser', () => {
+    const room = createTestRoom(); room.players.player1.hand = [];
+    const hidden = instantiateCard('phantom-land-soldier'); hidden.state = { ...hidden.state, ownerId: 'player1', controllerId: 'player1', zone: 'library' };
+    room.players.player1.deck = [hidden];
+    const source = creature('search-source', 'player1'); room.battlefield = [source];
+    const effects = buildStackEffects([{ action: 'MOVE_ZONE', params: { origin: 'library', destination: 'hand' }, targeting: { type: 'self', required: false },
+      choice: { kind: 'search', zone: 'library', cardTypes: ['Creature'], colors: ['black'], min: 1, max: 1 } }], 'player1', source);
+    const stack: StackObject = { uuid: 'search-effect', type: 'triggered', controllerId: 'player1', source, effects, countered: false };
+    room.pendingChoice = { ...resolutionChoice(room, stack, effects[0], 0, []), id: 'private-query' };
+    const own = buildPlayerView(room, 'player1'), opponent = buildPlayerView(room, 'player2');
+    expect(own.pendingChoice?.kind).toBe('search');
+    expect(JSON.stringify(own.pendingChoice)).toContain(hidden.blueprint.name);
+    expect(opponent.pendingChoice).toEqual({ kind: 'waiting', playerId: 'player1' });
+    expect(JSON.stringify(opponent)).not.toContain(hidden.uuid);
+    expect(JSON.stringify(opponent)).not.toContain(hidden.blueprint.name);
+    expect(JSON.stringify(own.pendingChoice)).not.toContain(hidden.uuid);
+    if (!own.pendingChoice || own.pendingChoice.kind === 'waiting' || own.pendingChoice.kind === 'number') throw new Error('Expected private card choices');
+    const answer = { choiceId: own.pendingChoice.id, choices: [own.pendingChoice.options[0].id] };
+    expect(decodeChoiceAnswer(room, 'player1', answer)).toMatchObject({ choices: [hidden.uuid] });
+    expect(decodeChoiceAnswer(room, 'player2', answer)).toEqual(answer);
+  });
   it('keeps server-generated ability provenance opaque and decodes advertised actions', () => {
     let room = createTestRoom(); fillTestLibraries(room);
     const hidden = room.players.player2.deck[0], host = creature('host', 'player1'); room.battlefield = [host];

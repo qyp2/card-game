@@ -1,11 +1,10 @@
 import type { CardInstance } from '../types/card.types';
 import type { ContinuousEffectEntry } from '../types/continuous-effect.types';
 import type { GameRoom } from '../types/game.room.types';
+import { collectCards } from '../shared/card-query';
 
 export function roomCards(room: GameRoom): CardInstance[] {
-  const cards = [...room.battlefield, ...room.stack.filter(s => s.type === 'spell').map(s => s.source),
-    ...Object.values(room.players).flatMap(p => [...p.hand, ...p.graveyard, ...p.deck, ...p.exile ?? []])];
-  return [...new Map(cards.map(c => [c.uuid, c])).values()];
+  return collectCards(room);
 }
 
 export function effectSource(cards: CardInstance[], entry: ContinuousEffectEntry): CardInstance | undefined {

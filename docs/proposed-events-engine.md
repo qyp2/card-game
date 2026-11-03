@@ -23,7 +23,7 @@ flowchart TD
 
 `planProposedMutations(room, mutations, options)` and `resumeProposedChoice(room, choice, answer)` return prepared mutations or a pending choice. Planning never changes the supplied room. A paused transaction commits none of its gameplay prefix or tail. The choice retains completed previews, remaining instructions, current event frames and replacement IDs already applied to each event lineage.
 
-Events distinguish damage, destruction, sacrifice, discard, ordinary transfers, individual draws, life changes, poison and counters. Card references pair the stable UUID with `zoneRevision`. Matching uses effective characteristics. Self-replacements precede ordinary replacements, including their exception for prohibited events; indestructible otherwise prohibits destruction before regeneration can consume a shield.
+Events distinguish damage, destruction, sacrifice, discard, ordinary transfers, individual draws, life changes and counters. Card references pair the stable UUID with `zoneRevision`. Matching uses effective characteristics. Self-replacements precede ordinary replacements, including their exception for prohibited events; indestructible otherwise prohibits destruction before regeneration can consume a shield.
 
 Replacement definitions are serializable data in `room.replacementEffects`. `ADD_REPLACEMENT_EFFECT` assigns a room sequence ID; explicit removal selects one ID. Definitions carry match filters, optional/self flags, exact source references, durations, finite event uses and finite prevention amounts. End-of-turn registrations expire during cleanup; source-dependent registrations require the original source incarnation on the battlefield. Independent resolved shields survive source departure.
 
@@ -35,7 +35,7 @@ Finite damage shields reserve consumption during preview. When simultaneous sour
 
 The damage pipeline first replaces/prevents assignments, then proposes their results, then commits one `APPLY_DAMAGE_BATCH`. Result replacement can itself create damage; serializable parent transactions keep nested choices inside the original atomic batch. Damage consequence hooks run on the fully damaged board before SBAs.
 
-Generic result consumers implement lifelink, deathtouch, infect/wither, loyalty/defense damage and protection prevention. Only players, creatures, planeswalkers and battles receive damage. Effective source characteristics and retained source information determine results. Damage events record the final dealt amount even when a result replacement changes the loss/counters or moves the recipient. Fully prevented damage produces no damage event or lifelink gain.
+Generic result consumers implement lifelink, deathtouch, wither, loyalty/defense damage and protection prevention. Only players, creatures, planeswalkers and battles receive damage. Effective source characteristics and retained source information determine results. Damage events record the final dealt amount even when a result replacement changes the loss/counters or moves the recipient. Fully prevented damage produces no damage event or lifelink gain. Poison/Infect was removed on 3 November 2026 because it had no authored card consumer; player losses are based on life and failed draws.
 
 Resolving effects are processed sequentially: later instructions see replaced results of earlier ones. A replacement choice retains the next resolution position. Earlier completed instructions may already be committed, but checkpoints remain suppressed until resolution completes. Individual draws similarly observe the previous draw. Combat allocation remains manual; combat completion and phase response tails remain in paused transactions.
 
@@ -43,7 +43,7 @@ Resolving effects are processed sequentially: later instructions see replaced re
 
 One board snapshot supplies all conditions in a batch. Legend/protector decisions are collected before any of that batch is applied, in active-player order. Choices retain exact references and survive engine reconstruction and reconnect. Departure information uses the full pre-batch snapshot.
 
-Checks cover zero toughness, lethal/deathtouch destruction, opposing +1/+1 and -1/-1 counters, token cessation outside the battlefield, Aura legality, Equipment/Fortification detachment, legend/world uniqueness, zero loyalty/defense, battle protector validity, poison and failed draws. Siege defense settlement waits for its pending/stacked triggers. World tenure records when a permanent gains or regains the supertype. Departed tokens cannot move again before cessation.
+Checks cover zero toughness, lethal/deathtouch destruction, opposing +1/+1 and -1/-1 counters, token cessation outside the battlefield, Aura legality, Equipment/Fortification detachment, legend/world uniqueness, zero loyalty/defense, battle protector validity and failed draws. Siege defense settlement waits for its pending/stacked triggers. World tenure records when a permanent gains or regains the supertype. Departed tokens cannot move again before cessation.
 
 The checkpoint repeats until stable before scheduling collected triggers. All simultaneous changes precede terminal freezing; simultaneous player losses produce a draw.
 

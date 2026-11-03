@@ -4,6 +4,7 @@ import type { EffectDefinition, TargetGroupDefinition, TargetingDefinition, Targ
 import { matchesTargetFilter } from './target-utils';
 import { CardCharacteristicService } from '../engine/card-characteristic-service';
 import { protectionApplies } from './protection';
+import { collectCards } from './card-query';
 
 export const isExplicitTargeting = (def: TargetingDefinition | undefined): def is TargetingDefinition => !!def && def.type !== 'self' && !def.all;
 export const targetKey = (target: TargetPointer) => [target?.targetType,
@@ -24,9 +25,9 @@ export function describeTargetGroups(effects: EffectDefinition[]): TargetGroupDe
 
 export function findTargetCard(room: GameRoom, target: TargetPointer): CardInstance | undefined {
   if ((target.targetType !== 'card' && target.targetType !== 'permanent') || !target.cardUuid) return;
-  return room.battlefield.find(c => c.uuid === target.cardUuid)
-    ?? room.stack.find(s => s.type === 'spell' && s.source.uuid === target.cardUuid)?.source
-    ?? Object.values(room.players).flatMap(p => [...p.hand, ...p.graveyard, ...p.deck, ...p.exile ?? []]).find(c => c.uuid === target.cardUuid);
+  // Preserve the common battlefield lookup without collecting every private zone.
+  return room.battlefield.find(card => card.uuid === target.cardUuid)
+    ?? collectCards(room).find(card => card.uuid === target.cardUuid);
 }
 
 export function structuralTargetLegal(room: GameRoom, playerId: string, target: TargetPointer, def: TargetingDefinition): boolean {
@@ -41,25 +42,13 @@ export function structuralTargetLegal(room: GameRoom, playerId: string, target: 
       const card = findTargetCard(room, target);
       if (!card || !(def.type === 'permanent' ? ['battlefield'] : def.zones ?? ['battlefield']).includes(card.state.zone) ||
           (target.zoneRevision !== undefined && target.zoneRevision !== (card.state.zoneRevision ?? 0)) || !matchesTargetFilter(card, def, playerId, room)) return false;
-      for (const [bounds, value] of [[def.power, CardCharacteristicService.resolvePower(room, card)], [def.toughness, CardCharacteristicService.resolveToughness(room, card)]] as const) {
-        if (bounds && ((bounds.min !== undefined && value < bounds.min) || (bounds.max !== undefined && value > bounds.max))) return false;
-      }
       return true;
     }
     case 'spell': case 'stack': {
       const object = room.stack.find(s => s.uuid === target.stackUuid);
       if (!object || (def.type === 'spell' && object.type !== 'spell') || !controllerMatches(object.controllerId) || !opponentMatches(object.controllerId)) return false;
       if (def.stackTypes?.length && !def.stackTypes.includes(object.type)) return false;
-      if ((def.cardTypes?.length || def.subTypes?.length) && !matchesTargetFilter(object.source, { ...def, controller: undefined }, playerId, room)) return false;
-      if (def.power) {
-        const value = CardCharacteristicService.resolvePower(room, object.source);
-        if ((def.power.min !== undefined && value < def.power.min) || (def.power.max !== undefined && value > def.power.max)) return false;
-      }
-      if (def.toughness) {
-        const value = CardCharacteristicService.resolveToughness(room, object.source);
-        if ((def.toughness.min !== undefined && value < def.toughness.min) || (def.toughness.max !== undefined && value > def.toughness.max)) return false;
-      }
-      return true;
+      return matchesTargetFilter(object.source, { ...def, controller: undefined }, playerId, room);
     }
     case 'self': return true;
   }
