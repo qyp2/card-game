@@ -1,3 +1,4 @@
+import { captureSourceInformation as captureCommandSource } from './source-information';
 // src/engine/game-engine.ts
 import { EventBus } from './event-bus';
 import { MutationCommitter } from './mutation-committer';
@@ -203,6 +204,12 @@ export class GameEngine {
   /** The player-command boundary. Lower-level methods remain rules/test primitives. */
   executePlayerAction(playerId: PlayerId, actionId: string, data: unknown = {}): ActionResult {
     return this.withCommandContext(actionId, playerId, () => {
+      if (data && typeof data === 'object' && 'cardUuid' in data && typeof data.cardUuid === 'string') {
+        const source = [...this.room.battlefield, ...this.room.players[playerId]?.hand ?? []].find(c => c.uuid === data.cardUuid);
+        const info = source ? captureCommandSource(this.room, source) : undefined;
+        if (info?.card.state.controllerId === playerId && this.commandContext) this.commandContext = { ...this.commandContext, source: info,
+          abilityId: 'abilityId' in data && typeof data.abilityId === 'string' ? data.abilityId : undefined };
+      }
       const result = this.executeCommand(playerId, actionId, data);
       const logger = engineLogger.withContext({ roomId: this.room.roomId, ...this.commandContext });
 

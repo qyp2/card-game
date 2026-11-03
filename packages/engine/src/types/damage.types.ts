@@ -5,6 +5,7 @@ export type DamageRecipient =
   | { kind: 'permanent'; cardUuid: string; zoneRevision: number };
 
 export interface DamageAssignment {
+  cause?: import('./change-cause.types').ChangeCause;
   source: CardSnapshot;
   recipient: DamageRecipient;
   amount: number;

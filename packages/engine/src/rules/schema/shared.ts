@@ -43,7 +43,7 @@ export const ConditionSchema: z.ZodType<RuleCondition> = z.lazy(() => z.union([
   z.strictObject({ all: z.array(ConditionSchema) }), z.strictObject({ any: z.array(ConditionSchema) }), z.strictObject({ not: ConditionSchema }),
   z.strictObject({ op: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'includes']), left: Operand, right: Operand }),
 ]));
-export const UsageSchema = z.strictObject({ period: z.enum(['turn', 'game']), limit: PositiveCount, identity: z.enum(['source_card', 'source_incarnation', 'controller']), consume: z.enum(['on_commit', 'on_change']) });
+export const UsageSchema = z.strictObject({ group: Identifier.optional(), period: z.enum(['turn', 'game']), limit: PositiveCount, identity: z.enum(['source_card', 'source_incarnation', 'controller']), consume: z.enum(['on_commit', 'on_change']) });
 export const LifetimeSchema = z.enum(['PERMANENT', 'END_OF_TURN', 'WHILE_ON_BATTLEFIELD', 'WHILE_ATTACHED']);
 export const NumericDeclarationSchema = z.strictObject({ name: Identifier, min: z.number().int(), max: z.number().int().optional() });
 export const CostSchema = z.strictObject({ mana: z.strictObject({ generic: CountExpression.optional(), white: Count.optional(), blue: Count.optional(), green: Count.optional(),

@@ -1,3 +1,4 @@
+import { abilityUsageAvailable } from './ability-usage';
 import type { TurnHistory } from '../types/trigger.types';
 import type { TriggeringEvent } from '../types/effect.types';
 import type { CardInstance, ActivatedAbility, TriggeredAbility } from '../types/card.types';
@@ -8,6 +9,8 @@ export const HISTORY_EVENTS = [
   'PERMANENT_ENTERED',
   'PERMANENT_LEFT',
   'PERMANENT_DIED',
+  'CREATURE_KILLED',
+  'CHARACTERISTICS_CHANGED',
   'PERMANENT_DESTROYED',
   'CARD_DRAWN',
   'LIBRARY_SHUFFLED',
@@ -51,7 +54,7 @@ export function abilityLimitReached(room: GameRoom, source: CardInstance, abilit
   const limit = ability.limitPerTurn;
 
   // No limit declared means the ability is unrestricted.
-  return limit !== undefined &&
+  return !abilityUsageAvailable(room, source, ability) || limit !== undefined &&
     (!Number.isSafeInteger(limit) ||
       limit < 1 ||
       (room.turnHistory?.uses[abilityUseKey(source, ability.id ?? '')] ?? 0) >= limit);
@@ -64,18 +67,15 @@ export function recordRuleEvent(history: TurnHistory, event: TriggeringEvent): T
 
   const playerId = event.payload.controllerId ?? event.payload.playerId ?? event.payload.currentPlayer;
 
-  // Per-player counts only exist when the event names a player.
-  const own = typeof playerId === 'string' ? history.playerCounts[playerId] ?? emptyEventCounts() : undefined;
+  const players = event.eventId === 'CREATURE_KILLED'
+    ? [...new Set((event.payload.outcome as import('../types/change-cause.types').KillOutcome).causes.flatMap(c => c.controllerId ? [c.controllerId] : []))]
+    : typeof playerId === 'string' ? [playerId] : [];
+  const playerCounts = { ...history.playerCounts };
+  for (const player of players) {
+    const own = playerCounts[player] ?? emptyEventCounts();
+    playerCounts[player] = { ...own, [event.eventId]: (own[event.eventId] ?? 0) + 1 };
+  }
+  return { ...history, events: [...history.events, event],
+    counts: { ...history.counts, [event.eventId]: (history.counts[event.eventId] ?? 0) + 1 }, playerCounts };
 
-  return {
-    ...history,
-    events: [...history.events, event],
-    counts: { ...history.counts, [event.eventId]: (history.counts[event.eventId] ?? 0) + 1 },
-    playerCounts: own
-      ? {
-        ...history.playerCounts,
-        [playerId as string]: { ...own, [event.eventId]: (own[event.eventId] ?? 0) + 1 },
-      }
-      : history.playerCounts,
-  };
 }

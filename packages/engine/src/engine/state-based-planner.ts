@@ -1,3 +1,4 @@
+import { causalKey, killMove, attributedKillOutcome } from './change-cause';
 import type { CardInstance } from '../types/card.types';
 import type { GameRoom, PlayerLoss } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
@@ -128,12 +129,12 @@ export function planStateBasedActions(room: GameRoom, pending: GameMutation[] = 
 
     const scorch = planScorchDestruction(room, card, value);
 
-    if (scorch) batch.mutations.push(scorch);
+    if (scorch) batch.mutations.push({ ...scorch, cause: room.causalState?.[causalKey(card)]?.lethal?.[0] });
 
     // Creature toughness and lethal damage.
     if (value.cardTypes.includes('Creature')) {
-      if (value.toughness <= 0) batch.mutations.push(toGraveyard(card));
-      else if ((card.state.damageTaken > 0 && card.state.damageTaken >= value.toughness || card.state.deathtouchDamage) && !value.keywords.some(k => k.toLowerCase() === 'indestructible')) batch.mutations.push({ type: 'DESTROY_CARD', ...ref(card) });
+      if (value.toughness <= 0) batch.mutations.push(killMove(room, toGraveyard(card) as Extract<GameMutation, { type: 'MOVE_CARD' }>, 'lethal'));
+      else if ((card.state.damageTaken > 0 && card.state.damageTaken >= value.toughness || card.state.deathtouchDamage) && !value.keywords.some(k => k.toLowerCase() === 'indestructible')) batch.mutations.push({ type: 'DESTROY_CARD', ...ref(card), cause: room.causalState?.[causalKey(card)]?.lethal?.[0], kill: attributedKillOutcome(room, card, 'lethal') });
     }
 
     if (card.state.deathtouchDamage) batch.mutations.push({ type: 'SET_DEATHTOUCH_DAMAGE', cardUuid: card.uuid, value: false });

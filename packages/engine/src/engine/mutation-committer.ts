@@ -1,3 +1,5 @@
+import { attributeMutations } from './change-cause';
+import { captureSourceInformation as captureCauseSource } from './source-information';
 import { EventBus, type EventContext } from './event-bus';
 import { gameReducer, reduceGameOperation } from './game-reducer';
 import { deriveAppliedEvents, sameStateValue, type AppliedMutation } from './applied-events';
@@ -31,7 +33,13 @@ export class MutationCommitter {
 
   /** Finish proposal decisions before committing any part of this transaction. */
   commit(mutations: GameMutation[], cause: BatchCause, resolution?: ResolutionReport): GameMutation[] {
-    const plan = planProposedMutations(this.room, mutations, { simultaneous: cause.kind === 'state-based-action', cause, resolution });
+    const command = this.getCommand();
+    const object = resolution?.stackObj ?? mutations.flatMap(m => m.type === 'PUSH_STACK' ? [m.stackObject] : [])[0];
+    const id = command?.commandId ?? this.generateUuid();
+    const attributed = attributeMutations(mutations, { id, rootId: id, parentId: cause.parentBatchId,
+      kind: object ? 'effect' : command ? 'command' : 'rule', source: object ? object.sourceInfo ?? captureCauseSource(this.room, object.source) : command?.source,
+      controllerId: object?.controllerId ?? command?.playerId, stackUuid: object?.uuid, abilityId: object && object.type !== 'spell' ? object.ability?.id : command?.abilityId }, this.room);
+    const plan = planProposedMutations(this.room, attributed, { simultaneous: cause.kind === 'state-based-action', cause, resolution });
 
     // A pending choice suspends the transaction: park the choice and stop.
     if (plan.pendingChoice) {
@@ -141,7 +149,7 @@ export class MutationCommitter {
       recorded ||= history !== previousHistory;
 
       context.before = {
-        ...(cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED'].includes(event.eventId) ? before : context.before),
+        ...(cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId) ? before : context.before),
         turnHistory: previousHistory,
       };
       context.after = { ...context.after, turnHistory: history };
@@ -179,7 +187,7 @@ export class MutationCommitter {
 
       // SBAs happen simultaneously: every departure witnesses the complete
       // batch's history, while retaining battlefield information from before it.
-      if (cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED'].includes(event.eventId)) {
+      if (cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId)) {
         context.after = { ...context.after, turnHistory: this.room.turnHistory };
       }
 

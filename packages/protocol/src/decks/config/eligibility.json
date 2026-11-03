@@ -1,6 +1,11 @@
 {
   "unlimitedCopies": [
-    "land-red"
+    "land-red",
+    "phantom-underworld",
+    "beast-holy-land",
+    "aurora-northland",
+    "angel-holy-land",
+    "sea-domain"
   ],
   "excludedCards": [
     "ability-counter-fixture",
@@ -10,5 +15,10 @@
     "rock",
     "scissors",
     "trigger-probe"
-  ]
+  ],
+  "copyLimits": {
+    "phantom-castle": 1,
+    "worlds-sea": 1,
+    "phantom-puppet": 20
+  }
 }

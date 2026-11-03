@@ -3,6 +3,7 @@
 // Returns a new GameRoom with shallow copies along the changed path.
 // Untouched subtrees are shared by reference.
 
+import { trackCausalChange } from './change-cause';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { DamageAssignment } from '../types/damage.types';
 import { newTurnHistory } from './turn-history';
@@ -177,7 +178,7 @@ export function reduceGameOperation(state: GameRoom, mutation: GameMutation): Op
 
   next = characteristicsChanged || next.combat !== state.combat ? reconcileCombat(next) : next;
 
-  return { ...outcome, state: next };
+  return { ...outcome, state: trackCausalChange(state, next, mutation) };
 }
 
 function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | OperationOutcome {

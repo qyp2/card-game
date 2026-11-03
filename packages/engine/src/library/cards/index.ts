@@ -1,3 +1,5 @@
+import phantomPuppet from './workbook/phantom-puppet.json';
+import phantomGiant from './workbook/phantom-giant.json';
 // Explicit content manifest: add new definitions here; validated by the catalog.
 import queryCard0 from './workbook/phantom-sapper.json';
 import queryCard1 from './workbook/worlds-wind-envoy.json';
@@ -95,6 +97,8 @@ import card77 from './workbook/worlds-sin-emperor.json';
 import card78 from './workbook/worlds-traveler.json';
 
 const cards: Record<string, unknown> = {
+  'phantom-puppet': phantomPuppet,
+  'phantom-giant': phantomGiant,
   'phantom-sapper': queryCard0,
   'worlds-wind-envoy': queryCard1,
   'heavenly-land-envoy-reila': queryCard2,

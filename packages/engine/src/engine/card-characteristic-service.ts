@@ -1,3 +1,4 @@
+import { fixedManaValue } from '../shared/card-query';
 import type { GameRoom } from '../types/game.room.types';
 import type { CardInstance, CardBlueprint } from '../types/card.types';
 import { resolveCharacteristics, resolveRoomCharacteristics } from './characteristic-layers';
@@ -58,6 +59,8 @@ export const CardCharacteristicService = {
   resolveBlueprint: (room: GameRoom, card: CardInstance): CardBlueprint => ({ ...card.blueprint, ...resolve(room, card) }),
   resolveCopiableBlueprint: (room: GameRoom, card: CardInstance): CardBlueprint => ({ ...card.blueprint, ...resolve(room, card, 1) }),
   resolve,
+  resolveManaCost: (room: GameRoom, card: CardInstance) => structuredClone(resolve(room, card).castRequirements.cost?.mana ?? {}),
+  resolveManaValue: (room: GameRoom, card: CardInstance) => fixedManaValue(resolve(room, card)),
   resolvePower: (room: GameRoom, card: CardInstance) => resolve(room, card).power,
   resolveToughness: (room: GameRoom, card: CardInstance) => resolve(room, card).toughness,
   resolveKeywords: (room: GameRoom, card: CardInstance) => resolve(room, card).keywords,

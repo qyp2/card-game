@@ -23,7 +23,7 @@ export function buildStackEffects(
   // Guard: a card with no effects contributes nothing.
   if (!definitions) return [];
 
-  return definitions.map(def => {
+  return definitions.map((def, index) => {
     const targets: TargetPointer[] = [];
 
     if (def.targeting.type === 'self') {
@@ -47,6 +47,8 @@ export function buildStackEffects(
     return {
       ...(def.recordResult ? { recordResult: def.recordResult } : {}),
       ...(def.condition ? { condition: def.condition } : {}),
+      instructionId: def.instructionId ?? String(index),
+      onKill: def.onKill,
       targetGroup: def.targetGroup,
       recordOutcome: def.recordOutcome,
       requiresOutcome: def.requiresOutcome,

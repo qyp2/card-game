@@ -22,6 +22,8 @@ export type GameOutcome =
     | { type: 'draw'; losses: PlayerLoss[] };
 
 export interface GameRoom {
+    /** Rules-only causal ledger, keyed by exact battlefield incarnation; never projected raw. */
+    causalState?: Record<string, import('./change-cause.types').LethalAttribution>;
     gameRuleUses?: Record<string, number>;
     replacementEffects?: import('./proposed-event.types').ReplacementDefinition[];
     replacementSequence?: number;

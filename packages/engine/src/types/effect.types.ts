@@ -113,6 +113,8 @@ export interface TargetPointer {
  * A single effect within a stack item. Carries its own targets locked at cast time.
  */
 export interface StackEffect {
+  onKill?: { destination: 'exile' };
+  instructionId?: string;
   recordResult?: import('./resolution-result.types').CardResultDefinition;
   condition?: import('./rule.types').RuleCondition;
   recordOutcome?: OutcomeDefinition;
@@ -153,6 +155,8 @@ export interface TargetingDefinition extends CardFilter {
 }
 
 export interface EffectDefinition {
+  onKill?: { destination: 'exile' };
+  instructionId?: string;
   recordResult?: import('./resolution-result.types').CardResultDefinition;
   condition?: import('./rule.types').RuleCondition;
   /** Resolution-local boolean; only actual committed destruction/discard counts. */
@@ -217,6 +221,7 @@ export interface ActivatedStackObject {
  * live game state is not a reliable substitute for the event that fired.
  */
 export interface TriggeringEvent {
+  cause?: import('./change-cause.types').ChangeCause;
   eventId: string;
   payload: Record<string, unknown>;
   eventUuid?: string;
@@ -249,7 +254,7 @@ export interface TriggeredStackObject {
 
 /** Exact cards exposed by this resolution; expires with its continuation. */
 export interface ResolutionReveal { cards: CardInstance[]; sourceInfo: CardSnapshot; controllerId: string }
-export interface OutcomeDefinition { name: string; kind: 'destroyed' | 'discarded' }
+export interface OutcomeDefinition { name: string; kind: 'destroyed' | 'discarded' | 'killed' }
 export interface OutcomeProbe extends OutcomeDefinition { cards: { cardUuid: string; zoneRevision: number }[] }
 export type StackObject = (SpellStackObject | ActivatedStackObject | TriggeredStackObject) & {
   resolutionResults?: import('./resolution-result.types').ResolutionCardResults;

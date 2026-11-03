@@ -21,7 +21,7 @@ const inBounds = (value: number | undefined, bounds: NumberBounds | undefined) =
   && (bounds.min === undefined || value >= bounds.min) && (bounds.max === undefined || value <= bounds.max);
 
 /** Unannounced/dynamic costs have no fixed mana value in this query contract. */
-function fixedManaValue(value: CardFilterView): number | undefined {
+export function fixedManaValue(value: CardFilterView): number | undefined {
   const amounts = Object.values(value.castRequirements.cost?.mana ?? {});
   return amounts.every(amount => typeof amount === 'number' && Number.isFinite(amount))
     ? (amounts as number[]).reduce((total, amount) => total + amount, 0) : undefined;

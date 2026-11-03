@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "id": "phantom-puppet",
+  "name": "幻影木偶",
+  "manaCost": "{B}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "幻影木偶"
+  ],
+  "colors": [
+    "black"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "rulesText": "此卡在每副牌組能投入20張。① 我方攻擊階段，我方場上存在三張以上魔屬性僕從時，墳墓中的這張卡費用視為0魔。② 攻擊時：可以從墳墓召喚一張「幻影木偶」僕從。",
+  "abilities": [
+    {
+      "id": "graveyard-cost",
+      "type": "static",
+      "activeZones": [
+        "graveyard"
+      ],
+      "rules": [
+        {
+          "id": "zero",
+          "family": "characteristics",
+          "scope": {
+            "self": true,
+            "zones": [
+              "graveyard"
+            ]
+          },
+          "operation": {
+            "type": "MANA_COST",
+            "mana": {}
+          },
+          "condition": {
+            "all": [
+              {
+                "op": "eq",
+                "left": {
+                  "path": "room.activeTurnPlayerId"
+                },
+                "right": {
+                  "path": "source.state.ownerId"
+                }
+              },
+              {
+                "any": [
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "beginCombatStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareAttackersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareBlockersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "combatDamageStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "endCombatStep"
+                  }
+                ]
+              },
+              {
+                "op": "gte",
+                "left": {
+                  "numeric": {
+                    "kind": "query",
+                    "id": "count",
+                    "args": {
+                      "scope": {
+                        "zones": [
+                          "battlefield"
+                        ],
+                        "controller": "self",
+                        "cardTypes": [
+                          "Creature"
+                        ],
+                        "colors": [
+                          "black"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "right": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "attack-reanimate",
+      "type": "triggered",
+      "triggerCondition": "ON_ATTACK",
+      "trigger": {
+        "subject": "self"
+      },
+      "effects": [
+        {
+          "family": "cards",
+          "operation": "move",
+          "params": {
+            "origin": "graveyard",
+            "destination": "battlefield"
+          },
+          "choice": {
+            "kind": "search",
+            "zone": "graveyard",
+            "cardTypes": [
+              "Creature"
+            ],
+            "subTypes": [
+              "幻影木偶"
+            ],
+            "min": 0,
+            "max": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      ]
+    }
+  ]
+}

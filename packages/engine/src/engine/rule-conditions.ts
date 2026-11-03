@@ -3,6 +3,7 @@ import type { GameRoom } from '../types/game.room.types';
 import type { TriggeringEvent } from '../types/effect.types';
 import { captureSourceInformation } from './source-information';
 import { emptyEventCounts } from './turn-history';
+import { fixedManaValue } from '../shared/card-query';
 import { readRulePath } from '../shared/rule-path';
 import { createBoardNumericContext } from './numeric-characteristics';
 import { roomCards } from './continuous-effect-state';
@@ -26,7 +27,8 @@ export function createRuleContext(
     : { card: source, power: source.blueprint.power ?? 0, toughness: source.blueprint.toughness ?? 0 });
 
   const fields = {
-    source: { ...info.card, power: info.power, toughness: info.toughness },
+    source: { ...info.card, ...info.card.lastKnownCharacteristics, power: info.power, toughness: info.toughness,
+      manaValue: info.card.lastKnownCharacteristics ? fixedManaValue(info.card.lastKnownCharacteristics) : room ? CardCharacteristicService.resolveManaValue(room, source) : undefined },
     controller: room?.players[controllerId],
     event,
     room: room
@@ -34,6 +36,7 @@ export function createRuleContext(
       : undefined,
     history: {
       ...room?.turnHistory,
+      gameUses: room?.gameRuleUses ?? {},
       own: room?.turnHistory?.playerCounts[controllerId] ?? emptyEventCounts(),
     },
     ...extra,

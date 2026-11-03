@@ -1,4 +1,5 @@
 // src/engine/effect-resolver.ts
+import { attributeMutations, effectCause } from './change-cause';
 import { EffectRegistry } from './effect-registry';
 import type { ResolutionEffectResult, ResolutionReport } from '../types/game-event.types';
 import { gameReducer } from './game-reducer';
@@ -124,7 +125,7 @@ export function resolveEffects(room: GameRoom, stackObj: StackObject, results: R
     const handler = EffectRegistry[validatedEffect.action];
 
     if (handler && (!isExplicitTargeting(validatedEffect.targeting) || validatedEffect.targets.length > 0)) {
-      const effectMutations = handler(workingRoom, stackObj, { ...validatedEffect, params: { ...validatedEffect.params, ...dynamicParams } }, context);
+      const effectMutations = attributeMutations(handler(workingRoom, stackObj, { ...validatedEffect, params: { ...validatedEffect.params, ...dynamicParams } }, context), effectCause(workingRoom, stackObj, effect), workingRoom);
       mutations.push(...effectMutations);
 
       // Apply each effect's mutations so the next effect sees the updated state
@@ -248,7 +249,7 @@ function continueResolution(room: GameRoom, resolving: StackObject, startIndex: 
       const produced = resolveEffects(workingRoom, { ...resolving, effects: [effect] }, results, true, context);
       const outcomeProbe = probeOutcome(workingRoom, effect.recordOutcome, produced);
       const cardResultProbe = probeCardResult(workingRoom, resolving, effect.recordResult, produced);
-      const planned = planProposedMutations(workingRoom, produced);
+      const planned = planProposedMutations(workingRoom, produced, effect.recordOutcome?.kind === 'killed' ? { killCheckCauseId: effectCause(workingRoom, resolving, effect).id } : {});
 
       // A replacement decision suspends resolution and resumes after this effect.
       if (planned.pendingChoice) {

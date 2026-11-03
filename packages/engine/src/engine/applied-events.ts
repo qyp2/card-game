@@ -1,3 +1,5 @@
+import { damageCause } from './change-cause';
+import type { ChangeCause } from '../types/change-cause.types';
 import type { GameRoom } from '../types/game.room.types';
 import type { CardSnapshot } from '../types/card.types';
 import type { GameMutation } from '../types/game-mutation.types';
@@ -24,15 +26,17 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
   observe?: (before: GameRoom, after: GameRoom) => void): EventDraft[] {
   const events: EventDraft[] = [];
   let eventBefore = batchBefore, eventAfter = batchAfter;
+  let eventCause: ChangeCause | undefined;
 
   const add = <K extends keyof GameEventPayloads>(eventId: K, payload: GameEventPayloads[K]) => {
-    events.push({ eventId, roomId: batchAfter.roomId, payload } as EventDraft);
+    events.push({ eventId, roomId: batchAfter.roomId, payload, ...(eventCause ? { cause: eventCause } : {}) } as EventDraft);
     observe?.(eventBefore, eventAfter);
   };
 
   for (const { mutation: m, before, after, events: ownedEvents } of steps) {
     eventBefore = before;
     eventAfter = after;
+    eventCause = m.cause;
 
     // Emit a damage event, resolving the source's snapshot from the pre-step state.
     const damageEvent = (amount: number, source: string | undefined, combat: boolean, recipient: { cardUuid?: string; playerId?: string }, retained?: CardSnapshot) => {
@@ -98,6 +102,7 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
 
       for (const assignment of validDamageAssignments(before, m.assignments)) {
         const { source, recipient, amount, combat } = assignment;
+        eventCause = damageCause(assignment);
 
         if (recipient.kind === 'player') {
           damageEvent(amount, source.card.uuid, combat, { playerId: recipient.playerId }, source);
@@ -121,6 +126,15 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
 
           damageEvent(amount, source.card.uuid, combat, { cardUuid: card.uuid }, source);
         }
+      }
+    }
+
+    if (m.type !== 'APPLY_DAMAGE_BATCH' && (before.battlefield !== after.battlefield || before.continuousEffectPool !== after.continuousEffectPool || before.phase !== after.phase || before.players !== after.players)) {
+      for (const card of after.battlefield) {
+        const old = before.battlefield.find(c => c.uuid === card.uuid && (c.state.zoneRevision ?? 0) === (card.state.zoneRevision ?? 0));
+        if (!old) continue;
+        const previous = CardCharacteristicService.resolve(before, old), current = CardCharacteristicService.resolve(after, card);
+        if (!sameStateValue(previous, current)) add('CHARACTERISTICS_CHANGED', { card, controllerId: current.controllerId, before: previous, after: current });
       }
     }
 
@@ -169,6 +183,7 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
           const payload = { card: snapshot.card, snapshot, controllerId: snapshot.card.state.controllerId };
 
           add('PERMANENT_LEFT', payload);
+          if (newCard && m.kill && ['graveyard', 'exile'].includes(m.to) && m.kill.victim.zoneRevision === (departed.state.zoneRevision ?? 0)) add('CREATURE_KILLED', { ...payload, destination: m.to, outcome: m.kill });
 
           if (newCard && m.to === 'graveyard' && m.reason === 'destroy') add('PERMANENT_DESTROYED', payload);
           if (m.to === 'graveyard' && CardCharacteristicService.resolveTypes(before, snapshot.card).includes('Creature')) add('PERMANENT_DIED', payload);
@@ -253,6 +268,7 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
 
   eventBefore = batchBefore;
   eventAfter = batchAfter;
+  eventCause = undefined;
 
   if (resolution?.stackObj.immediate) add('ACTION_RESOLVED', { stackObj: resolution.stackObj, effects: resolution.effects });
 

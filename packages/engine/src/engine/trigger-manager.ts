@@ -9,6 +9,7 @@ import type { StackObject, StackEffect, TriggeringEvent } from '../types/effect.
 import { captureSourceInformation, resolveSourceInformation } from './source-information';
 import { triggerMatches } from './trigger-matching';
 import { conditionMatches, createRuleContext } from './rule-conditions';
+import { abilityUsageAvailable, recordAbilityUsage } from './ability-usage';
 import { abilityUseKey, newTurnHistory } from './turn-history';
 import type { CardSnapshot } from '../types/card.types';
 import { CardCharacteristicService } from './card-characteristic-service';
@@ -73,6 +74,8 @@ interface EventMapping {
 }
 
 const EVENT_MAP: Record<string, EventMapping> = {
+  CREATURE_KILLED: { triggerEvent: 'ON_KILL', scanBattlefield: true, includeEventCard: false },
+  CHARACTERISTICS_CHANGED: { triggerEvent: 'ON_CHARACTERISTICS_CHANGED', scanBattlefield: true, includeEventCard: true },
   CARD_REVEALED: { triggerEvent: 'ON_REVEAL', scanBattlefield: false, includeEventCard: true },
   PERMANENT_ENTERED: { triggerEvent: 'ON_ENTER_BATTLEFIELD', scanBattlefield: true, includeEventCard: true, selfEntryEffects: true },
   PERMANENT_LEFT: { triggerEvent: 'ON_LEAVE_BATTLEFIELD', scanBattlefield: true, includeEventCard: true },
@@ -154,6 +157,7 @@ export function discoverTriggers(event: GameEvent, context: TriggerContext): Pen
   const shared = new Set<string>();
   const scanSet = buildScanSet(event, context, mapping);
   const triggeringEvent: TriggeringEvent = {
+    cause: event.cause,
     eventId: event.eventId,
     payload: event.payload,
     eventUuid: event.eventUuid,
@@ -257,7 +261,7 @@ export class TriggerManager {
    * the mutation collector.
    */
   private onEvent(event: GameEvent, batch?: EventContext): void {
-    const departure = event.eventId === 'PERMANENT_LEFT' || event.eventId === 'PERMANENT_DIED' || event.eventId === 'PERMANENT_DESTROYED';
+    const departure = event.eventId === 'PERMANENT_LEFT' || event.eventId === 'PERMANENT_DIED' || event.eventId === 'PERMANENT_DESTROYED' || event.eventId === 'CREATURE_KILLED';
     const room = batch ? (departure ? { ...batch.before, turnHistory: batch.after.turnHistory } : batch.after) : this.getRoom();
 
     // Discovery is read-only. Uses queued by earlier events become visible to
@@ -301,6 +305,7 @@ export class TriggerManager {
         countered: false,
       });
       const triggeringEvent: TriggeringEvent = {
+        cause: event.cause,
         eventId: event.eventId,
         payload: event.payload,
         eventUuid: event.eventUuid,
@@ -328,6 +333,7 @@ export class TriggerManager {
    * Queue a PUSH_STACK mutation. The engine publishes its event after application.
    */
   private pushTrigger(trigger: PendingTrigger, room: GameRoom, sourceInfo?: CardSnapshot, useKey = abilityUseKey(trigger.source, trigger.ability?.id ?? 'on-enter')): boolean {
+    if (trigger.ability && !abilityUsageAvailable(room, trigger.source, trigger.ability, this.collector, trigger.controllerId)) return false;
     const limit = trigger.ability?.limitPerTurn;
     const turnNumber = room.turnNumber ?? 1;
     const reserved = this.collector.filter(mutation => mutation.type === 'RECORD_ABILITY_USE' && mutation.key === useKey && (mutation.turnNumber ?? turnNumber) === turnNumber).length;
@@ -349,6 +355,7 @@ export class TriggerManager {
 
     this.collector.push({ type: 'PUSH_STACK', stackObject: stackObj });
     this.collector.push({ type: 'RECORD_ABILITY_USE', key: useKey, turnNumber });
+    if (trigger.ability) this.collector.push(...recordAbilityUsage(room, trigger.source, trigger.ability, trigger.controllerId));
 
     if (gameConfig.logging.appliedEvents) {
       engineLogger.withContext({ roomId: room.roomId, commandId: trigger.event.commandId, batchId: trigger.event.batchId })

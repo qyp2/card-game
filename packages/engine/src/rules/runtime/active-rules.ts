@@ -48,10 +48,10 @@ export function ruleUse(active: ActiveRule): RuleUse | undefined {
   // The identity decides which uses share one budget.
   let identity = `${active.source.uuid}:${active.source.state.zoneRevision ?? 0}`;
 
-  if (usage.identity === 'controller') identity = `${active.controllerId}:${active.source.blueprint.id}`;
+  if (usage.identity === 'controller') identity = usage.group ? active.controllerId : `${active.controllerId}:${active.source.blueprint.id}`;
   else if (usage.identity === 'source_card') identity = active.source.uuid;
 
-  return { key: `rule-use:${identity}:${active.abilityId}:${active.definition.id}`, period: usage.period, limit: usage.limit };
+  return { key: usage.group ? `usage:${identity}:group:${usage.group}` : `rule-use:${identity}:${active.abilityId}:${active.definition.id}`, period: usage.period, limit: usage.limit };
 }
 /** Whether a rule's use budget still allows another use this period. */
 export function ruleUseAvailable(room: GameRoom, use: RuleUse | undefined): boolean {

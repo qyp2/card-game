@@ -1,3 +1,4 @@
+import { damageCause } from './change-cause';
 import type { DamageAssignment } from '../types/damage.types';
 import type { GameRoom } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
@@ -7,7 +8,9 @@ import { CardCharacteristicService } from './card-characteristic-service';
 export function planDamageResults(room: GameRoom, assignments: readonly DamageAssignment[]): GameMutation[] {
   const results: GameMutation[] = [];
 
-  for (const { amount, recipient, source } of assignments) {
+  for (const assignment of assignments) {
+    const { amount, recipient, source } = assignment;
+    const start = results.length;
     const characteristics = CardCharacteristicService.resolve(room, source.card);
     const keywords = characteristics.keywords.map((k) => k.toLowerCase());
 
@@ -73,6 +76,7 @@ export function planDamageResults(room: GameRoom, assignments: readonly DamageAs
     if (keywords.includes('lifelink') && room.players[characteristics.controllerId]) {
       results.push({ type: 'CHANGE_LIFE', playerId: characteristics.controllerId, amount });
     }
+    for (let i = start; i < results.length; i++) results[i] = { ...results[i], cause: damageCause(assignment) };
   }
 
   return results;

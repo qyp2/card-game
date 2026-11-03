@@ -1,3 +1,4 @@
+import { fixedManaValue } from '../shared/card-query';
 import type { CardBlueprint, CardInstance } from '../types/card.types';
 import { MANA_COLORS } from '../types/card.types';
 import type { GameRoom } from '../types/game.room.types';
@@ -150,6 +151,7 @@ function transform(value: LayerValue, entry: ContinuousEffectEntry, cards: CardI
       subTypes: list(value.subTypes, effect.setSubTypes, effect.addSubTypes, effect.removeSubTypes),
       superTypes: list(value.superTypes, effect.setSuperTypes, effect.addSuperTypes, effect.removeSuperTypes),
     };
+    case 'MANA_COST': return { ...value, castRequirements: { ...value.castRequirements, cost: { ...value.castRequirements.cost, mana: { ...effect.mana } } } };
     case 'COLOR': return { ...value, colors: list(value.colors, effect.set, effect.add, effect.remove) };
     case 'ABILITY': {
       const abilities = (effect.removeAll ? [] : value.abilities).filter(a => !effect.removeIds?.includes(a.id ?? ''));
@@ -220,8 +222,8 @@ function affected(entry: ContinuousEffectEntry, cards: CardInstance[], board: Bo
     if (!entry.condition) return true;
 
     const fields = {
-      source: source ? { ...source, ...board.get(source.uuid) } : undefined,
-      target: { ...c, ...board.get(c.uuid) },
+      source: source ? { ...source, ...board.get(source.uuid), manaValue: fixedManaValue(board.get(source.uuid)!) } : undefined,
+      target: { ...c, ...board.get(c.uuid), manaValue: fixedManaValue(board.get(c.uuid)!) },
       controller: controller ? room.players[controller] : undefined,
       room: { phase: room.phase, turnNumber: room.turnNumber ?? 1, activeTurnPlayerId: room.activeTurnPlayerId },
       history: { ...room.turnHistory, own: controller ? room.turnHistory?.playerCounts[controller] : undefined },
@@ -345,7 +347,7 @@ function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: numbe
   const continuations = new Map<string, ContinuousEffectEntry>();
   const startedGroups = new Set<string>();
 
-  for (const layer of [1, 2, 3, 4, 5, 6, 70, 71, 72, 73, 80]) {
+  for (const layer of [1, 2, 3, 4, 5, 5.5, 6, 70, 71, 72, 73, 80]) {
     if (layer > throughLayer) break;
 
     // Layer 73 also folds in +1/+1 and -1/-1 counters.

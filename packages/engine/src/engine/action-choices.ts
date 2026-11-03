@@ -107,7 +107,7 @@ export function prepareActionChoice(
 
   // Guard: a per-turn ability limit blocks the action outright.
   if (ability?.type === 'activated' && abilityLimitReached(room, card, ability)) {
-    return reject('Ability use limit reached for this turn');
+    return reject('Ability use limit reached');
   }
 
   const blueprint = CardCharacteristicService.resolveBlueprint(room, card);

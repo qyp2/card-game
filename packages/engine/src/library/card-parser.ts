@@ -67,6 +67,7 @@ export function normalizeActionCost(cost: Record<string, unknown> | undefined, d
 export function parseInstructionDefinition(raw: Record<string, unknown>, declarations: NumericDeclaration[] = []): EffectDefinition {
   raw = compileInstruction(raw);
   const effect: EffectDefinition = {
+    ...(raw.onKill ? { onKill: structuredClone(raw.onKill) as EffectDefinition['onKill'] } : {}),
     ...(raw.recordResult ? { recordResult: structuredClone(raw.recordResult) as EffectDefinition['recordResult'] } : {}),
     ...(raw.condition ? { condition: structuredClone(raw.condition) as EffectDefinition['condition'] } : {}),
     ...(raw.recordOutcome ? { recordOutcome: structuredClone(raw.recordOutcome) as EffectDefinition['recordOutcome'] } : {}),
@@ -117,6 +118,7 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
 
   const base = {
     ...(ability.immediate === true ? { immediate: true } : {}),
+    ...(ability.usage ? { usage: structuredClone(ability.usage) as import('../rules/schema/contracts').AbilityUsage } : {}),
     ...(ability.limitPerTurn !== undefined ? { limitPerTurn: ability.limitPerTurn as number } : {}),
     ...(Array.isArray(ability.modes) ? { modes: normalizeModes(ability.modes as Record<string, unknown>[], declarations) } : {}),
     ...(ability.modeCount ? { modeCount: ability.modeCount as { min: number; max: number } } : {}),

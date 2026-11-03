@@ -1,6 +1,7 @@
 import type { CardInstance, CardZone } from '../types/card.types';
 import type { CardCharacteristics, CharacteristicNumber } from '../types/continuous-effect.types';
 import type { NumericContext } from '../types/numeric-value.types';
+import { fixedManaValue } from '../shared/card-query';
 import { readRulePath } from '../shared/rule-path';
 import { scopeMatches } from './effect-scopes';
 import { characteristicNumericValue, evaluateNumericValue } from '../shared/numeric-values';
@@ -22,7 +23,11 @@ export interface BoardNumericContextOptions {
 /** The caller supplies either an intermediate board or the normal rules view. */
 export function createBoardNumericContext(options: BoardNumericContextOptions): NumericContext {
   /** Present a card as its resolved characteristics, or undefined when absent. */
-  const cardView = (card: CardInstance | undefined) => card ? { ...card, ...options.characteristics(card) } : undefined;
+  const cardView = (card: CardInstance | undefined) => {
+    if (!card) return undefined;
+    const value = options.characteristics(card);
+    return { ...card, ...value, manaValue: fixedManaValue(value) };
+  };
 
   /** Cards selected by a scope, honouring the scope's source collection. */
   const selected = (scope: import('../types/continuous-effect.types').EffectScope) => collectCardSource(options.cards, scope.from, options.results)?.filter((entry) =>

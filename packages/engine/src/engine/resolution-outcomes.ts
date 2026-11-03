@@ -11,6 +11,7 @@ export function probeOutcome(room: GameRoom, definition: OutcomeDefinition | und
 
   // Collect the card UUIDs the mutations targeted, matching the outcome kind.
   const ids = produced.flatMap((mutation) =>
+    definition.kind === 'killed' && ('cardUuid' in mutation || mutation.type === 'ADD_CONTINUOUS_EFFECT' || mutation.type === 'APPLY_DAMAGE_BATCH') ? room.battlefield.map(c => c.uuid) :
     definition.kind === 'destroyed' && mutation.type === 'DESTROY_CARD' ||
     definition.kind === 'discarded' && mutation.type === 'MOVE_CARD' && mutation.reason === 'discard'
       ? [mutation.cardUuid]
@@ -34,22 +35,22 @@ export function settleOutcome(room: GameRoom, object: StackObject, probe: Outcom
   let working = room, succeeded = false;
 
   // Replay the mutations, looking for the card actually arriving in the
-  // graveyard from the expected zone with the expected reason.
+  // expected destination from the expected incarnation and with the required outcome.
   for (const mutation of mutations) {
     const before = working;
     working = gameReducer(working, mutation);
 
-    // Only graveyard moves with the matching reason can satisfy the outcome.
+    // Kill credit follows the attributed lethal/destroy departure; other outcomes require their graveyard reason.
     if (
       mutation.type !== 'MOVE_CARD' ||
-      mutation.to !== 'graveyard' ||
-      mutation.reason !== (probe.kind === 'destroyed' ? 'destroy' : 'discard')
+      (probe.kind === 'killed' ? !['graveyard', 'exile'].includes(mutation.to) || !mutation.kill || !mutation.kill.causes.some(c => c.stackUuid === object.uuid) : mutation.to !== 'graveyard' ||
+      mutation.reason !== (probe.kind === 'destroyed' ? 'destroy' : 'discard'))
     ) {
       continue;
     }
 
     const old = roomCards(before).find((card) => card.uuid === mutation.cardUuid && card.state.zone === mutation.from);
-    const arrived = working.players[mutation.playerId]?.graveyard.find((card) => card.uuid === mutation.cardUuid);
+    const arrived = roomCards(working).find(card => card.uuid === mutation.cardUuid && card.state.zone === mutation.to);
 
     // The move counts only when it is the same incarnation we probed, and the
     // revision advanced by exactly one.

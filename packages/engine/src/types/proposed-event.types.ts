@@ -6,7 +6,8 @@ import type { BatchCause, ResolutionReport } from './game-event.types';
 
 export interface ObjectReference { cardUuid: string; zoneRevision: number }
 export type ZoneMove = Extract<GameMutation, { type: 'MOVE_CARD' }>;
-export type ProposedEvent =
+export type ProposedEvent = ProposedEventBody & { cause?: import('./change-cause.types').ChangeCause };
+type ProposedEventBody =
   | { kind: 'damage'; assignment: DamageAssignment }
   | { kind: 'zone_transfer' | 'destroy' | 'sacrifice' | 'discard'; move: ZoneMove }
   | { kind: 'draw'; playerId: string; move?: ZoneMove }
@@ -52,6 +53,7 @@ export interface ReplacementDefinition {
 }
 export interface TrackedProposedEvent { event: ProposedEvent; applied: string[] }
 export interface ProposedTransaction {
+  killCheckCauseId?: string;
   completed: GameMutation[];
   remaining: GameMutation[];
   current?: { frames: TrackedProposedEvent[]; final: TrackedProposedEvent[]; damage?: DamageAssignment[]; resultPrimitives?: GameMutation[] };

@@ -17,6 +17,8 @@ export interface GameEventPayloads {
   PERMANENT_LEFT: { card: CardInstance; snapshot: CardSnapshot; controllerId: PlayerId };
   PERMANENT_DIED: GameEventPayloads['PERMANENT_LEFT'];
   PERMANENT_DESTROYED: GameEventPayloads['PERMANENT_LEFT'];
+  CREATURE_KILLED: { card: CardInstance; snapshot: CardSnapshot; controllerId: PlayerId; destination: CardZone; outcome: import('./change-cause.types').KillOutcome };
+  CHARACTERISTICS_CHANGED: { card: CardInstance; controllerId: PlayerId; before: import('./continuous-effect.types').CardCharacteristics; after: import('./continuous-effect.types').CardCharacteristics };
   DAMAGE_TAKEN: { card: CardInstance; controllerId: PlayerId; amount: number; oldDamage: number; newDamage: number; source?: string };
   DAMAGE_DEALT: { card?: CardInstance; controllerId?: PlayerId; source?: string; snapshot?: CardSnapshot; amount: number; combat: boolean; recipient: { cardUuid?: string; playerId?: PlayerId } };
   LIFE_CHANGED: { playerId: PlayerId; oldLife: number; newLife: number; amount: number };
@@ -57,6 +59,7 @@ export interface EventIdentity {
 
 /** The uncommitted shape is also useful for external/debug event-bus consumers. */
 export interface GameEvent<K extends string = string> {
+  cause?: import('./change-cause.types').ChangeCause;
   eventId: K;
   roomId: string;
   payload: K extends keyof GameEventPayloads ? GameEventPayloads[K] : Record<string, unknown>;
@@ -71,6 +74,8 @@ export type EventDraft = {
 export type AppliedGameEvent = EventDraft & EventIdentity;
 
 export interface CommandContext {
+  source?: CardSnapshot;
+  abilityId?: string;
   commandId: string;
   action: string;
   playerId: PlayerId;

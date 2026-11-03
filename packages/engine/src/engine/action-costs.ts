@@ -8,6 +8,7 @@ import { ManaPool } from './mana-pool';
 import { manaAbilities, manaOutput } from './mana-abilities';
 import { ActionValidator } from './action-validator';
 import { gameReducer } from './game-reducer';
+import { recordAbilityUsage } from './ability-usage';
 import { abilityLimitReached, abilityUseKey } from './turn-history';
 import { materializeAnnouncementCost } from './announcement-values';
 import { actionCostError } from './cost-composition';
@@ -268,7 +269,7 @@ export function planManaActivation(
 
   // Guard: the per-turn use limit must not be exhausted.
   if (abilityLimitReached(room, card, ability)) {
-    return reject('Ability use limit reached for this turn');
+    return reject('Ability use limit reached');
   }
 
   const output = manaOutput(ability);
@@ -355,6 +356,7 @@ export function planManaActivation(
         type: 'RECORD_ABILITY_USE',
         key: abilityUseKey(card, ability.id ?? ''),
       },
+      ...recordAbilityUsage(room, card, ability, playerId),
     ],
   };
 }

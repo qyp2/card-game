@@ -82,7 +82,7 @@ Each requires exactly one `effect` or a nonempty ordered `effects` list. Both us
 
 Activated abilities declare cost, timing and optional `allowedZones` (battlefield by default; hand must be explicit). They support numeric declarations, additional/alternative costs and `limitPerTurn`. Costs support mana, tap/untap, life, discard, discardSelf and sacrifice; omit a cost or use `{}` for none. An alternative replaces the base cost; additional costs follow. Use `immediate` only for a supported immediate ability. Cost modifiers currently modify spells, not activations.
 
-Triggered abilities require `triggerCondition`. Optional `trigger` filters subject/controller/type/subtype/condition; `interveningIf` is rechecked at resolution. `sharedPerEvent` combines the same controller's identical ability IDs for an event. `limitPerTurn` is implemented. Per-game activated limits are not implemented by modifier usage.
+Triggered abilities require `triggerCondition`. Optional `trigger` filters subject/controller/type/subtype/condition; `interveningIf` is rechecked at resolution. `sharedPerEvent` combines the same controller's identical ability IDs for an event. `limitPerTurn` is implemented. Ordinary activated/triggered abilities now support `usage` with turn/game periods and shared groups; see [shared infrastructure](../../../../docs/shared-card-infrastructure.md).
 
 ```json
 {
@@ -140,3 +140,12 @@ Choices support optional, discard, options, ordering, search, selection and dist
 Mill instructions can capture `recordResult: { "name": "milled", "kind": "milled" }`. Later search choices and numeric scopes can use `from: { "kind": "result", "name": "milled" }` with the same filters. Default `current` view selects exact arrival incarnations still present; numeric `view: "recorded"` uses historical arrival characteristics. Cards move into their real zones before the next instruction. Sets survive paused choices and expire after the whole spell/ability resolves. Instruction `condition` supports conditional follow-ups using these queries. See [the full result-set contract](../../../../docs/resolution-results-architecture.md) and `example-mill-result` for syntax and replacement/identity details.
 
 See [rule-contract architecture and blocker assessment](../../../../docs/rule-contract-architecture.md) for ownership, migration evidence, legacy review and remaining mechanics.
+
+
+## Effective costs and causal outcomes
+
+A characteristic rule with `operation: { type: "MANA_COST", mana: {} }` makes all effective cost/value queries see zero while its zone/condition applies. Preserve the printed blueprint; payment-only adjustments remain in the costs family.
+
+Ordinary abilities accept `usage: { period: "game", limit: 1, identity: "source_card", consume: "on_commit" }`. Optional `group` shares a budget across abilities/rules; trigger enqueue consumes its use even if later countered.
+
+Instructions may declare `onKill: { destination: "exile" }` and `recordOutcome: { name: "kill", kind: "killed" }`; a follow-up can use `requiresOutcome: "kill"`. This captures actual attributed lethal/destroy departures with replacement-safe direct exile. `ON_KILL` with `trigger.cause` selects self/controller/any causal sources. `ON_DIE` still means an actual graveyard departure. See the [contract/history guide](../../../../docs/shared-card-infrastructure.md) for timing, receipts and the open broad credit ruling.

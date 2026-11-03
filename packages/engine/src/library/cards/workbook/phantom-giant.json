@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "id": "phantom-giant",
+  "name": "幻影巨人",
+  "manaCost": "{2}{B}{B}{B}{B}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "幻影木偶"
+  ],
+  "colors": [
+    "black"
+  ],
+  "power": 5,
+  "toughness": 5,
+  "rulesText": "墳墓中的此卡費用視為3魔1無。① 我方攻擊階段，我方場上存在五張以上魔屬性僕從時，墳墓中的這張卡費用視為0魔。② 攻擊時：從牌組頂部棄置三張卡片。然後，可以從墳墓召喚一張「幻影木偶」僕從。",
+  "abilities": [
+    {
+      "id": "graveyard-cost",
+      "type": "static",
+      "activeZones": [
+        "graveyard"
+      ],
+      "rules": [
+        {
+          "id": "base",
+          "family": "characteristics",
+          "scope": {
+            "self": true,
+            "zones": [
+              "graveyard"
+            ]
+          },
+          "operation": {
+            "type": "MANA_COST",
+            "mana": {
+              "black": 3,
+              "generic": 1
+            }
+          }
+        },
+        {
+          "id": "zero",
+          "family": "characteristics",
+          "scope": {
+            "self": true,
+            "zones": [
+              "graveyard"
+            ]
+          },
+          "operation": {
+            "type": "MANA_COST",
+            "mana": {}
+          },
+          "condition": {
+            "all": [
+              {
+                "op": "eq",
+                "left": {
+                  "path": "room.activeTurnPlayerId"
+                },
+                "right": {
+                  "path": "source.state.ownerId"
+                }
+              },
+              {
+                "any": [
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "beginCombatStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareAttackersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareBlockersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "combatDamageStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "endCombatStep"
+                  }
+                ]
+              },
+              {
+                "op": "gte",
+                "left": {
+                  "numeric": {
+                    "kind": "query",
+                    "id": "count",
+                    "args": {
+                      "scope": {
+                        "zones": [
+                          "battlefield"
+                        ],
+                        "controller": "self",
+                        "cardTypes": [
+                          "Creature"
+                        ],
+                        "colors": [
+                          "black"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "right": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "attack-mill-reanimate",
+      "type": "triggered",
+      "triggerCondition": "ON_ATTACK",
+      "trigger": {
+        "subject": "self"
+      },
+      "effects": [
+        {
+          "family": "cards",
+          "operation": "mill",
+          "params": {
+            "amount": 3
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        },
+        {
+          "family": "cards",
+          "operation": "move",
+          "params": {
+            "origin": "graveyard",
+            "destination": "battlefield"
+          },
+          "choice": {
+            "kind": "search",
+            "zone": "graveyard",
+            "cardTypes": [
+              "Creature"
+            ],
+            "subTypes": [
+              "幻影木偶"
+            ],
+            "min": 0,
+            "max": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      ]
+    }
+  ]
+}

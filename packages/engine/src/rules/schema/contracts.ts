@@ -10,7 +10,7 @@ import { InstructionNames, instructionParameterSchemas, type InstructionAction }
 const speed = z.enum(['instant', 'sorcery']);
 const triggerEvent = z.enum(['ON_ENTER_BATTLEFIELD', 'ON_LEAVE_BATTLEFIELD', 'ON_DIE', 'ON_DESTROY', 'ON_REVEAL', 'ON_DRAW', 'ON_SHUFFLE',
   'ON_DISCARD_FROM_HAND', 'ON_DISCARD_FROM_LIBRARY', 'ON_COUNTER_CHANGED', 'BEGIN_UPKEEP', 'END_OF_TURN', 'ON_DAMAGE_TAKEN', 'ON_LIFE_GAIN', 'ON_LIFE_LOSS',
-  'ON_DAMAGE_DEALT', 'ON_BLOCK', 'COMBAT_DAMAGE', 'ON_SPELL_CAST', 'ON_ATTACK']);
+  'ON_DAMAGE_DEALT', 'ON_BLOCK', 'COMBAT_DAMAGE', 'ON_SPELL_CAST', 'ON_ATTACK', 'ON_KILL', 'ON_CHARACTERISTICS_CHANGED']);
 export const CharacteristicOperationSchema = characteristicOperationSchema(() => NormalizedAbilitySchema, () => NormalizedBlueprintSchema);
 export const ContinuousOperationSchema = z.union([CharacteristicOperationSchema, PermissionOperationSchema]);
 const ruleBase = { id: Identifier, group: Identifier.optional(), condition: ConditionSchema.optional(), scope: ScopeSchema.omit({ cardUuid: true, zoneRevision: true, objects: true }) };
@@ -27,9 +27,9 @@ export type CostModifierDefinition = Extract<ModifierDefinition, { family: 'cost
 export type EventModifierDefinition = Extract<ModifierDefinition, { family: 'event-replacements' }>;
 
 const parameters = instructionParameterSchemas(ContinuousOperationSchema, () => NormalizedAbilitySchema);
-const effectFields = { tags: z.array(Identifier).optional(), targeting: TargetSchema.optional(), choice: z.lazy(() => ChoiceSchema).optional(),
+const effectFields = { onKill: z.strictObject({ destination: z.literal('exile') }).optional(), tags: z.array(Identifier).optional(), targeting: TargetSchema.optional(), choice: z.lazy(() => ChoiceSchema).optional(),
   recordResult: CardResultDefinitionSchema.optional(), condition: ConditionSchema.optional(),
-  targetGroup: Identifier.optional(), recordOutcome: z.strictObject({ name: Identifier, kind: z.enum(['destroyed', 'discarded']) }).optional(), requiresOutcome: Identifier.optional() };
+  targetGroup: Identifier.optional(), recordOutcome: z.strictObject({ name: Identifier, kind: z.enum(['destroyed', 'discarded', 'killed']) }).optional(), requiresOutcome: Identifier.optional() };
 const engineInstruction = z.strictObject({ action: Identifier, params: z.record(z.string(), z.unknown()).optional(), ...effectFields });
 export const AuthoredEffectSchema: z.ZodType = z.lazy(() => z.union([
   engineInstruction,
@@ -51,9 +51,11 @@ export const ChoiceSchema: z.ZodType = z.lazy(() => z.discriminatedUnion('kind',
   z.strictObject({ kind: z.literal('selection'), criteria: TargetSchema, prompt: z.string().optional() }),
   z.strictObject({ kind: z.literal('distribution'), total: Count, field: Identifier.optional(), prompt: z.string().optional() }),
 ]));
-const TriggerFilterSchema = z.strictObject({ subject: z.enum(['self', 'another', 'any']).optional(), controller: PlayerRelation.optional(), cardTypes: z.array(Identifier).optional(),
+const TriggerFilterSchema = z.strictObject({ cause: z.enum(['self', 'controller', 'any']).optional(), subject: z.enum(['self', 'another', 'any']).optional(), controller: PlayerRelation.optional(), cardTypes: z.array(Identifier).optional(),
   subTypes: z.array(Identifier).optional(), condition: ConditionSchema.optional() });
-const commonAbility = { id: Identifier, immediate: z.boolean().optional(), limitPerTurn: Count.min(1).optional(), castSpeed: speed.optional(), modes: z.array(ModeSchema).optional(),
+export const AbilityUsageSchema = UsageSchema.extend({ consume: z.literal('on_commit') });
+export type AbilityUsage = z.infer<typeof AbilityUsageSchema>;
+const commonAbility = { id: Identifier, immediate: z.boolean().optional(), usage: AbilityUsageSchema.optional(), limitPerTurn: Count.min(1).optional(), castSpeed: speed.optional(), modes: z.array(ModeSchema).optional(),
   modeCount: z.strictObject({ min: Count, max: Count }).optional() };
 const staticFields = { id: Identifier, type: z.literal('static'), activeZones: z.array(Zone).optional(), characteristicDefining: z.boolean().optional(),
   effects: z.array(z.strictObject({ group: Identifier.optional(), layer: z.number().int(), scope: ScopeSchema, effect: ContinuousOperationSchema, condition: ConditionSchema.optional() })).optional(),

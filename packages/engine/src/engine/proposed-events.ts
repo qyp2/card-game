@@ -1,3 +1,4 @@
+import { attributedLethalMoves, killMove, attributeDamage, replacementCause } from './change-cause';
 import type { GameRoom } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { ChoiceAnswer, PendingChoice } from '../types/choice.types';
@@ -11,10 +12,21 @@ import { planDamageResults } from './damage-keywords';
 import { recordRuleUse } from '../rules/runtime/active-rules';
 
 export interface ProposedPlan { mutations: GameMutation[]; pendingChoice?: PendingChoice }
-export type ProposedPlanOptions = Pick<ProposedTransaction, 'simultaneous' | 'cause' | 'resolution'>;
+export type ProposedPlanOptions = Pick<ProposedTransaction, 'simultaneous' | 'cause' | 'resolution' | 'killCheckCauseId'>;
 
 /** Turn a primitive mutation into the proposed events a replacement effect can act on. */
 function propose(room: GameRoom, mutation: GameMutation): ProposedEvent[] | undefined {
+  return proposeBody(room, mutation)?.map(event => {
+    if ('move' in event && event.move) {
+      const move = { ...event.move, cause: mutation.cause, kill: mutation.kill };
+      if (move.kill?.causes.some(c => c.killDestination === 'exile')) move.to = 'exile';
+      return { ...event, cause: mutation.cause, move: event.kind === 'destroy' && !move.kill
+        ? killMove(room, move, 'destroy', mutation.cause ? [mutation.cause] : undefined) as typeof move : move };
+    }
+    return { ...event, cause: mutation.cause };
+  });
+}
+function proposeBody(room: GameRoom, mutation: GameMutation): ProposedEvent[] | undefined {
   // Guard: an already-replaced mutation must not be proposed again.
   if ('replacementProcessed' in mutation && mutation.replacementProcessed) return;
 
@@ -116,6 +128,7 @@ function lower(room: GameRoom, events: ProposedEvent[]): GameMutation[] {
     };
 
     if (mutation) {
+      mutation = { ...mutation, cause: mutation.cause ?? event.cause };
       result.push(mutation);
       working = gameReducer(working, mutation);
     }
@@ -245,7 +258,12 @@ function applyShieldAllocation(room: GameRoom, choice: PendingChoice, transactio
     // Guard: the frame must still be replaceable by this rule.
     if (frame.event.kind !== 'damage' || !applicableReplacement(room, frame.event, rule)) throw new Error('Shield allocation is stale');
 
-    frame.event.assignment.amount -= allocations[`damage:${index}`] ?? 0;
+    const amount = allocations[`damage:${index}`] ?? 0;
+    frame.event.assignment.amount -= amount;
+    if (amount > 0) {
+      frame.event.cause = replacementCause(room, frame.event.cause ?? frame.event.assignment.cause, rule);
+      if (frame.event.cause) frame.event.assignment = attributeDamage({ ...frame.event.assignment, cause: undefined }, frame.event.cause);
+    }
     frame.applied.push(rule.id);
   }
 
@@ -272,9 +290,10 @@ function applyRule(room: GameRoom, transaction: ProposedTransaction, rule: Repla
 
   const result = applyReplacement(room, frame.event, rule);
 
-  if (result.mutations?.length) transaction.completed.push(...result.mutations);
-
   const changed = !!result.mutations?.length || JSON.stringify(result.events) !== JSON.stringify([frame.event]);
+
+  const cause = changed ? replacementCause(room, frame.event.cause, rule) : frame.event.cause;
+  if (result.mutations?.length) transaction.completed.push(...result.mutations.map(m => ({ ...m, cause: m.cause ?? cause })));
 
   // A consumable rule records its use when it actually changed the event.
   if (changed && rule.ruleUse) transaction.completed.push(recordRuleUse(room, rule.ruleUse));
@@ -289,7 +308,8 @@ function applyRule(room: GameRoom, transaction: ProposedTransaction, rule: Repla
     transaction.completed.push({ type: 'SET_REPLACEMENT_EFFECTS', effects });
   }
 
-  transaction.current!.frames.unshift(...result.events.map(event => ({ event, applied: [...applied] })));
+  transaction.current!.frames.unshift(...result.events.map(event => ({ event: { ...event, cause: cause ?? event.cause,
+    ...(event.kind === 'damage' && cause ? { assignment: attributeDamage({ ...event.assignment, cause: undefined }, cause) } : {}) }, applied: [...applied] })));
 }
 
 /** Drive the transaction until it settles or needs a player decision. */
@@ -409,6 +429,12 @@ function run(room: GameRoom, transaction: ProposedTransaction): ProposedPlan {
     applyRule(matchingRoom, transaction, rules[0]);
   }
 
+  if (transaction.killCheckCauseId) {
+    const causeId = transaction.killCheckCauseId;
+    transaction.killCheckCauseId = undefined;
+    const moves = attributedLethalMoves(preview(room, transaction), causeId);
+    if (moves.length) return run(room, { ...transaction, remaining: moves });
+  }
   return { mutations: transaction.completed };
 }
 

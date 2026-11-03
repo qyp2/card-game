@@ -6,6 +6,9 @@ import { CardCharacteristicService } from './card-characteristic-service';
 /** Card events default to this object; player/step events default to its controller. */
 export function triggerMatches(event: GameEvent, source: CardInstance, filter: TriggerFilter = {}, controllerId = source.state.controllerId, room?: GameRoom): boolean {
   const card = event.payload.card as CardInstance | undefined;
+  const causes = event.eventId === 'CREATURE_KILLED' ? (event.payload.outcome as import('../types/change-cause.types').KillOutcome).causes : event.cause ? [event.cause] : [];
+  const causeRelation = filter.cause ?? (event.eventId === 'CREATURE_KILLED' ? 'self' : 'any');
+  if (causeRelation !== 'any' && !causes.some(c => causeRelation === 'controller' ? c.controllerId === controllerId : c.source?.card.uuid === source.uuid && (c.source.card.state.zoneRevision ?? 0) === (source.state.zoneRevision ?? 0))) return false;
 
   // Events that describe something happening *to* a player rather than to a
   // card; these default to "any" subject instead of "self".
@@ -16,7 +19,7 @@ export function triggerMatches(event: GameEvent, source: CardInstance, filter: T
     'SPELL_CAST',
   ].includes(event.eventId);
 
-  const subject = filter.subject ?? ((card && !personalEvent) || event.eventId === 'DAMAGE_DEALT' ? 'self' : 'any');
+  const subject = filter.subject ?? ((card && !personalEvent && event.eventId !== 'CREATURE_KILLED') || event.eventId === 'DAMAGE_DEALT' ? 'self' : 'any');
 
   // Identity is UUID *plus* zone and revision: a card that left and returned is
   // a different rules object.

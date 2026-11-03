@@ -12,7 +12,8 @@ import type { GameRoom, GameOutcome, PlayerId } from './game.room.types';
 import type { StackObject, SpellStackObject, CombatDeclaration } from './effect.types';
 import type { LibraryCardReference, LibraryPlacement } from './library.types';
 
-export type GameMutation =
+export type GameMutation = GameMutationBody & { cause?: import('./change-cause.types').ChangeCause; kill?: import('./change-cause.types').KillOutcome };
+type GameMutationBody =
   | { type: 'SHUFFLE_LIBRARY'; playerId: PlayerId; order: LibraryCardReference[] }
   | { type: 'REORDER_LIBRARY'; playerId: PlayerId; order: LibraryCardReference[] }
   | { type: 'ADD_REPLACEMENT_EFFECT'; effect: Omit<import('./proposed-event.types').ReplacementDefinition, 'id'> & { id?: string } }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CatalogResponseSchema, newScenario, validateDeck, type DeckInput } from '@card-game/protocol';
+import { CatalogResponseSchema, deckEligibility, newScenario, validateDeck, type DeckInput } from '@card-game/protocol';
 import { buildCatalog } from '@server/catalog/catalog';
 import { DeckService, InvalidDeckError } from '@server/decks/deck-service';
 import { InMemoryDeckStore } from '@server/decks/deck-store';
@@ -48,7 +48,7 @@ describe('shared deck rules and catalog boundary', () => {
     expect(CatalogResponseSchema.safeParse({ protocolVersion: 1, cards, offset: 0, limit: 100, total: cards.length }).success).toBe(true);
     const encoded = JSON.stringify(cards);
     for (const field of ['"abilities"', '"onCastEffects"', '"castRequirements"', '"uuid"', '"state"']) expect(encoded).not.toContain(field);
-    expect(catalog.get('land-red')?.copyLimit).toBeNull(); expect(catalog.get('sea-domain')?.copyLimit).toBe(4);
+    expect(catalog.get('land-red')?.copyLimit).toBeNull(); expect(catalog.get('sea-domain')?.copyLimit).toBeNull();
     expect(() => getBlueprint('toString')).toThrow('Unknown');
   });
   it('bounds saved-deck creation and returns shared validation issues without mutation', () => {
@@ -60,5 +60,42 @@ describe('shared deck rules and catalog boundary', () => {
     expect(() => service.update('other', previous.id, valid)).toThrow('not found');
     expect(() => service.update('owner', previous.id, { ...valid, cards: [] })).toThrow(InvalidDeckError);
     expect(service.get('owner', previous.id)).toEqual(previous);
+  });
+});
+
+
+describe('owned config-driven copy limits shared with the builder', () => {
+  it.each([['phantom-puppet', 20], ['phantom-castle', 1], ['worlds-sea', 1]])('enforces the configured limit for %s', (cardId, limit) => {
+    expect(catalog.get(cardId)?.copyLimit).toBe(limit);
+    const deck = (n: number) => ({ name: 'Policy', format: 'standard', cards: [{ cardId: 'land-red', quantity: 60 - n }, { cardId, quantity: n }] });
+    expect(validateDeck(deck(limit), catalog).valid).toBe(true);
+    expect(validateDeck(deck(limit + 1), catalog).valid).toBe(false);
+  });
+  it('allows all six workbook repeatable lands under the owned eligibility config', () => {
+    for (const cardId of ['land-red', 'phantom-underworld', 'beast-holy-land', 'aurora-northland', 'angel-holy-land', 'sea-domain']) {
+      const card = [...catalog.values()].find(c => c.id === cardId);
+      expect(card).toBeDefined();
+      expect(validateDeck({ name: 'Land', format: 'standard', cards: [{ cardId, quantity: 60 }] }, catalog).valid).toBe(true);
+    }
+  });
+});
+
+
+describe('deck policy parser and custom config', () => {
+  it('uses one compiled policy for preview validation and server saves', () => {
+    const custom = buildCatalog({ ...deckEligibility, copyLimits: { ...deckEligibility.copyLimits, 'empire-servant': 20 } });
+    const deck = { ...valid, cards: [{ cardId: 'land-red', quantity: 40 }, { cardId: 'empire-servant', quantity: 20 }] };
+    expect(validateDeck(deck, custom).valid).toBe(true);
+    const service = new DeckService(new InMemoryDeckStore(), custom, () => 1);
+    expect(service.create('owner', deck).cards).toEqual(deck.cards);
+    expect(() => service.create('owner', { ...deck, cards: [{ cardId: 'land-red', quantity: 39 }, { cardId: 'empire-servant', quantity: 21 }] })).toThrow(InvalidDeckError);
+  });
+  it('rejects unknown, overlapping, duplicate and invalid configured exceptions', () => {
+    for (const policy of [
+      { ...deckEligibility, copyLimits: { 'not-a-card': 20 } },
+      { ...deckEligibility, copyLimits: { 'land-red': 20 } },
+      { ...deckEligibility, copyLimits: { 'empire-servant': 0 } },
+      { ...deckEligibility, unlimitedCopies: ['land-red', 'land-red'] },
+    ]) expect(() => buildCatalog(policy as any)).toThrow();
   });
 });

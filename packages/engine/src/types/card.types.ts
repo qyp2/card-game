@@ -49,7 +49,9 @@ export type TriggerEvent =
     | 'ON_BLOCK'
     | 'COMBAT_DAMAGE'
     | 'ON_SPELL_CAST'
-    | 'ON_ATTACK';
+    | 'ON_ATTACK'
+    | 'ON_KILL'
+    | 'ON_CHARACTERISTICS_CHANGED';
 
 // ============================================================================
 // 3. Ability Architecture (Discriminated Unions)
@@ -60,6 +62,7 @@ export interface ActivatedAbilityBase extends CostRoutes {
     /** Ordinary activations default to battlefield; hand must be explicitly admitted. */
     allowedZones?: ('hand' | 'battlefield')[];
     numericDeclarations?: import('./numeric-value.types').NumericDeclaration[];
+    usage?: import('../rules/schema/contracts').AbilityUsage;
     limitPerTurn?: number;
     modes?: import('./effect.types').ModeDefinition[];
     modeCount?: { min: number; max: number };
@@ -81,6 +84,7 @@ export type ActivatedAbility = ActivatedAbilityBase & (
 );
 
 export interface TriggerFilter {
+    cause?: 'self' | 'controller' | 'any';
     condition?: import('./rule.types').RuleCondition;
     subject?: 'self' | 'another' | 'any';
     controller?: 'self' | 'opponent' | 'any';
@@ -92,6 +96,7 @@ export interface TriggeredAbilityBase {
     immediate?: boolean;
     /** Identical ability IDs on this controller's copies produce one trigger for an event. */
     sharedPerEvent?: boolean;
+    usage?: import('../rules/schema/contracts').AbilityUsage;
     limitPerTurn?: number;
     interveningIf?: import('./rule.types').RuleCondition;
     modes?: import('./effect.types').ModeDefinition[];
