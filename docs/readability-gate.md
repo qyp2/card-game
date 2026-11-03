@@ -1,6 +1,6 @@
 # Readability Gate
 
-**Status:** Current · **Date:** 2026-10-29
+**Status:** Current · **Date:** 2026-11-03
 
 > Two mechanical gates that keep the engine readable as it grows: a **ratcheting
 > readability test** and a **ratcheting coverage threshold**. Both run inside
@@ -102,24 +102,83 @@ First findings:
 npm run test:coverage
 ```
 
-Runs the `engine` project with the v8 provider and writes `coverage/` (text,
+Runs every vitest project with the v8 provider and writes `coverage/` (text,
 HTML, and `coverage-summary.json`). The threshold block fails the run when
 coverage drops below the frozen floor.
 
+### Scope
+
+Coverage is measured over the modules that carry logic worth asserting on:
+
+| Included | Why |
+|---|---|
+| `packages/engine/src` | The rules engine — the densest logic in the repo |
+| `packages/protocol/src` | Wire schemas; a silent change here breaks every client |
+| `packages/ui/src` | Shared presentational helpers |
+| `packages/browser-session/src` | Session/CSRF state machine |
+| `apps/server/src` | Request handling, persistence, auth |
+| `apps/game-client/**/*.ts` | Stores, reducers, layout maths, targeting |
+
+Excluded on purpose:
+
+- **`**/*.tsx`** — see below.
+- **`**/types/**`** — type-only modules compile to nothing.
+- **`packages/engine/src/engine/numeric-values.ts`** — a one-line re-export shim.
+
+### Why JSX is not covered
+
+Every vitest project runs under `environment: 'node'`, so a component test can
+only assert on a string produced by `renderToStaticMarkup`. A high number there
+measures how much of the render function executed, not whether the output was
+correct — it is a snapshot test wearing a coverage badge.
+
+Measured 2026-11-03, the client's 23 `.tsx` files sat at 69.93% lines while its
+`.ts` files sat at 82.28%, and the gap was concentrated in shell files
+(`main.tsx` 0%, `AccountControls.tsx` 19%, `Home.tsx` 25%, `StartScreen.tsx`
+32%, `App.tsx` 37%) whose job is wiring, not logic. Chasing those numbers would
+mean asserting on markup, which is exactly the kind of test that gets rewritten
+every time a class name changes.
+
+The UI is gated by the two-tab smoke test instead — see
+[`playwright-smoke-testing.md`](playwright-smoke-testing.md).
+
 ### Current thresholds
 
-Measured 2026-10-29 over `packages/engine/src` (types and the `numeric-values.ts`
-re-export shim excluded):
+Measured 2026-11-03 over the scope above (182 files):
 
 | Metric | Measured | Threshold |
 |---|---|---|
-| Lines | 94.43% | 94 |
-| Statements | 91.36% | 91 |
-| Functions | 94.04% | 93 |
-| Branches | 86.45% | 86 |
+| Lines | 94.08% | 93 |
+| Statements | 90.29% | 89 |
+| Functions | 93.17% | 92 |
+| Branches | 86.28% | 85 |
 
 Each threshold sits one point below its measurement so ordinary noise cannot fail
 the build, while a real regression still does.
+
+Per area, for orientation:
+
+| Area | Files | Lines | Statements | Functions | Branches |
+|---|---|---|---|---|---|
+| `packages/protocol` | 15 | 100% | 100% | 100% | 98.80% |
+| `packages/engine` | 101 | 95.43% | 92.34% | 95.34% | 88.09% |
+| `packages/browser-session` | 1 | 95.92% | 90.22% | 80.00% | 87.10% |
+| `apps/server` | 46 | 94.54% | 90.06% | 94.44% | 86.00% |
+| `apps/game-client` | 18 | 82.28% | 76.18% | 76.88% | 68.12% |
+
+`apps/game-client` is the weakest area and the one to watch. Its low branches
+number is concentrated in `hooks/useSocket.ts` (20%), `store/deltaReducer.ts`
+(34%), and `socket.ts` (26%) — all three are thin wrappers around a live socket,
+which is why the smoke test exists.
+
+### Why one global threshold, not per-file
+
+A per-file floor sounds stricter but is worse in practice: it forces a test for
+every trivial module, and it makes the gate fail for reasons unrelated to the
+change under review. A global floor has the opposite weakness — a 0%-covered file
+can hide behind a 100%-covered one — so it is paired with review, not a
+substitute for it. The per-area numbers are printed on every run, which is enough
+to notice a module drifting.
 
 ### Why coverage is a weak gate on its own
 
@@ -146,7 +205,7 @@ untested new code, not a substitute for review.
 |---|---|
 | `npm run test` | Full suite, including both architecture gates |
 | `npm run test:architecture` | Import-boundary test only |
-| `npm run test:coverage` | Engine suite with coverage thresholds |
+| `npm run test:coverage` | Full suite with coverage thresholds |
 | `npm run verify` | `typecheck && test && build` — what CI runs |
 
 The readability test lives under `tests/architecture/`, which the `architecture`

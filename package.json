@@ -23,7 +23,7 @@
     "dev": "npm run build:server && node apps/server/dist/index.js --vite",
     "dev:client": "npm run dev -w @card-game/client",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --project engine",
+    "test:coverage": "vitest run --coverage",
     "test:architecture": "vitest run --pool=threads --maxWorkers=1 tests/architecture/import-boundaries.test.ts",
     "test:watch": "vitest",
     "verify": "npm run typecheck && npm run test && npm run build",
