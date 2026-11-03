@@ -24,12 +24,24 @@ export class EventBus {
     this.verbose = verbose;
   }
 
+  /** Publish an event to every listener registered for its id. */
   emit(event: GameEvent, context?: EventContext): void {
+    // Optional tracing: log the event with the batch/command context attached.
     if (this.verbose || gameConfig.logging.appliedEvents) {
-      engineLogger.withContext({ roomId: this.roomId, ...context?.command, commandId: event.commandId, batchId: event.batchId, eventUuid: event.eventUuid })
+      engineLogger
+        .withContext({
+          roomId: this.roomId,
+          ...context?.command,
+          commandId: event.commandId,
+          batchId: event.batchId,
+          eventUuid: event.eventUuid,
+        })
         .debug('event:emitted', event.eventId, { eventId: event.eventId, payload: event.payload });
     }
+
     const handlers = this.listeners.get(event.eventId);
+
+    // Dispatch to every listener registered for this event id, if any.
     if (handlers) {
       for (const listener of handlers) {
         listener(event, context);
@@ -37,8 +49,11 @@ export class EventBus {
     }
   }
 
+  /** Subscribe to an event id. */
   on<K extends string>(eventId: K, listener: EventListener<K>): void {
     const existing = this.listeners.get(eventId);
+
+    // First listener for this id creates the bucket; later ones append.
     if (existing) {
       existing.push(listener as EventListener);
     } else {
@@ -46,9 +61,13 @@ export class EventBus {
     }
   }
 
+  /** Unsubscribe a previously registered listener. */
   off<K extends string>(eventId: K, listener: EventListener<K>): void {
     const handlers = this.listeners.get(eventId);
+
+    // Guard: nothing registered for this id.
     if (!handlers) return;
+
     const idx = handlers.indexOf(listener as EventListener);
     if (idx !== -1) handlers.splice(idx, 1);
   }

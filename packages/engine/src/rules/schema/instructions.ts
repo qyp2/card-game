@@ -15,6 +15,7 @@ export const InstructionNames = {
 } as const;
 export type InstructionAction = keyof typeof InstructionNames;
 
+/** Parameter schemas for every instruction action, keyed by action id. */
 export function instructionParameterSchemas(characteristic: z.ZodType, ability: () => z.ZodType) {
   const empty = z.strictObject({});
   const stats = { power: EffectNumber.optional(), toughness: EffectNumber.optional() };

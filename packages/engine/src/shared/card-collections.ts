@@ -4,6 +4,7 @@ import type { CardResultSource, ResolutionCardResults } from '../types/resolutio
 import { safeRuleKey } from './rule-path';
 
 export interface CollectedCard { card: CardInstance; recordedCharacteristics?: CardCharacteristics }
+/** Type guard for a resolution-result card source. */
 export function validCardResultSource(value: unknown): value is CardResultSource {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const source = value as Record<string, unknown>;

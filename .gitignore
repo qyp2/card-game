@@ -3,6 +3,7 @@ test.txt
 tem/
 build/
 dist/
+coverage/
 node_modules/
 data/deltas.jsonl*
 data/admin-audit.jsonl*

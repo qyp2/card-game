@@ -20,10 +20,14 @@ export function buildStackEffects(
   controllerId: string,
   source?: CardInstance
 ): StackEffect[] {
+  // Guard: a card with no effects contributes nothing.
   if (!definitions) return [];
+
   return definitions.map(def => {
     const targets: TargetPointer[] = [];
+
     if (def.targeting.type === 'self') {
+      // A self-target is either the source permanent or its controller.
       targets.push(def.targeting.subject === 'source' && source
         ? { targetType: 'permanent', cardUuid: source.uuid, zoneRevision: source.state.zoneRevision ?? 0 }
         : { targetType: 'player', playerId: controllerId });
@@ -38,6 +42,7 @@ export function buildStackEffects(
         controller: def.targeting.controller,
       });
     }
+
     // For effects requiring explicit targets, targets are filled by server-prompted targeting (future)
     return {
       ...(def.recordResult ? { recordResult: def.recordResult } : {}),
@@ -87,14 +92,19 @@ export function revalidateTargets(
     // Filter-based "all" target → expand to concrete matches
     if (target.all) {
       if (target.targetType === 'player') {
+        // Every player, narrowed by the self/opponent controller filter.
         for (const playerId of Object.keys(room.players)) if ((target.controller !== 'self' || playerId === controllerId) && (target.controller !== 'opponent' || playerId !== controllerId)) resolvedTargets.push({ targetType: 'player', playerId });
+
         continue;
       }
+
       const matches = room.battlefield.filter(card => matchesTargetFilter(card,
         { ...effect.targeting, ...target, type: 'permanent', required: false }, controllerId, room));
+
       for (const card of matches) {
         resolvedTargets.push({ targetType: 'permanent', cardUuid: card.uuid });
       }
+
       continue;
     }
 
@@ -102,29 +112,33 @@ export function revalidateTargets(
     const valid = isExplicitTargeting(effect.targeting)
       ? structuralTargetLegal(room, controllerId, target, effect.targeting) && (!source || PermissionRegistry.canTarget(room, controllerId, source, [target]))
       : (() => {
-      switch (target.targetType) {
-        case 'permanent':
-        case 'card': {
-          if (!target.cardUuid) return false;
-          const card = findTargetCard(room, target);
-          return !!card && card.state.zone === (target.zone ?? 'battlefield') && (target.zoneRevision === undefined || target.zoneRevision === (card.state.zoneRevision ?? 0));
+        switch (target.targetType) {
+          case 'permanent':
+          case 'card': {
+            if (!target.cardUuid) return false;
+
+            const card = findTargetCard(room, target);
+
+            return !!card && card.state.zone === (target.zone ?? 'battlefield') && (target.zoneRevision === undefined || target.zoneRevision === (card.state.zoneRevision ?? 0));
+          }
+          case 'player': {
+            if (!target.playerId) return false;
+
+            return target.playerId in room.players;
+          }
+          case 'stack': {
+            if (!target.stackUuid) return false;
+
+            return room.stack.some(s => s.uuid === target.stackUuid);
+          }
+          case 'self': {
+            // Self always resolves to the controller — always valid
+            return true;
+          }
+          default:
+            return false;
         }
-        case 'player': {
-          if (!target.playerId) return false;
-          return target.playerId in room.players;
-        }
-        case 'stack': {
-          if (!target.stackUuid) return false;
-          return room.stack.some(s => s.uuid === target.stackUuid);
-        }
-        case 'self': {
-          // Self always resolves to the controller — always valid
-          return true;
-        }
-        default:
-          return false;
-      }
-    })();
+      })();
 
     if (valid) resolvedTargets.push(target);
   }
@@ -168,21 +182,30 @@ export function buildDynamicParams(
   const { numeric, exactTarget } = resolutionNumericContext(room, stackObj, effect);
 
   for (const [key, value] of Object.entries(effect.params)) {
+    // Numeric expressions are evaluated against the board context.
     if (hasNumericExpression(value)) {
       const result = evaluateNumericValue(value, numeric);
       dynamic[key] = result.ok ? result.value : undefined;
+
       continue;
     }
+
+    // Guard: only 'DYNAMIC:' markers are resolved here.
     if (typeof value !== 'string' || !value.startsWith('DYNAMIC:')) continue;
     const path = value.slice('DYNAMIC:'.length);
+
+    // Event fields come from the triggering event of a triggered ability.
     if (path.startsWith('event.') && stackObj.type === 'triggered') {
       const eventValue = readRulePath({ event: stackObj.triggeringEvent }, path);
       const result = typeof eventValue === 'number' ? evaluateNumericValue({ numeric: { kind: 'query', id: 'field', args: { path } } }, numeric) : undefined;
       dynamic[key] = result ? result.ok ? result.value : undefined : eventValue;
+
       continue;
     }
     if (['source.power', 'source.toughness', 'target.power', 'target.toughness'].includes(path)) {
-      const result = path.startsWith('target.') && exactTarget?.state.zone !== 'battlefield' ? undefined
+      // A target that has left the battlefield has no characteristics to read.
+      const result = path.startsWith('target.') && exactTarget?.state.zone !== 'battlefield'
+        ? undefined
         : evaluateNumericValue({ numeric: { kind: 'query', id: 'field', args: { path } } }, numeric);
       dynamic[key] = result?.ok ? result.value : undefined;
     }
@@ -213,6 +236,7 @@ export function resolutionNumericContext(room: GameRoom, stackObj: StackObject, 
   return { numeric, exactTarget, fields };
 }
 
+/** Whether an instruction's authored condition still holds at resolution time. */
 export function instructionConditionMatches(room: GameRoom, object: StackObject, effect: StackEffect): boolean {
   if (!effect.condition) return true;
   const { numeric, fields } = resolutionNumericContext(room, object, effect);

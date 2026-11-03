@@ -19,14 +19,18 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const identifier = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 const reject = (reason: string): ActionResult => ({ success: false, phase: 'validate', reason });
 
+/** Structural check for one client-supplied target pointer. */
 function validTarget(value: unknown): boolean {
   if (!object(value)) return false;
+
   // A player selects concrete targets. Expansion is built from card definitions
   // by the resolver, and must not be injected into a selected pointer.
   if (value.all !== undefined && value.all !== false) return false;
+
   for (const field of ['cardTypes', 'subTypes']) {
     if (value[field] !== undefined && (!Array.isArray(value[field]) || !value[field].every(identifier))) return false;
   }
+
   switch (value.targetType) {
     case 'self': return true;
     case 'player': return identifier(value.playerId);
@@ -41,72 +45,109 @@ function validTarget(value: unknown): boolean {
 /** Check shared fields before handlers inspect targets or look up a card. */
 export function validateActionData(data: unknown): string | undefined {
   if (!object(data)) return 'Action data must be an object';
+
   if (data.payment !== undefined && !validManaAmounts(data.payment)) return 'payment must contain nonnegative integer mana amounts';
-  if (data.targetGroups !== undefined && (!Array.isArray(data.targetGroups) || !data.targetGroups.every(group =>
-    object(group) && identifier(group.id) && Array.isArray(group.targets) && group.targets.every(validTarget)))) return 'targetGroups must contain IDs and concrete targets';
-  if (data.abilityIndex !== undefined && (!Number.isSafeInteger(data.abilityIndex) || (data.abilityIndex as number) < 0)) return 'abilityIndex must be a nonnegative integer';
+
+  if (
+    data.targetGroups !== undefined &&
+    (!Array.isArray(data.targetGroups) ||
+      !data.targetGroups.every((group) =>
+        object(group) && identifier(group.id) && Array.isArray(group.targets) && group.targets.every(validTarget)))
+  ) {
+    return 'targetGroups must contain IDs and concrete targets';
+  }
+
+  if (data.abilityIndex !== undefined && (!Number.isSafeInteger(data.abilityIndex) || (data.abilityIndex as number) < 0)) {
+    return 'abilityIndex must be a nonnegative integer';
+  }
+
   if (data.manaColor !== undefined && !MANA_COLORS.includes(data.manaColor as ManaColor)) return 'manaColor must name a mana color';
   if (data.cardUuid !== undefined && !identifier(data.cardUuid)) return 'cardUuid must be a nonempty string';
+
   if (data.targets !== undefined && (!Array.isArray(data.targets) || !data.targets.every(validTarget))) {
     return 'targets must be an array of valid target pointers';
   }
+
   if (data.stackUuid !== undefined && !identifier(data.stackUuid)) return 'stackUuid must be a nonempty string';
 }
 
 const noFields = () => undefined;
 
+/** Propose the action, then hand priority to the active player. */
 function declareAndRespond(engine: GameEngine, playerId: PlayerId, actionId: string, data: ActionData): ActionResult {
   const result = engine.proposeAndStack(playerId, actionId, data);
   if (!result.success) return result;
+
   return { ...result, mutations: [...(result.mutations ?? []), ...engine.givePriorityTo(engine.roomState.activeTurnPlayerId)] };
 }
 
 /** Orchestration only. Card behavior continues to live in ActionRegistry. */
 export const playerCommands: Record<string, PlayerCommand> = {
   [ACTION_IDS.enterBattle]: {
-    status: 'playing', validate: noFields,
+    status: 'playing',
+    validate: noFields,
     execute: (engine, playerId, data) => {
       const result = enterBattleHandler.validate(engine.roomState, playerId, data);
       if (!result.success) return result;
+
+      // Guard: only the player holding priority may enter battle.
       if (engine.priorityPlayerId !== playerId) return reject('Not your priority!');
+
       const passed = engine.passPriority(playerId);
+
       return passed.success ? { success: true, mutations: passed.mutations } : reject('Not your priority!');
     },
   },
+
   [ACTION_IDS.declareAttackers]: {
     status: 'playing',
-    validate: data => Array.isArray(data.attackers) && data.attackers.every(a => object(a) && identifier(a.cardUuid))
-      ? undefined : 'attackers must be an array of card UUID entries',
+    validate: (data) => Array.isArray(data.attackers) && data.attackers.every((a) => object(a) && identifier(a.cardUuid))
+      ? undefined
+      : 'attackers must be an array of card UUID entries',
     execute: (engine, playerId, data) => declareAndRespond(engine, playerId, ACTION_IDS.declareAttackers, data),
   },
+
   [ACTION_IDS.declareBlockers]: {
     status: 'playing',
-    validate: data => data.assignments === undefined || (Array.isArray(data.assignments) && data.assignments.every(a =>
+    validate: (data) => data.assignments === undefined || (Array.isArray(data.assignments) && data.assignments.every((a) =>
       object(a) && identifier(a.attackerUuid) && Array.isArray(a.blockerUuids) && a.blockerUuids.every(identifier)))
-      ? undefined : 'assignments must contain attacker UUIDs and blocker UUID arrays',
+      ? undefined
+      : 'assignments must contain attacker UUIDs and blocker UUID arrays',
     execute: (engine, playerId, data) => declareAndRespond(engine, playerId, ACTION_IDS.declareBlockers, data),
   },
+
   [ACTION_IDS.passPriority]: {
-    status: 'playing', validate: noFields,
+    status: 'playing',
+    validate: noFields,
     execute: (engine, playerId) => {
       const result = engine.passPriority(playerId);
+
       return result.success ? { success: true, mutations: result.mutations } : reject('Not your priority!');
     },
   },
+
   [ACTION_IDS.resolveStack]: {
-    status: 'playing', debug: 'stack', validate: noFields,
-    execute: engine => engine.resolveTopOfStack(),
+    status: 'playing',
+    debug: 'stack',
+    validate: noFields,
+    execute: (engine) => engine.resolveTopOfStack(),
   },
+
   [ACTION_IDS.endTurn]: {
-    status: 'playing', debug: 'flow', validate: noFields,
-    execute: engine => engine.roomState.stack.length > 0
+    status: 'playing',
+    debug: 'flow',
+    validate: noFields,
+    execute: (engine) => engine.roomState.stack.length > 0
       ? reject('Cannot end turn while the stack is not empty!')
       : { success: true, mutations: engine.advancePhase('skipToEnd') },
   },
+
   [ACTION_IDS.rpsPlay]: {
-    status: 'RPS', validate: noFields,
+    status: 'RPS',
+    validate: noFields,
     execute: (engine, playerId, data) => {
       const result = engine.handleAction(playerId, ACTION_IDS.rpsPlay, data);
+
       return result.success ? { ...result, mutations: engine.applyMutations(result.mutations ?? []) } : result;
     },
   },

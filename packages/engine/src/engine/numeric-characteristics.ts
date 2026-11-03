@@ -21,24 +21,49 @@ export interface BoardNumericContextOptions {
 
 /** The caller supplies either an intermediate board or the normal rules view. */
 export function createBoardNumericContext(options: BoardNumericContextOptions): NumericContext {
+  /** Present a card as its resolved characteristics, or undefined when absent. */
   const cardView = (card: CardInstance | undefined) => card ? { ...card, ...options.characteristics(card) } : undefined;
-  const selected = (scope: import('../types/continuous-effect.types').EffectScope) => collectCardSource(options.cards, scope.from, options.results)?.filter(entry =>
-    scopeMatches({ ...(!scope.from && options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
-      entry.card, entry.recordedCharacteristics ?? options.characteristics(entry.card), options.source, options.controllerId));
+
+  /** Cards selected by a scope, honouring the scope's source collection. */
+  const selected = (scope: import('../types/continuous-effect.types').EffectScope) => collectCardSource(options.cards, scope.from, options.results)?.filter((entry) =>
+    scopeMatches(
+      { ...(!scope.from && options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
+      entry.card,
+      entry.recordedCharacteristics ?? options.characteristics(entry.card),
+      options.source,
+      options.controllerId,
+    ));
+
   return {
-    readField: path => {
+    readField: (path) => {
       const root = path.split('.')[0];
       const fields = options.fields ?? {};
-      return readRulePath(root === 'source' && !Object.prototype.hasOwnProperty.call(fields, root) ? { source: cardView(options.source) }
-        : root === 'target' && !Object.prototype.hasOwnProperty.call(fields, root) ? { target: cardView(options.target) } : fields, path);
+
+      // `source` and `target` are synthesized from the card views unless the
+      // caller explicitly supplied them.
+      return readRulePath(
+        root === 'source' && !Object.prototype.hasOwnProperty.call(fields, root)
+          ? { source: cardView(options.source) }
+          : root === 'target' && !Object.prototype.hasOwnProperty.call(fields, root)
+            ? { target: cardView(options.target) }
+            : fields,
+        path,
+      );
     },
-    count: scope => selected(scope)?.length ?? NaN,
-    counterTotal: (scope, counterType) => selected(scope)?.reduce((total, entry) => total + (entry.card.state.counters[counterType] ?? 0), 0) ?? NaN,
+
+    count: (scope) => selected(scope)?.length ?? NaN,
+
+    counterTotal: (scope, counterType) =>
+      selected(scope)?.reduce((total, entry) => total + (entry.card.state.counters[counterType] ?? 0), 0) ?? NaN,
   };
 }
 
+/** Evaluate a characteristic number, throwing when it cannot be resolved. */
 export function requireCharacteristicNumber(value: CharacteristicNumber, context: NumericContext): number {
   const result = evaluateNumericValue(characteristicNumericValue(value), context);
+
+  // Guard: an unresolved value is a rules bug, not a recoverable condition.
   if (!result.ok) throw new Error('Unresolved numeric characteristic: ' + result.reason);
+
   return result.value;
 }

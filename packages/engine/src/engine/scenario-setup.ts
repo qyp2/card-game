@@ -31,6 +31,7 @@ export interface ScenarioSetup {
     shuffle: 'fixed' | 'seeded';
     seed: number;
 }
+/** Deterministic PRNG for scenario shuffles, seeded independently of gameplay entropy. */
 export function scenarioRandom(seed: number): () => number { let state = seed >>> 0; return () => { state = (Math.imul(1664525, state) + 1013904223) >>> 0; return state / 4294967296; }; }
 /** First listed library card is drawn first. IDs use supplied entropy, never the gameplay seed. */
 export function buildScenarioRoom(roomId: string, players: readonly [

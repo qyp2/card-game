@@ -10,6 +10,7 @@ import { activeRules, ruleUse, ruleUseAvailable, type RuleUse } from './active-r
 import type { CostModifierDefinition } from '../schema/contracts';
 import type { NumericContext } from '../../types/numeric-value.types';
 
+/** Apply every active cost rule to a base cost, returning the adjusted cost and the uses consumed. */
 export function applyCostRules(room: GameRoom, playerId: string, card: CardInstance, base: ActionCost, extra: ActionCost = {}): { cost: ActionCost; uses: RuleUse[]; signature: unknown[] } {
   const target = CardCharacteristicService.resolve(room, card);
   const applicable = activeRules(room).flatMap(active => {

@@ -24,47 +24,81 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
   observe?: (before: GameRoom, after: GameRoom) => void): EventDraft[] {
   const events: EventDraft[] = [];
   let eventBefore = batchBefore, eventAfter = batchAfter;
+
   const add = <K extends keyof GameEventPayloads>(eventId: K, payload: GameEventPayloads[K]) => {
     events.push({ eventId, roomId: batchAfter.roomId, payload } as EventDraft);
     observe?.(eventBefore, eventAfter);
   };
+
   for (const { mutation: m, before, after, events: ownedEvents } of steps) {
-    eventBefore = before; eventAfter = after;
+    eventBefore = before;
+    eventAfter = after;
+
+    // Emit a damage event, resolving the source's snapshot from the pre-step state.
     const damageEvent = (amount: number, source: string | undefined, combat: boolean, recipient: { cardUuid?: string; playerId?: string }, retained?: CardSnapshot) => {
       const live = before.battlefield.find(card => card.uuid === source) ?? before.stack.find(object => object.type === 'spell' && object.source.uuid === source)?.source;
       const snapshot = retained ?? (live ? captureSourceInformation(before, live) : undefined);
       const card = snapshot?.card;
+
       add('DAMAGE_DEALT', { card, controllerId: card?.state.controllerId, source, snapshot, amount, combat, recipient });
     };
+
     add('MUTATION_APPLIED', { mutation: m });
+
+    // An operation that owns its own derivation supplies the events directly.
     if (ownedEvents !== undefined) {
-      for (const event of ownedEvents) { events.push(event); observe?.(before, after); }
+      for (const event of ownedEvents) {
+        events.push(event);
+        observe?.(before, after);
+      }
+
       continue;
     }
+
     if (m.type === 'ADD_COUNTER' || m.type === 'REMOVE_COUNTER') {
       const oldCard = before.battlefield.find(card => card.uuid === m.cardUuid);
       const card = after.battlefield.find(card => card.uuid === m.cardUuid);
       const oldCount = oldCard?.state.counters[m.counterType] ?? 0;
       const newCount = card?.state.counters[m.counterType] ?? 0;
+
       if (card && oldCard && newCount !== oldCount) add('COUNTER_CHANGED', {
-        card, counterType: m.counterType, oldCount, newCount, amount: newCount - oldCount,
+        card,
+        counterType: m.counterType,
+        oldCount,
+        newCount,
+        amount: newCount - oldCount,
         targetControllerId: CardCharacteristicService.resolveController(after, card),
-        controllerId: m.sourceControllerId ?? m.sourceInfo?.card.state.controllerId, source: m.sourceInfo?.card.uuid, sourceInfo: m.sourceInfo,
+        controllerId: m.sourceControllerId ?? m.sourceInfo?.card.state.controllerId,
+        source: m.sourceInfo?.card.uuid,
+        sourceInfo: m.sourceInfo,
       });
     }
+
     if (m.type === 'APPLY_DAMAGE_BATCH') {
       let resultRoom = before;
+
+      // Replay the derived damage results so their own events are published first.
       const resultSteps = (m.results ?? planDamageResults(before, validDamageAssignments(before, m.assignments))).flatMap(mutation => {
         const previous = resultRoom;
         const outcome = reduceGameOperation(previous, mutation);
         resultRoom = outcome.state;
+
         return outcome.status === 'committed' ? [{ mutation, before: previous, after: resultRoom, events: outcome.events }] : [];
       });
+
       const resultEvents = deriveAppliedEvents(before, after, resultSteps);
-      for (const event of resultEvents) { events.push(event); observe?.(before, after); }
+
+      for (const event of resultEvents) {
+        events.push(event);
+        observe?.(before, after);
+      }
+
+      // Track cumulative damage per card so each DAMAGE_TAKEN reports the right delta.
       const marked = new Map<string, number>();
+
       for (const assignment of validDamageAssignments(before, m.assignments)) {
         const { source, recipient, amount, combat } = assignment;
+
         if (recipient.kind === 'player') {
           damageEvent(amount, source.card.uuid, combat, { playerId: recipient.playerId }, source);
         } else {
@@ -73,118 +107,181 @@ export function deriveAppliedEvents(batchBefore: GameRoom, batchAfter: GameRoom,
             ?? captureSourceInformation(before, previous).card;
           const oldDamage = marked.get(card.uuid) ?? before.battlefield.find(c => c.uuid === card.uuid)!.state.damageTaken ?? 0;
           const newDamage = Math.min(oldDamage + amount, card.state.damageTaken);
+
           marked.set(card.uuid, newDamage);
-          if (CardCharacteristicService.resolveTypes(before, previous).includes('Creature')) add('DAMAGE_TAKEN', { card, controllerId: CardCharacteristicService.resolveController(before, previous), amount, oldDamage, newDamage, source: source.card.uuid });
+
+          if (CardCharacteristicService.resolveTypes(before, previous).includes('Creature')) add('DAMAGE_TAKEN', {
+            card,
+            controllerId: CardCharacteristicService.resolveController(before, previous),
+            amount,
+            oldDamage,
+            newDamage,
+            source: source.card.uuid,
+          });
+
           damageEvent(amount, source.card.uuid, combat, { cardUuid: card.uuid }, source);
         }
       }
     }
+
     if (m.type === 'COUNTER_STACK') {
       const stackObj = before.stack.find(object => object.uuid === m.stackUuid);
+
       if (stackObj && !after.stack.some(object => object.uuid === m.stackUuid)) {
         add('STACK_COUNTERED', { stackObj });
+
+        // A countered spell's card moves from the stack to its owner's graveyard.
         if (stackObj.type === 'spell') {
           const card = after.players[stackObj.source.state.ownerId].graveyard.find(card => card.uuid === stackObj.source.uuid);
+
           if (card) add('CARD_MOVED', { cardUuid: card.uuid, from: 'stack', to: 'graveyard', before: stackObj.source, after: card });
         }
       }
     }
+
     if (m.type === 'SET_PENDING_CHOICE') {
       if (before.pendingChoice && before.pendingChoice.id !== after.pendingChoice?.id) add('CHOICE_COMPLETED', { choiceId: before.pendingChoice.id, playerId: before.pendingChoice.playerId, kind: before.pendingChoice.kind });
       if (after.pendingChoice && before.pendingChoice?.id !== after.pendingChoice.id) add('CHOICE_REQUESTED', { choiceId: after.pendingChoice.id, playerId: after.pendingChoice.playerId, kind: after.pendingChoice.kind });
     }
+
     if (m.type === 'MOVE_CARD') {
       const oldCard = getCardInZone(before, m.cardUuid, m.playerId, m.from);
       const newCard = getCardInZone(after, m.cardUuid, m.playerId, m.to);
+
       if (oldCard && newCard) add('CARD_MOVED', { cardUuid: m.cardUuid, from: m.from, to: m.to, before: oldCard, after: newCard });
       if (oldCard && newCard && m.reason === 'draw' && m.from === 'library' && m.to === 'hand') add('CARD_DRAWN', { card: newCard, playerId: m.playerId, controllerId: m.playerId });
       if (oldCard && newCard && m.reason === 'discard' && m.from === 'hand' && m.to === 'graveyard') add('CARD_DISCARDED_FROM_HAND', { card: oldCard, playerId: m.playerId, controllerId: m.playerId });
       if (oldCard && newCard && m.reason === 'discard' && m.from === 'library' && m.to === 'graveyard') add('CARD_DISCARDED_FROM_LIBRARY', { card: oldCard, playerId: m.playerId, controllerId: m.playerId });
+
+      // A cast spell is announced once its card reaches the stack.
       if (m.reason === 'cast' && oldCard && newCard) {
         const stackObj = m.stackObject?.immediate ? m.stackObject : after.stack.find(object => object.type === 'spell' && object.source.uuid === m.cardUuid);
+
         if (stackObj) add('SPELL_CAST', { card: stackObj.source, playerId: stackObj.controllerId, controllerId: stackObj.controllerId, stackObj });
       }
+
+      // Leaving the battlefield always reports a departure, plus death/destruction.
       if (m.from === 'battlefield') {
         const departed = oldCard;
+
         if (departed) {
           const snapshot = m.sourceSnapshot ?? captureSourceInformation(before, departed);
           const payload = { card: snapshot.card, snapshot, controllerId: snapshot.card.state.controllerId };
+
           add('PERMANENT_LEFT', payload);
+
           if (newCard && m.to === 'graveyard' && m.reason === 'destroy') add('PERMANENT_DESTROYED', payload);
           if (m.to === 'graveyard' && CardCharacteristicService.resolveTypes(before, snapshot.card).includes('Creature')) add('PERMANENT_DIED', payload);
         }
       }
+
       if (m.to === 'battlefield' && newCard) add('PERMANENT_ENTERED', { card: newCard, controllerId: CardCharacteristicService.resolveController(after, newCard) });
     }
+
     if (m.type === 'SET_DAMAGE') {
       const oldCard = before.battlefield.find(card => card.uuid === m.cardUuid);
       const card = after.battlefield.find(card => card.uuid === m.cardUuid);
       const oldDamage = oldCard?.state.damageTaken ?? 0;
       const newDamage = card?.state.damageTaken ?? 0;
+
       if (card && CardCharacteristicService.resolveTypes(after, card).includes('Creature') && newDamage > oldDamage) {
         add('DAMAGE_TAKEN', { card, controllerId: CardCharacteristicService.resolveController(after, card), amount: newDamage - oldDamage, oldDamage, newDamage, source: m.source });
       }
+
       if (card && newDamage > oldDamage) damageEvent(newDamage - oldDamage, m.source, m.combat ?? false, { cardUuid: card.uuid }, m.damageSourceInfo);
     }
+
     if (m.type === 'SET_LIFE') {
       const oldLife = before.players[m.playerId].life;
       const newLife = after.players[m.playerId].life;
+
       if (oldLife !== newLife) {
         add('LIFE_CHANGED', { playerId: m.playerId, oldLife, newLife, amount: newLife - oldLife });
         add(newLife > oldLife ? 'LIFE_GAINED' : 'LIFE_LOST', { playerId: m.playerId, oldLife, newLife, amount: Math.abs(newLife - oldLife) });
+
+        // Life loss from a damage source is also a damage event.
         if (newLife < oldLife && m.damageSource) damageEvent(oldLife - newLife, m.damageSource, m.combat ?? false, { playerId: m.playerId }, m.damageSourceInfo);
       }
     }
+
     if (m.type === 'DECLARE_ATTACKERS') {
       add('ATTACKERS_DECLARED', { attackerIds: after.combat.map(decl => decl.attacker.uuid) });
+
       for (const decl of after.combat) add('ATTACK_DECLARED', { card: decl.attacker, controllerId: decl.attacker.state.controllerId });
     }
+
+    // A blocker declaration is reported once, whether completed or assigned directly.
     if (m.type === 'COMPLETE_BLOCKER_DECLARATION' || (m.type === 'ASSIGN_BLOCKERS' && !steps.some(step => step.mutation.type === 'COMPLETE_BLOCKER_DECLARATION'))) add('BLOCKERS_DECLARED', {
       blockerAssignments: after.combat.map(decl => ({ attackerUuid: decl.attacker.uuid, blockerUuids: decl.blockers.map(card => card.uuid) })),
     });
+
     if (m.type === 'COMPLETE_BLOCKER_DECLARATION') for (const declaration of after.combat) for (const blocker of declaration.blockers) {
       add('BLOCK_DECLARED', { card: blocker, controllerId: blocker.state.controllerId, attackerUuid: declaration.attacker.uuid });
     }
+
+    // Combat damage is announced once per completed pass.
     if (m.type === 'SET_COMBAT_DAMAGE' && m.state?.completed && (!before.combatDamage?.completed || before.combatDamage.passIndex !== m.state.passIndex)) {
-      add('COMBAT_DAMAGE_RESOLVED', { currentPlayer: after.activeTurnPlayerId,
+      add('COMBAT_DAMAGE_RESOLVED', {
+        currentPlayer: after.activeTurnPlayerId,
         damageAssignments: steps.map(step => step.mutation).filter(mutation => mutation.type === 'APPLY_DAMAGE_BATCH'),
-        pass: m.state.passes[m.state.passIndex] });
+        pass: m.state.passes[m.state.passIndex],
+      });
     }
+
     if (m.type === 'SET_PHASE' && before.phase !== after.phase) {
       add('PHASE_CHANGED', { previousPhase: before.phase, phase: after.phase, currentPlayer: after.activeTurnPlayerId });
+
       if (after.phase === 'stateTurnStart') add('TURN_STARTED', { currentPlayer: after.activeTurnPlayerId });
       if (after.phase === 'upkeepStep') add('UPKEEP_STARTED', { currentPlayer: after.activeTurnPlayerId });
       if (after.phase === 'stateEndPhase') add('END_STEP_STARTED', { currentPlayer: after.activeTurnPlayerId });
       if (after.phase === 'beginCombatStep') add('COMBAT_BEGIN', { currentPlayer: after.activeTurnPlayerId });
       if (after.phase === 'endCombatStep') add('COMBAT_ENDED', { currentPlayer: after.activeTurnPlayerId });
     }
+
     if (m.type === 'SET_TURN' && before.activeTurnPlayerId !== after.activeTurnPlayerId) add('TURN_SWITCHED', { previousPlayer: before.activeTurnPlayerId, newPlayer: after.activeTurnPlayerId });
     if (m.type === 'SET_PRIORITY' && before.priorityPlayerId !== after.priorityPlayerId) add('PRIORITY_GIVEN', { previousPlayer: before.priorityPlayerId, playerId: after.priorityPlayerId });
+
+    // Any stack change is published, plus the proposal when something was added.
     if (!sameStateValue(before.stack, after.stack)) {
       const newAction = after.stack.find(object => !before.stack.some(old => old.uuid === object.uuid));
+
       add('STACK_UPDATED', { before: before.stack, stack: after.stack, newAction });
+
       if (newAction) add('ACTION_PROPOSED', { actionType: newAction.type, playerId: newAction.controllerId, stackObj: newAction });
     }
   }
-  eventBefore = batchBefore; eventAfter = batchAfter;
+
+  eventBefore = batchBefore;
+  eventAfter = batchAfter;
+
   if (resolution?.stackObj.immediate) add('ACTION_RESOLVED', { stackObj: resolution.stackObj, effects: resolution.effects });
+
+  // Reveals are published once the resolving object has finished resolving.
   const revealCompleted = resolution && (resolution.stackObj.immediate ||
     batchBefore.stack.some(object => object.uuid === resolution.stackObj.uuid) && !batchAfter.stack.some(object => object.uuid === resolution.stackObj.uuid));
+
   if (revealCompleted) {
     const stackObj = resolution.stackObj;
+
+    // Guard: a countered or fizzled object reveals nothing.
     if (!stackObj.countered && !stackObj.fizzled) for (const reveal of stackObj.resolutionReveals ?? []) {
       for (const revealedCard of reveal.cards) {
         const player = batchAfter.players[revealedCard.state.ownerId];
         const card = [...player.deck, ...player.hand].find(card => card.uuid === revealedCard.uuid) ?? revealedCard;
+
         add('CARD_REVEALED', { card, revealedCard, sourceInfo: reveal.sourceInfo, controllerId: reveal.controllerId });
       }
     }
   }
+
   // Completion notifications require the resolving object to have actually left the stack.
   if (resolution && batchBefore.stack.some(object => object.uuid === resolution.stackObj.uuid) && !batchAfter.stack.some(object => object.uuid === resolution.stackObj.uuid)) {
     const stackObj = resolution.stackObj;
+
     for (const result of resolution.effects) add('STACK_ITEM_RESOLVED', { ...result, stackObj });
+
     add('STACK_RESOLVED', { effectId: stackObj.effects[0]?.action ?? 'structural', stackObj, countered: stackObj.countered });
   }
+
   return events;
 }

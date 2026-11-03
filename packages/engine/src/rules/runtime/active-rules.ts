@@ -38,16 +38,26 @@ export function activeRules(room: GameRoom): ActiveRule[] {
         id: `rule:${source.uuid}:${source.state.zoneRevision ?? 0}:${ability.id}:${definition.id}` })));
   }));
 }
+/** The shared use budget a rule consumes, or `undefined` when it is unlimited. */
 export function ruleUse(active: ActiveRule): RuleUse | undefined {
   const usage = 'usage' in active.definition ? active.definition.usage : undefined;
+
+  // Guard: a rule without a usage block is unlimited.
   if (!usage) return;
-  const identity = usage.identity === 'controller' ? `${active.controllerId}:${active.source.blueprint.id}`
-    : usage.identity === 'source_card' ? active.source.uuid : `${active.source.uuid}:${active.source.state.zoneRevision ?? 0}`;
+
+  // The identity decides which uses share one budget.
+  let identity = `${active.source.uuid}:${active.source.state.zoneRevision ?? 0}`;
+
+  if (usage.identity === 'controller') identity = `${active.controllerId}:${active.source.blueprint.id}`;
+  else if (usage.identity === 'source_card') identity = active.source.uuid;
+
   return { key: `rule-use:${identity}:${active.abilityId}:${active.definition.id}`, period: usage.period, limit: usage.limit };
 }
+/** Whether a rule's use budget still allows another use this period. */
 export function ruleUseAvailable(room: GameRoom, use: RuleUse | undefined): boolean {
   return !use || (use.period === 'game' ? room.gameRuleUses?.[use.key] ?? 0 : room.turnHistory?.uses[use.key] ?? 0) < use.limit;
 }
+/** Mutation that consumes one use of a rule's budget. */
 export function recordRuleUse(room: GameRoom, use: RuleUse): GameMutation {
   return use.period === 'turn' ? { type: 'RECORD_ABILITY_USE', key: use.key, turnNumber: room.turnNumber ?? 1 }
     : { type: 'RECORD_GAME_RULE_USE', key: use.key };

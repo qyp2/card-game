@@ -13,6 +13,7 @@ export interface CardFilterView {
   castRequirements: CardInstance['blueprint']['castRequirements'];
 }
 
+/** Whether a card's controller satisfies a `self`/`opponent`/`any` relation. */
 export function relativePlayerMatches(actual: string, relation: RelativePlayer | undefined, playerId?: string): boolean {
   return !relation || relation === 'any' || !!playerId && (relation === 'self' ? actual === playerId : actual !== playerId);
 }

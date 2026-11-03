@@ -12,9 +12,11 @@ import type { StackObject } from '../../types/effect.types';
  */
 export const passPriorityHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, _action: ActionData): ActionResult {
+    // Guard: only the player currently holding priority may pass it.
     if (room.priorityPlayerId !== playerId) {
       return { success: false, phase: 'validate', reason: 'Not your priority!' };
     }
+
     return { success: true };
   },
 

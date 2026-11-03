@@ -7,27 +7,36 @@ import type { CardInstance } from '../../types/card.types';
 import { CombatRuleRegistry, type BlockerContext } from '../combat-rules';
 import { liveCombatCard } from '../combat-state';
 
+/** Build the combat-rule view of the submitted blocker assignments. */
 function context(room: GameRoom, playerId: PlayerId, assignments: { attackerUuid: string; blockerUuids: string[] }[] = []): BlockerContext {
-  return { room, playerId, assignments: assignments.map(assignment => ({
-    attacker: liveCombatCard(room, room.combat.find(d => d.uuid === assignment.attackerUuid)!.attacker)!,
-    blockers: assignment.blockerUuids.map(uuid => findCardOnBattlefield(room, uuid)!),
-  })) };
+  return {
+    room,
+    playerId,
+    assignments: assignments.map((assignment) => ({
+      attacker: liveCombatCard(room, room.combat.find((d) => d.uuid === assignment.attackerUuid)!.attacker)!,
+      blockers: assignment.blockerUuids.map((uuid) => findCardOnBattlefield(room, uuid)!),
+    })),
+  };
 }
 
 function findCardOnBattlefield(room: GameRoom, cardUuid: string): CardInstance | undefined {
-  return room.battlefield.find(c => c.uuid === cardUuid);
+  return room.battlefield.find((c) => c.uuid === cardUuid);
 }
 
 export const declareBlockersHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, action: ActionData): ActionResult {
+    // Guard: combat is already declared, or responses are still pending.
     if (room.stack.length || room.combatDeclarations?.blockers) {
       return { success: false, phase: 'validate', reason: 'Combat declaration is already complete or responses are pending' };
     }
+
     const assignments = action.assignments as { attackerUuid: string; blockerUuids: string[] }[] | undefined;
 
     // Must be the defending player (NOT the active player)
     const defendingPlayerId = room.activeTurnPlayerId === room.player1Id
       ? room.player2Id! : room.player1Id;
+
+    // Guard: only the defender may block.
     if (playerId !== defendingPlayerId) {
       return { success: false, phase: 'validate', reason: 'Only the defending player can declare blockers' };
     }
@@ -43,21 +52,26 @@ export const declareBlockersHandler: ActionHandler = {
     const assignedAttackers = new Set<string>();
 
     for (const { attackerUuid, blockerUuids } of assignments ?? []) {
+      // Guard: each attacker may appear at most once.
       if (assignedAttackers.has(attackerUuid)) return { success: false, phase: 'validate', reason: 'Duplicate attacker assignments are not allowed' };
+
       assignedAttackers.add(attackerUuid);
+
       // Attacker must exist in room.combat
-      const combatDecl = room.combat.find(d => d.uuid === attackerUuid);
+      const combatDecl = room.combat.find((d) => d.uuid === attackerUuid);
       if (!combatDecl || !liveCombatCard(room, combatDecl.attacker)) {
         return { success: false, phase: 'validate', reason: `Attacker ${attackerUuid} not found in combat declarations` };
       }
 
       for (const blockerUuid of blockerUuids) {
         const blocker = findCardOnBattlefield(room, blockerUuid);
+
         // Blocker must not already be assigned to another attacker
         if (assignedBlockers.has(blockerUuid)) {
           return { success: false, phase: 'validate', reason: `${blocker ? CardCharacteristicService.resolve(room, blocker).name : 'Blocker ' + blockerUuid} is already assigned to another attacker` };
         }
 
+        // Guard: the blocker must still be on the battlefield.
         if (!blocker) {
           return { success: false, phase: 'validate', reason: `Blocker ${blockerUuid} not found on battlefield` };
         }
@@ -82,6 +96,7 @@ export const declareBlockersHandler: ActionHandler = {
     }
 
     const reason = CombatRuleRegistry.validateBlockers(context(room, playerId, assignments));
+
     return reason ? { success: false, phase: 'validate', reason } : { success: true };
   },
 
@@ -97,6 +112,7 @@ export const declareBlockersHandler: ActionHandler = {
     }
 
     mutations.push({ type: 'COMPLETE_BLOCKER_DECLARATION' });
+
     // Blocking does NOT tap the blocker (MTG CR 509.1f)
     // No stackObject — turn-based action
     return { success: true, mutations: CombatRuleRegistry.blockerMutations(context(room, playerId, assignments), mutations) };

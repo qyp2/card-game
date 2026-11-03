@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Color, Identifier, Numeric, ScopeSchema, Finite } from './shared';
 
 export const CharacteristicValueSchema = z.union([Numeric, z.strictObject({ count: ScopeSchema, multiply: Finite.optional(), add: Finite.optional() })]);
+/** Schema for a characteristic value: a plain number, or a counted scope with optional scaling. */
 export function characteristicOperationSchema(ability: () => z.ZodType, blueprint: () => z.ZodType) {
   return z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('COPY'), blueprint: z.lazy(blueprint) }),

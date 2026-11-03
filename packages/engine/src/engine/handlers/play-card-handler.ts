@@ -17,41 +17,66 @@ import { prepareAnnouncement, spellAnnouncementDefinition } from '../announcemen
 import { recordRuleUse } from '../../rules/runtime/active-rules';
 
 function findCardInHand(room: GameRoom, playerId: PlayerId, cardUuid: string): CardInstance | undefined {
-  return room.players[playerId].hand.find(c => c.uuid === cardUuid);
+  return room.players[playerId].hand.find((c) => c.uuid === cardUuid);
 }
 
 export const playCardHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, action: ActionData): ActionResult {
+    // Guard: the action must name a card that is actually in hand.
     if (!action.cardUuid) {
       return { success: false, phase: 'validate', reason: 'cardUuid is required' };
     }
+
     const card = findCardInHand(room, playerId, action.cardUuid);
+
     if (!card) {
       return { success: false, phase: 'validate', reason: 'Card not found in hand' };
     }
 
-    if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) return { success: false, phase: 'validate', reason: 'Lands are played directly, not cast as spells' };
+    // Lands bypass the stack entirely.
+    if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) {
+      return { success: false, phase: 'validate', reason: 'Lands are played directly, not cast as spells' };
+    }
+
     if (!PermissionRegistry.canPlay(room, playerId, card)) {
       return { success: false, phase: 'validate', reason: 'A modifier prevents playing this card' };
     }
+
+    // Validate the announcement before any cost or target work.
     const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action, { room, playerId });
+
     if (!announcement.success) return { success: false, phase: 'validate', reason: announcement.reason };
     if (announcement.missing) return { success: false, phase: 'validate', reason: 'Choose all declared numbers' };
     if (announcement.missingCostRoute) return { success: false, phase: 'validate', reason: 'Choose a cost route' };
-    const effects = selectModeEffects(CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [], CardCharacteristicService.resolveBlueprint(room, card).modes, action.modes, CardCharacteristicService.resolveBlueprint(room, card).modeCount, { room, playerId });
+
+    const effects = selectModeEffects(
+      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
+      CardCharacteristicService.resolveBlueprint(room, card).modes,
+      action.modes,
+      CardCharacteristicService.resolveBlueprint(room, card).modeCount,
+      { room, playerId },
+    );
+
     if (!effects) return { success: false, phase: 'validate', reason: 'Select valid modes' };
+
     const targets = planTargetGroups(room, playerId, card, buildStackEffects(effects, playerId, card), action);
+
     if (!targets.success) return { ...targets, phase: 'validate' };
+
     const distributions = planAnnouncedDistributions(targets.effects, action);
+
     if (!distributions.success) return { ...distributions, phase: 'validate' };
 
     const validation = ActionValidator.canActivate(room, playerId, card, { ...CardCharacteristicService.resolveBlueprint(room, card).castRequirements, cost: undefined });
+
     if (!validation.valid) {
       return { success: false, phase: 'validate', reason: validation.reason };
     }
 
     const costs = planActionCosts(room, playerId, card, announcement.cost, action);
+
     if (!costs.success) return { success: false, phase: 'validate', reason: costs.reason };
+
     return { success: true };
   },
 
@@ -63,30 +88,53 @@ export const playCardHandler: ActionHandler = {
    * The StackObject is built with a caller-supplied UUID (from actionData.stackUuid).
    */
   propose(room: GameRoom, playerId: PlayerId, action: ActionData): ActionResult {
+    // Guard: the action must name a card that is actually in hand.
     if (!action.cardUuid) {
       return { success: false, phase: 'propose', reason: 'cardUuid is required' };
     }
+
     const card = findCardInHand(room, playerId, action.cardUuid);
+
     if (!card) {
       return { success: false, phase: 'propose', reason: 'Card not found in hand' };
     }
-    if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) return { success: false, phase: 'propose', reason: 'Lands are played directly, not cast as spells' };
+
+    // Lands bypass the stack entirely.
+    if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) {
+      return { success: false, phase: 'propose', reason: 'Lands are played directly, not cast as spells' };
+    }
 
     const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action, { room, playerId });
+
     if (!announcement.success) return { success: false, phase: 'propose', reason: announcement.reason };
     if (announcement.missing) return { success: false, phase: 'propose', reason: 'Choose all declared numbers' };
     if (announcement.missingCostRoute) return { success: false, phase: 'propose', reason: 'Choose a cost route' };
+
     const costs = planActionCosts(room, playerId, card, announcement.cost, action);
+
     if (!costs.success) return { success: false, phase: 'propose', reason: costs.reason };
+
     const mutations: GameMutation[] = [...costs.mutations, ...(announcement.ruleUses ?? []).map(use => recordRuleUse(room, use))];
 
     // --- BUILD STACK OBJECT (snapshot values locked here) ---
-    const onCastEffects = selectModeEffects(CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [], CardCharacteristicService.resolveBlueprint(room, card).modes, action.modes, CardCharacteristicService.resolveBlueprint(room, card).modeCount, { room, playerId });
+    const onCastEffects = selectModeEffects(
+      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
+      CardCharacteristicService.resolveBlueprint(room, card).modes,
+      action.modes,
+      CardCharacteristicService.resolveBlueprint(room, card).modeCount,
+      { room, playerId },
+    );
+
     if (!onCastEffects) return { success: false, phase: 'propose', reason: 'Select valid modes' };
+
     const targets = planTargetGroups(room, playerId, card, buildStackEffects(onCastEffects, playerId, card), action);
+
     if (!targets.success) return { ...targets, phase: 'propose' };
+
     const distributions = planAnnouncedDistributions(targets.effects, action);
+
     if (!distributions.success) return { ...distributions, phase: 'propose' };
+
     const effects = distributions.effects;
 
     const stackType: StackItemType = 'spell';
@@ -105,8 +153,15 @@ export const playCardHandler: ActionHandler = {
       ...(Object.keys(announcement.bindings).length ? { numericBindings: announcement.bindings } : {}),
     };
 
-    mutations.push({ type: 'MOVE_CARD', cardUuid: card.uuid, playerId: card.state.ownerId,
-      from: 'hand', to: 'stack', stackObject: stackObj, reason: 'cast' });
+    mutations.push({
+      type: 'MOVE_CARD',
+      cardUuid: card.uuid,
+      playerId: card.state.ownerId,
+      from: 'hand',
+      to: 'stack',
+      stackObject: stackObj,
+      reason: 'cast',
+    });
 
     return { success: true, stackObject: stackObj, mutations };
   },

@@ -97,6 +97,7 @@ export const NormalizedBlueprintSchema: z.ZodType = z.lazy(() => z.strictObject(
 export class RuleContractError extends Error {
   constructor(readonly definitionPath: string, detail: string) { super(`${definitionPath}: ${detail}`); this.name = 'RuleContractError'; }
 }
+/** Validate `input` against `schema`, reporting the first issue as a `RuleContractError`. */
 export function parseContract<T>(schema: z.ZodType<T>, input: unknown, path: string): T {
   try { assertDefinitionTree(input); } catch (error) { throw new RuleContractError(path, (error as Error).message); }
   const result = schema.safeParse(input);
@@ -106,6 +107,7 @@ export function parseContract<T>(schema: z.ZodType<T>, input: unknown, path: str
   }
   return result.data;
 }
+/** Reject a modifier whose conditions reference fields its family cannot see. */
 export function assertModifierContext(rule: ModifierDefinition, path: string): void {
   const allowed = new Set(['source', 'target', 'controller', 'room', 'history', ...(rule.family === 'event-replacements' ? ['event'] : []), ...(rule.family === 'costs' ? ['actorId'] : [])]);
   const visit = (v: unknown, at: string) => {
@@ -128,9 +130,11 @@ export function assertModifierContext(rule: ModifierDefinition, path: string): v
     if (validEvents && rule.events.some(event => !validEvents.includes(event))) throw new RuleContractError(path + '.events', 'Operation does not support this event family');
   }
 }
+/** Parse and cross-check one authored modifier definition. */
 export function parseModifierDefinition(input: unknown, path = 'modifier'): ModifierDefinition {
   const rule = parseContract(ModifierDefinitionSchema, input, path); assertModifierContext(rule, path); return rule;
 }
+/** Parse one authored effect, resolving its family/operation pair to an action id. */
 export function parseAuthoredEffect(input: unknown, path = 'effect'): Record<string, unknown> {
   const raw = parseContract(AuthoredEffectSchema, input, path) as Record<string, unknown>;
   if ('action' in raw) return raw;

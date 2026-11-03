@@ -59,14 +59,17 @@ export class ActionRegistry {
     this.handlers = new Map(Object.entries(handlers));
   }
 
+  /** Look up the handler for an action type, if one is registered. */
   get(type: ActionType): ActionHandler | undefined {
     return this.handlers.get(type);
   }
 
+  /** True when an action type has a registered handler. */
   has(type: ActionType): boolean {
     return this.handlers.has(type);
   }
 
+  /** Return a new registry with one handler added or replaced. */
   with(type: ActionType, handler: ActionHandler): ActionRegistry {
     return new ActionRegistry(Object.fromEntries([...this.handlers, [type, handler]]));
   }

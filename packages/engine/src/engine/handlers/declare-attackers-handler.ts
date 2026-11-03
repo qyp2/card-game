@@ -8,16 +8,22 @@ import { CardCharacteristicService } from '../card-characteristic-service';
 import { CombatRuleRegistry } from '../combat-rules';
 import { captureSourceInformation } from '../source-information';
 
+/** Find a card the given player controls on the battlefield. */
 function findCardOnBattlefield(room: GameRoom, playerId: PlayerId, cardUuid: string): CardInstance | undefined {
-  return room.battlefield.find(c => c.uuid === cardUuid && CardCharacteristicService.resolveController(room, c) === playerId);
+  return room.battlefield.find((c) =>
+    c.uuid === cardUuid && CardCharacteristicService.resolveController(room, c) === playerId);
 }
 
 export const declareAttackersHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, action: ActionData): ActionResult {
+    // Guard: combat is already declared, or responses are still pending.
     if (room.stack.length || room.combatDeclarations?.attackers) {
       return { success: false, phase: 'validate', reason: 'Combat declaration is already complete or responses are pending' };
     }
+
     const attackers = action.attackers as { cardUuid: string }[] | undefined;
+
+    // Guard: the packet must name the attackers.
     if (!attackers) {
       return { success: false, phase: 'validate', reason: 'attackers is required' };
     }
@@ -33,13 +39,15 @@ export const declareAttackersHandler: ActionHandler = {
     }
 
     // Check for duplicate cardUuids
-    const uuids = attackers.map(a => a.cardUuid);
+    const uuids = attackers.map((a) => a.cardUuid);
     if (new Set(uuids).size !== uuids.length) {
       return { success: false, phase: 'validate', reason: 'Duplicate attackers are not allowed' };
     }
 
     for (const { cardUuid } of attackers) {
       const card = findCardOnBattlefield(room, playerId, cardUuid);
+
+      // Guard: each attacker must be a creature you control on the battlefield.
       if (!card) {
         return { success: false, phase: 'validate', reason: `Creature ${cardUuid} not found on your battlefield` };
       }
@@ -48,21 +56,35 @@ export const declareAttackersHandler: ActionHandler = {
         return { success: false, phase: 'validate', reason: `Card ${cardUuid} is not a creature` };
       }
 
+      // Guard: attacking taps the creature, so it must be untapped.
       if (card.state.isTapped) {
         return { success: false, phase: 'validate', reason: `${CardCharacteristicService.resolve(room, card).name} is already tapped` };
       }
 
-      if (card.state.summoningSickness && !CombatRuleRegistry.canAttackWhileSummoningSick({ room, playerId,
-        attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!).filter(Boolean) }, card)) {
+      // Guard: summoning sickness, unless a combat rule grants haste.
+      if (
+        card.state.summoningSickness &&
+        !CombatRuleRegistry.canAttackWhileSummoningSick({
+          room,
+          playerId,
+          attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!).filter(Boolean),
+        }, card)
+      ) {
         return { success: false, phase: 'validate', reason: `${CardCharacteristicService.resolve(room, card).name} has summoning sickness` };
       }
 
+      // Guard: one attack per creature per turn.
       if (card.state.attackedThisTurn) {
         return { success: false, phase: 'validate', reason: `${CardCharacteristicService.resolve(room, card).name} has already attacked this turn` };
       }
     }
 
-    const reason = CombatRuleRegistry.validateAttackers({ room, playerId, attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!) });
+    const reason = CombatRuleRegistry.validateAttackers({
+      room,
+      playerId,
+      attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!),
+    });
+
     return reason ? { success: false, phase: 'validate', reason } : { success: true };
   },
 
@@ -73,6 +95,8 @@ export const declareAttackersHandler: ActionHandler = {
 
     for (const { cardUuid } of attackers) {
       const card = findCardOnBattlefield(room, playerId, cardUuid);
+
+      // Guard: the board may have changed since validation.
       if (!card) {
         return { success: false, phase: 'propose', reason: `Creature ${cardUuid} disappeared from battlefield` };
       }
@@ -93,7 +117,11 @@ export const declareAttackersHandler: ActionHandler = {
     }
 
     // Batch declare all attackers at once
-    const consequences = CombatRuleRegistry.attackerMutations({ room, playerId, attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!) }, mutations);
+    const consequences = CombatRuleRegistry.attackerMutations({
+      room,
+      playerId,
+      attackers: attackers.map(({ cardUuid }) => findCardOnBattlefield(room, playerId, cardUuid)!),
+    }, mutations);
     consequences.push({ type: 'DECLARE_ATTACKERS', declarations });
 
     // No stackObject — turn-based action, damage applied later in combatDamageStep

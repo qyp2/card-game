@@ -24,6 +24,12 @@ See [delivery checks and next slices](STATUS.md) for what was verified and what 
 | crypto/ | Optional later encrypted-log exercise |
 | findings/ | Register, individual finding template, private evidence and reviewed publication |
 
+Detection tooling lives in [`../deploy/monitoring/`](../deploy/monitoring/README.md), not here:
+Prometheus/Grafana (Phase 3), per-interface Suricata (Phase 4) and Loki log correlation
+(Phase 4.5). This directory produces the attacks; that one produces the evidence.
+
+## Rules
+
 Active tooling must eventually reject non-isolated profiles and out-of-scope targets. A Cloudflare demo is functional sharing only. No real secrets belong in templates. Raw output lives in ignored lab/runs/ or findings/evidence/; reviewed publication lives in findings/published/. A raw tool response is not a confirmed finding.
 
 No lab runtime imports application implementation. Valid fuzzer seed contracts may be compared to public protocol definitions in a separate check; malformed mutations deliberately violate them.

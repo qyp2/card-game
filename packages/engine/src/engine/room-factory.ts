@@ -10,85 +10,99 @@ import { defaultRuntimeContext, type RuntimeContext } from '../shared/runtime-co
 
 const RPS_CARD_IDS = ['rock', 'paper', 'scissors'] as const;
 
+/** A fresh player record with full life, empty mana pool and empty zones. */
 function createDefaultPlayer(id: PlayerId, setup: SetupConfig): PlayerState {
-    return {
-        id,
-        life: setup.startingLife,
-        mana: { red: 0, blue: 0, green: 0, black: 0, white: 0, yellow: 0 },
-        deck: [],
-        hand: [],
-        graveyard: []
-    };
+  return {
+    id,
+    life: setup.startingLife,
+    mana: { red: 0, blue: 0, green: 0, black: 0, white: 0, yellow: 0 },
+    deck: [],
+    hand: [],
+    graveyard: [],
+  };
 }
 
+/** Create a room with only player 1 seated; player 2 joins later. */
 export function createRoom(roomId: string, player1Id: PlayerId, cards?: readonly string[], settings?: RoomSettings): GameRoom {
-    const selected = settings?.setup ?? gameConfig.setup;
-    const setup = snapshotSetupConfig(cards ? { ...selected, playerDecks: { [player1Id]: [...cards] } } : selected);
-    if (cards) { cards.forEach(getBlueprint); setup.playerDecks = { [player1Id]: [...cards] }; }
-    else setup.developmentDeck.forEach(getBlueprint);
-    return {
-        setup, turnNumber: 1,
-        roomId,
-        player1Id: player1Id,
-        player2Id: null,
-        players: {
-            [player1Id]: createDefaultPlayer(player1Id, setup)
-        },
-        phase: 'stateMainPhase',
-        status: 'waiting',
-        debugMode: settings?.debugMode ?? gameConfig.debugMode,
-        engineState: 'waiting_for_player',
-        activeTurnPlayerId: player1Id,
-        priorityPlayerId: null,
-        lastPassedPlayerId: null,
-        battlefield: [],
-        continuousEffectPool: [],
-        stack: [],
-        combat: [],
-        rpsState: {
-            status: 'pending',
-            playedCards: {}
-        }
-    };
+  const selected = settings?.setup ?? gameConfig.setup;
+  const setup = snapshotSetupConfig(cards ? { ...selected, playerDecks: { [player1Id]: [...cards] } } : selected);
+
+  // An explicit card list overrides the configured development deck.
+  if (cards) {
+    cards.forEach(getBlueprint);
+    setup.playerDecks = { [player1Id]: [...cards] };
+  } else {
+    setup.developmentDeck.forEach(getBlueprint);
+  }
+
+  return {
+    setup,
+    turnNumber: 1,
+    roomId,
+    player1Id: player1Id,
+    player2Id: null,
+    players: {
+      [player1Id]: createDefaultPlayer(player1Id, setup),
+    },
+    phase: 'stateMainPhase',
+    status: 'waiting',
+    debugMode: settings?.debugMode ?? gameConfig.debugMode,
+    engineState: 'waiting_for_player',
+    activeTurnPlayerId: player1Id,
+    priorityPlayerId: null,
+    lastPassedPlayerId: null,
+    battlefield: [],
+    continuousEffectPool: [],
+    stack: [],
+    combat: [],
+    rpsState: {
+      status: 'pending',
+      playedCards: {},
+    },
+  };
 }
 
+/** Seat player 2 and optionally pin their deck list. */
 export function joinRoom(room: GameRoom, player2Id: PlayerId, cards?: readonly string[]): void {
-    if (cards) {
-      cards.forEach(getBlueprint);
-      room.setup = { ...(room.setup ?? snapshotSetupConfig()), playerDecks: { ...room.setup?.playerDecks, [player2Id]: [...cards] } };
-    }
-    room.player2Id = player2Id;
-    room.players[player2Id] = createDefaultPlayer(player2Id, room.setup ?? gameConfig.setup);
+  if (cards) {
+    cards.forEach(getBlueprint);
+    room.setup = { ...(room.setup ?? snapshotSetupConfig()), playerDecks: { ...room.setup?.playerDecks, [player2Id]: [...cards] } };
+  }
+
+  room.player2Id = player2Id;
+  room.players[player2Id] = createDefaultPlayer(player2Id, room.setup ?? gameConfig.setup);
 }
 
+/** Deal the three RPS cards to both players and enter the RPS phase. */
 export function setupRPS(
   room: GameRoom,
   context: Pick<RuntimeContext, 'uuid'> = defaultRuntimeContext,
 ): void {
-    room.status = 'RPS';
-    
-    if (!room.player2Id) return;
+  room.status = 'RPS';
 
-    const p1 = room.players[room.player1Id];
-    const p2 = room.players[room.player2Id];
+  // Guard: RPS needs both seats filled.
+  if (!room.player2Id) return;
 
-    room.battlefield = [];
-    p1.hand = [];
-    p2.hand = [];
+  const p1 = room.players[room.player1Id];
+  const p2 = room.players[room.player2Id];
 
-    for (const id of RPS_CARD_IDS) {
-      const c1 = instantiateCard(id, context);
-      c1.state.zone = 'hand';
-      c1.state.ownerId = room.player1Id;
-      c1.state.controllerId = room.player1Id;
-      p1.hand.push(c1);
+  room.battlefield = [];
+  p1.hand = [];
+  p2.hand = [];
 
-      const c2 = instantiateCard(id, context);
-      c2.state.zone = 'hand';
-      c2.state.ownerId = room.player2Id;
-      c2.state.controllerId = room.player2Id;
-      p2.hand.push(c2);
-    }
+  for (const id of RPS_CARD_IDS) {
+    const c1 = instantiateCard(id, context);
+    c1.state.zone = 'hand';
+    c1.state.ownerId = room.player1Id;
+    c1.state.controllerId = room.player1Id;
+    p1.hand.push(c1);
+
+    const c2 = instantiateCard(id, context);
+    c2.state.zone = 'hand';
+    c2.state.ownerId = room.player2Id;
+    c2.state.controllerId = room.player2Id;
+    p2.hand.push(c2);
+  }
 }
 
 /**
@@ -103,12 +117,14 @@ export function buildTestDeck(
   return buildDeck(playerId, setup.developmentDeck, setup.shuffleDevelopmentDeck, context);
 }
 
+/** Instantiate a deck list into library-zone cards, optionally shuffled. */
 function buildDeck(playerId: PlayerId, cardIds: readonly string[], shuffle: boolean, context: RuntimeContext): CardInstance[] {
-  const deck = cardIds.map(id => {
+  const deck = cardIds.map((id) => {
     const card = instantiateCard(id, context);
     card.state.zone = 'library';
     card.state.ownerId = playerId;
     card.state.controllerId = playerId;
+
     return card;
   });
 
@@ -121,28 +137,32 @@ function buildDeck(playerId: PlayerId, cardIds: readonly string[], shuffle: bool
   return deck;
 }
 
+/** Move the top cards of both decks into the opening hands. */
 export function dealStartingHands(room: GameRoom): void {
-    if (!room.player2Id) return;
+  // Guard: dealing needs both seats filled.
+  if (!room.player2Id) return;
 
-    const p1 = room.players[room.player1Id];
-    const p2 = room.players[room.player2Id];
+  const p1 = room.players[room.player1Id];
+  const p2 = room.players[room.player2Id];
 
-    p1.hand = [];
-    p2.hand = [];
+  p1.hand = [];
+  p2.hand = [];
 
-    for (let i = 0; i < (room.setup ?? gameConfig.setup).openingHandSize; i++) {
-        const p1Card = p1.deck.pop();
-        if (p1Card) {
-          p1Card.state.zone = 'hand';
-          p1.hand.push(p1Card);
-        }
+  for (let i = 0; i < (room.setup ?? gameConfig.setup).openingHandSize; i++) {
+    const p1Card = p1.deck.pop();
 
-        const p2Card = p2.deck.pop();
-        if (p2Card) {
-          p2Card.state.zone = 'hand';
-          p2.hand.push(p2Card);
-        }
+    if (p1Card) {
+      p1Card.state.zone = 'hand';
+      p1.hand.push(p1Card);
     }
+
+    const p2Card = p2.deck.pop();
+
+    if (p2Card) {
+      p2Card.state.zone = 'hand';
+      p2.hand.push(p2Card);
+    }
+  }
 }
 
 /** Build/deal on fresh setup data so previously committed room references stay intact. */
@@ -150,18 +170,32 @@ export function buildStartingCardMutations(
   room: GameRoom,
   context: RuntimeContext = defaultRuntimeContext,
 ): GameMutation[] {
+  // Guard: nothing to deal until both players are seated.
   if (!room.player2Id) return [];
+
   const ids = [room.player1Id, room.player2Id];
   const players = { ...room.players };
-  for (const id of ids) players[id] = {
-    ...players[id],
-    deck: room.setup?.playerDecks?.[id] ? buildDeck(id, room.setup.playerDecks[id], true, context) : buildTestDeck(id, room.setup ?? gameConfig.setup, context),
-    hand: [],
-  };
+
+  for (const id of ids) {
+    players[id] = {
+      ...players[id],
+      deck: room.setup?.playerDecks?.[id]
+        ? buildDeck(id, room.setup.playerDecks[id], true, context)
+        : buildTestDeck(id, room.setup ?? gameConfig.setup, context),
+      hand: [],
+    };
+  }
+
+  // Deal against a throwaway copy so the real room is untouched.
   const setup = { ...room, players };
   dealStartingHands(setup);
-  return ids.map(playerId => ({ type: 'SET_PLAYER_ZONES', playerId,
-    deck: setup.players[playerId].deck, hand: setup.players[playerId].hand }));
+
+  return ids.map((playerId) => ({
+    type: 'SET_PLAYER_ZONES',
+    playerId,
+    deck: setup.players[playerId].deck,
+    hand: setup.players[playerId].hand,
+  }));
 }
 
 /**
@@ -182,6 +216,7 @@ export function resolveRPS(room: GameRoom): GameMutation[] {
   const beats: Record<string, string> = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
 
   let winner: PlayerId;
+
   if (c1 === c2) {
     winner = p1; // tie → player1 goes first
   } else if (beats[c1] === c2) {

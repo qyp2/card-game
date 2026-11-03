@@ -11,34 +11,65 @@ export interface DamageRule {
 
 export class DamageRuleRegistry {
   private static rules = new Set<DamageRule>();
+
+  /** Register a damage rule; the returned function unregisters it. */
   static register(rule: DamageRule): () => void {
-    this.rules.add(rule); return () => { this.rules.delete(rule); };
+    this.rules.add(rule);
+
+    return () => {
+      this.rules.delete(rule);
+    };
   }
+
+  /** Run every modifier in registration order, stopping if one cancels the assignment. */
   static modify(room: GameRoom, original: DamageAssignment): DamageAssignment | null {
     let assignment: DamageAssignment | null = original;
+
     for (const rule of this.rules) {
+      // A rule returned null: the assignment is fully replaced or prevented.
       if (!assignment) break;
+
       if (rule.modify) assignment = rule.modify(room, assignment);
     }
+
     return assignment;
   }
+
+  /** Collect consequences from every rule that declares them. */
   static consequences(room: GameRoom, assignments: readonly DamageAssignment[]): GameMutation[] {
-    return [...this.rules].flatMap(rule => rule.consequences?.(room, assignments) ?? []);
+    return [...this.rules].flatMap((rule) => rule.consequences?.(room, assignments) ?? []);
   }
 }
 
+/** Keep only assignments with a positive integer amount and a still-legal recipient. */
 export function validDamageAssignments(room: GameRoom, assignments: readonly DamageAssignment[]): DamageAssignment[] {
-  return assignments.filter(({ amount, recipient }) => Number.isSafeInteger(amount) && amount > 0 &&
-    (recipient.kind === 'player' ? !!room.players[recipient.playerId] : room.battlefield.some(card =>
-      card.uuid === recipient.cardUuid && (card.state.zoneRevision ?? 0) === recipient.zoneRevision &&
-      CardCharacteristicService.resolveTypes(room, card).some(type => ['Creature', 'Planeswalker', 'Battle'].includes(type)))));
+  return assignments.filter(({ amount, recipient }) =>
+    Number.isSafeInteger(amount) &&
+    amount > 0 &&
+    (recipient.kind === 'player'
+      ? !!room.players[recipient.playerId]
+      : room.battlefield.some((card) =>
+        card.uuid === recipient.cardUuid &&
+        (card.state.zoneRevision ?? 0) === recipient.zoneRevision &&
+        CardCharacteristicService.resolveTypes(room, card).some((type) =>
+          ['Creature', 'Planeswalker', 'Battle'].includes(type)))));
 }
 
 /** Shared by combat and effect damage. Pure proposal hooks precede one atomic commit. */
 export function planDamage(room: GameRoom, proposed: readonly DamageAssignment[]): GameMutation[] {
-  const modified = proposed.filter(assignment => Number.isSafeInteger(assignment.amount) && assignment.amount > 0)
-    .flatMap(assignment => { const result = DamageRuleRegistry.modify(room, structuredClone(assignment)); return result ? [result] : []; });
+  // Drop malformed amounts, then let each rule transform a private copy.
+  const modified = proposed
+    .filter((assignment) => Number.isSafeInteger(assignment.amount) && assignment.amount > 0)
+    .flatMap((assignment) => {
+      const result = DamageRuleRegistry.modify(room, structuredClone(assignment));
+      return result ? [result] : [];
+    });
+
   const assignments = validDamageAssignments(room, modified);
+
+  // Guard: nothing survived modification and validation.
   if (!assignments.length) return [];
+
+  // One batch mutation keeps the whole damage event atomic.
   return [{ type: 'APPLY_DAMAGE_BATCH', assignments }];
 }

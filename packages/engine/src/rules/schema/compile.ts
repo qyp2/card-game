@@ -3,6 +3,7 @@ import { operationStage } from '../operation-stage';
 import type { ModifierDefinition } from './contracts';
 import type { ContinuousEffect, StaticEffectDefinition } from '../../types/continuous-effect.types';
 
+/** Compile authored modifier definitions into the static effects the engine evaluates. */
 export function compileStaticRules(rules: ModifierDefinition[]): StaticEffectDefinition[] {
   return rules.map((rule, i) => parseModifierDefinition(rule, `rules.${i}`)).flatMap(rule => {
     if (rule.family !== 'characteristics' && rule.family !== 'permissions') return [];
@@ -27,6 +28,7 @@ export function compileInstruction(input: Record<string, unknown>): Record<strin
 function compileMode(mode: Record<string, unknown>): Record<string, unknown> {
   return { ...mode, effects: (mode.effects as Record<string, unknown>[]).map(compileInstruction) };
 }
+/** Compile one authored characteristic operation into its runtime shape. */
 export function compileCharacteristicOperation(operation: Record<string, unknown>): Record<string, unknown> {
   if (operation.type === 'ABILITY') return { ...operation, ...(operation.add ? { add: (operation.add as Record<string, unknown>[]).map(compileNormalizedAbility) } : {}) };
   if (operation.type === 'COPY') {

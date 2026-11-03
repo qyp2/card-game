@@ -19,17 +19,22 @@ import type { StackObject } from '../../types/effect.types';
  */
 export const endTurnHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, _action: ActionData): ActionResult {
+    // Guard: the game must be past the opening RPS phase.
     if (room.status === 'RPS') {
       return { success: false, phase: 'validate', reason: 'Cannot end turn during Rock Paper Scissors phase!' };
     }
+
     // The stack is a zone, not a phase (MTG 116). Ending the turn while the
     // stack is open would abandon it.
     if (room.stack.length > 0) {
       return { success: false, phase: 'validate', reason: 'Cannot end turn while the stack is not empty!' };
     }
+
+    // Guard: only the active player may end the turn.
     if (room.activeTurnPlayerId !== playerId) {
       return { success: false, phase: 'validate', reason: 'Not your turn!' };
     }
+
     return { success: true };
   },
 
