@@ -26,9 +26,9 @@ Existing GameEngine.passPriority / the pass_priority command already transfer pr
 
 OptionService.getOptions is a UI preview. It checks timing, permissions and many payment constraints, but enabled spell/ability options do not prove a legal target assignment or a completable mode/number/alternative-payment choice. Conversely, an unaffordable spell may become payable through available mana abilities. Client-side hidden information and stale snapshots are further reasons not to make the browser authoritative. An empty hand alone proves nothing about battlefield abilities.
 
-Recommended next implementation:
+The pure query is now [implemented](legal-action-query.md). The remaining coordinator plan is:
 
-1. Add a pure hasLegalNonPassAction(room, playerId) query using shared command legality, legal target/group selection and payment feasibility. Reuse existing validators; previews or unresolved complex choices return unknown rather than permission to skip.
+1. Use hasLegalNonPassAction(room, playerId), which returns available with a witness, none after exhaustive rejection, or unknown when the position/search cannot be decided safely.
 2. Only auto-pass for an opted-in connected player who currently owns priority in waiting_for_player, with no choice, trigger queue, rules work or required combat declaration. Mana abilities count as actions unless a separately named preference explicitly chooses to skip them.
 3. Let the server call the existing pass_priority command only for a proven none result, rechecking current state immediately before execution. Preserve ordinary published mutations, logs and opponent response windows.
 4. Bound passes per processing cycle, yield between cycles and stop on any new action/decision, changed preference or disconnect. Never repeatedly advance empty turns in an unbounded synchronous loop. Do not auto-answer targets, attackers, blockers, RPS or optional effects.
