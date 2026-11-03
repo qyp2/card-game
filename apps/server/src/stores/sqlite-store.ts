@@ -90,6 +90,10 @@ export class SqliteStore implements AccountRepository, DeckRepository, AuditRepo
       .run(record.digest, record.id, record.subject.kind, record.subject.id, record.subject.kind === 'account' ? record.subject.id : null, record.scope, record.createdAt, record.expiresAt, record.kind ?? 'legacy', record.parentDigest ?? null);
   }
   deleteSession(digest: string) { this.statement('DELETE FROM sessions WHERE digest=?').run(digest); }
+  accountSeats(accountId: string): SeatOwnership[] {
+    return [...this.seats.values()].flatMap(seats => [...seats.values()])
+      .filter(seat => seat.accountId === accountId || seat.owner === 'account:' + accountId).map(seat => ({ ...seat }));
+  }
   ownedSeat(roomId: string, owner: string) { const seat = [...this.seats.get(roomId)?.values() ?? []].find(value => value.owner === owner); return seat && { ...seat }; }
   seatOwner(roomId: string, playerId: string) { return this.seats.get(roomId)?.get(playerId)?.owner; }
   saveSeat(seat: SeatOwnership) {
@@ -97,6 +101,7 @@ export class SqliteStore implements AccountRepository, DeckRepository, AuditRepo
     if (!seats) { seats = new Map(); this.seats.set(seat.roomId, seats); }
     seats.set(seat.playerId, { ...seat });
   }
+  deleteSeat(roomId: string, playerId: string) { this.seats.get(roomId)?.delete(playerId); }
   deleteRoomSeats(roomId: string) { this.seats.delete(roomId); }
 
   private deck(row: unknown): SavedDeck | undefined {

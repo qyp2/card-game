@@ -13,6 +13,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 
 - [Concept map — where things are and how flows run](docs/MAP.md) (start here to navigate the code)
 - [Current architecture and verification](ARCHITECTURE.md)
+- [Concede, room exit, refresh history and auto-pass assessment](docs/room-lifecycle-and-auto-pass.md)
 - [Workspace architecture supplement](docs/workspace-architecture.md)
 - [Enforced dependency rules](docs/architecture-import-policy.md)
 - [Readability and coverage gates](docs/readability-gate.md)

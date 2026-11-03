@@ -1,3 +1,5 @@
 {
-  "savedDeckPageSize": 100
+  "savedDeckPageSize": 100,
+  "gameLogMaxEntries": 100,
+  "gameLogSummaryMaxLength": 8000
 }

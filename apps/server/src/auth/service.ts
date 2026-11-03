@@ -45,19 +45,35 @@ export class AuthService {
       playerId: owned?.playerId ?? sessionOwner(session), account: account ? publicAccount(account) : null,
       ...(owned ? { roomId: owned.roomId } : {}) };
   }
+  /** One account reserves one room across all browser families and game tabs, including reconnect grace. */
+  assertRoomAvailable(session: SessionRecord, roomId?: string): void {
+    if (session.subject.kind !== 'account') return;
+    this.assertAccountRoomAvailable(session.subject.id, roomId);
+  }
+  private assertAccountRoomAvailable(accountId: string, roomId?: string): void {
+    const occupied = this.repository.accountSeats(accountId).find(seat => this.rooms.getRoom(seat.roomId) &&
+      (seat.roomId !== roomId));
+    if (occupied) throw new AuthError(409, 'This account already has a room. Leave it before joining another.');
+
+  }
   claimSeat(session: SessionRecord, roomId: string, playerId: string): void {
     if (session.scope !== 'game' || session.kind === 'browser') throw new AuthError(403, 'A game session is required.');
+    this.assertRoomAvailable(session, roomId);
+    const accountSeat = session.subject.kind === 'account'
+      ? this.repository.accountSeats(session.subject.id).find(seat => seat.roomId === roomId) : undefined;
+    if (accountSeat && accountSeat.owner !== sessionOwner(session)) throw new AuthError(409, 'Another game tab owns this account’s room.');
     const owner = sessionOwner(session), existing = this.repository.seatOwner(roomId, playerId);
     if (existing && existing !== owner) throw new AuthError(403, 'Seat belongs to another account.');
-    this.repository.saveSeat({ roomId, playerId, owner });
+    this.repository.saveSeat({ roomId, playerId, owner, ...(session.subject.kind === 'account' ? { accountId: session.subject.id } : {}) });
   }
   private linkSeat(account: AccountRecord, prior: SessionRecord | undefined, roomId?: string) {
     if (!prior || prior.subject.kind !== 'guest' || !roomId || !this.rooms.getRoom(roomId)) return undefined;
+    this.assertAccountRoomAvailable(account.id, roomId);
     const guestSeat = this.repository.ownedSeat(roomId, subjectKey(prior.subject));
     if (!guestSeat) throw new AuthError(403, 'Guest does not own this seat.');
-    const existing = this.repository.ownedSeat(roomId, `account:${account.id}`);
+    const existing = this.repository.accountSeats(account.id).find(seat => seat.roomId === roomId);
     if (existing && existing.playerId !== guestSeat.playerId) throw new AuthError(409, 'Account already occupies another seat in this room.');
-    return { ...guestSeat, owner: `account:${account.id}` };
+    return { ...guestSeat, owner: `account:${account.id}`, accountId: account.id };
   }
   private completeLogin(account: AccountRecord, priorToken: unknown, roomId?: string, scope: SessionScope = 'game', browser = false): AuthResponse {
     return this.sessions.atomic(() => {
@@ -123,12 +139,15 @@ export class AuthService {
       }
       let seat;
       if (roomId && this.rooms.getRoom(roomId)) {
+        this.assertAccountRoomAvailable(parent.subject.id, roomId);
         if (!prior || prior.kind === 'browser' || prior.kind === 'tab' || prior.scope !== 'game' || prior.subject.kind === 'account' && prior.subject.id !== parent.subject.id) throw new AuthError(403, 'This game tab does not own that room seat.');
         seat = this.repository.ownedSeat(roomId, sessionOwner(prior));
         if (!seat) throw new AuthError(403, 'This game tab does not own that room seat.');
+        const occupied = this.repository.accountSeats(parent.subject.id).find(value => value.roomId === roomId);
+        if (occupied && occupied.playerId !== seat.playerId) throw new AuthError(409, 'Account already occupies another seat in this room.');
       }
       const issued = this.sessions.issue(parent.subject, 'game', { kind: 'tab', parent });
-      if (seat && prior) { this.repository.saveSeat({ ...seat, owner: sessionOwner(issued.record) }); this.sessions.revoke(prior, 'linked'); }
+      if (seat && prior) { this.repository.saveSeat({ ...seat, owner: sessionOwner(issued.record), accountId: parent.subject.id }); this.sessions.revoke(prior, 'linked'); }
       return { ...this.info(issued.record, roomId), token: issued.token };
     });
   }

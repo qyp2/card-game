@@ -12,6 +12,7 @@ import type { GameRoom } from '@card-game/engine/types/game.room.types';
 import { serverLogger } from '@card-game/engine/shared/game-logger';
 import { loadServerConfig, type AuthConfig, type ServerConfig } from './config';
 import { AuthService } from './auth/service';
+import { sessionOwner } from './auth/account-store';
 import { bootstrapAdmin } from './auth/bootstrap';
 import { createAuthRouter, inspectorIdentity, bearerToken } from './auth/routes';
 import { AuthError } from './auth/errors';
@@ -184,11 +185,33 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       if (auth.sessions.validateDigest(identity.session.digest)) { next(); return; }
       if (socket.connected) retireSocket(socket);
     });
+    socket.on('leaveRoom', (input: unknown) => {
+      if (!isProtocolMessage(input) || typeof input !== 'object' || input === null ||
+          !('roomId' in input) || typeof input.roomId !== 'string') {
+        socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Invalid leave room packet' }); return;
+      }
+      const roomId = input.roomId;
+      const actor = auth.playerId(identity.session, roomId);
+      if (store.auth.seatOwner(roomId, actor) === undefined) {
+        if (!runtime.currentRoom(socket.id)) socket.emit('roomLeft', { protocolVersion: PROTOCOL_VERSION, roomId });
+        return;
+      }
+      const left = runtime.leaveRoom(socket.id, roomId);
+      if (!left) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Not seated in this room' }); return; }
+      store.auth.deleteSeat(roomId, left.playerId);
+      void socket.leave(roomId);
+      socket.emit('roomLeft', { protocolVersion: PROTOCOL_VERSION, roomId });
+      identity.playerId = auth.playerId(identity.session);
+      socket.emit('sessionReady', auth.info(identity.session));
+    });
     socket.on('createRoom', (input: unknown) => {
+      if (runtime.currentRoom(socket.id)) {
+        socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Leave the current room first.' }); return;
+      }
       const parsed = RoomSetupRequestSchema.safeParse(input);
       if (!parsed.success) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Invalid create room packet' }); return; }
       let cards: string[] | undefined;
-      try { cards = selectedCards(identity, parsed.data.deckId); }
+      try { auth.assertRoomAvailable(identity.session); cards = selectedCards(identity, parsed.data.deckId); }
       catch (error) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: error instanceof AuthError ? error.message : 'Deck selection failed.' }); return; }
       const creator = auth.playerId(identity.session);
       const created = runtime.createRoom(socket.id, creator, cards);
@@ -202,9 +225,12 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       const parsed = JoinRoomRequestSchema.safeParse(input);
       if (!parsed.success) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Invalid join room packet' }); return; }
       const { roomId, deckId } = parsed.data;
+      if (runtime.currentRoom(socket.id) && runtime.currentRoom(socket.id) !== roomId) {
+        socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Leave the current room first.' }); return;
+      }
       if(runtime.isTestRoom(roomId)){socket.emit('error',{protocolVersion:PROTOCOL_VERSION,message:'Claim an assigned test seat before reconnecting.'});return;}
       const ownedPlayerId = auth.playerId(identity.session, roomId);
-      if (store.auth.ownedSeat(roomId, `${identity.session.subject.kind}:${identity.session.subject.id}`)) {
+      if (store.auth.ownedSeat(roomId, sessionOwner(identity.session))) {
         const restored = runtime.connect(socket.id, ownedPlayerId, roomId);
         if (restored.kind === 'rejoined') {
           identity.playerId = ownedPlayerId;
@@ -214,7 +240,15 @@ export function createGameApplication(options: ApplicationOptions = {}) {
         }
       }
       let cards: string[] | undefined;
-      try { cards = selectedCards(identity, deckId); }
+      try {
+        auth.assertRoomAvailable(identity.session, roomId);
+        const occupied = identity.session.subject.kind === 'account'
+          ? store.auth.accountSeats(identity.session.subject.id).find(seat => seat.roomId === roomId) : undefined;
+        if (occupied && occupied.owner !== sessionOwner(identity.session)) {
+          throw new AuthError(409, 'Another game tab owns this account’s room.');
+        }
+        cards = selectedCards(identity, deckId);
+      }
       catch (error) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: error instanceof AuthError ? error.message : 'Deck selection failed.' }); return; }
       const joined = runtime.joinRoom(socket.id, ownedPlayerId, roomId, cards);
       if (joined.kind === 'not_found') { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Room not found' }); return; }

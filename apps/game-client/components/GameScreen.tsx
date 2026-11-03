@@ -11,6 +11,7 @@ import ContextMenu from './ContextMenu';
 import TargetSelector from './TargetSelector';
 import ChoicePanel from './ChoicePanel';
 import RotateGate from './RotateGate';
+import RoomControls from './RoomControls';
 
 export default function GameScreen() {
   const roomId = useGameStore((s) => s.roomId);
@@ -28,12 +29,15 @@ export default function GameScreen() {
             <OpponentInfo />
             <div className="board-banner">
               <span className="board-banner-room">Room <strong>{roomId}</strong></span>
+              <RoomControls />
               {gameOver && (
                 <div role="status" className="game-outcome">
                   <strong>{outcome?.type === 'draw' ? 'Draw' : outcome?.type === 'win'
                     ? (outcome.winnerId === myPlayerId ? 'You win' : 'You lose') : 'Game over'}</strong>
                   {outcome && <span> — {outcome.type === 'draw'
                     ? 'Both players reached zero or less life.'
+                    : outcome.losses.some(loss => loss.reason === 'concede') ? 'A player conceded.'
+                    : outcome.losses.some(loss => loss.reason === 'failed_draw') ? 'A player could not draw a card.'
                     : 'A player reached zero or less life.'}</span>}
                 </div>
               )}

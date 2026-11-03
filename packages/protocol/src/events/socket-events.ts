@@ -10,6 +10,7 @@ export interface ErrorMessage extends Versioned { message: string; commandId?: s
 export interface ClientActionMessage extends Versioned { roomId: string; actionId: string; commandId?: string; cardUuid?: string; targets?: unknown[]; [field: string]: unknown }
 export interface OptionsRequest extends RoomMessage { cardUuid: string; zone: 'hand' | 'battlefield' }
 export interface ClientEvents {
+  leaveRoom(message: RoomMessage): void;
   createRoom(message: RoomSetupMessage): void;
   joinRoom(message: RoomMessage & RoomSetupMessage): void;
   playerAction(message: ClientActionMessage): void;
@@ -21,6 +22,7 @@ export interface ServerEvents {
   roomSnapshot(message: SnapshotMessage): void;
   stateDelta(message: ViewDelta): void;
   optionsForCard(message: OptionsMessage): void;
+  roomLeft(message: RoomMessage): void;
   roomCreated(message: RoomMessage): void;
   roomJoined(message: RoomMessage): void;
   roomDestroyed(message: RoomMessage): void;

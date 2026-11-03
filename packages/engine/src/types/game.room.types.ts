@@ -14,7 +14,7 @@ export type PlayerId = PlayerState['id'];
 
 export interface PlayerLoss {
     playerId: PlayerId;
-    reason: 'life_total' | 'failed_draw';
+    reason: 'life_total' | 'failed_draw' | 'concede';
 }
 
 export type GameOutcome =

@@ -16,7 +16,7 @@ import { tapForManaHandler } from './handlers/tap-for-mana-handler';
  * The handler bound to each action id. `choose` is excluded because it is
  * resolved by the choice service rather than an action handler.
  */
-const DEFAULT_ACTION_HANDLERS: Record<Exclude<ActionId, typeof ACTION_IDS.choose>, ActionHandler> = {
+const DEFAULT_ACTION_HANDLERS: Record<Exclude<ActionId, typeof ACTION_IDS.choose | typeof ACTION_IDS.concede>, ActionHandler> = {
   [ACTION_IDS.castSpell]: playCardHandler,
   [ACTION_IDS.playLand]: playLandHandler,
   [ACTION_IDS.activateAbility]: activateAbilityHandler,

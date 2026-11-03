@@ -4,7 +4,7 @@ export interface AccountRecord extends PublicAccount { passwordHash: string; dis
 export type Subject = { kind: 'guest'; id: string } | { kind: 'account'; id: string };
 export type SessionScope = 'game' | 'admin';
 export interface SessionRecord { id: string; digest: string; subject: Subject; scope: SessionScope; createdAt: number; expiresAt: number; kind?: 'legacy' | 'browser' | 'tab'; parentDigest?: string }
-export interface SeatOwnership { roomId: string; playerId: string; owner: string }
+export interface SeatOwnership { roomId: string; playerId: string; owner: string; accountId?: string }
 export const subjectKey = (subject: Subject): string => `${subject.kind}:${subject.id}`;
 export const sessionOwner = (session: SessionRecord): string => session.kind === 'tab' ? 'tab:' + session.id : subjectKey(session.subject);
 
@@ -22,9 +22,11 @@ export interface AccountRepository {
   findSession(digest: string): SessionRecord | undefined;
   saveSession(session: SessionRecord): void;
   deleteSession(digest: string): void;
+  accountSeats(accountId: string): SeatOwnership[];
   ownedSeat(roomId: string, owner: string): SeatOwnership | undefined;
   seatOwner(roomId: string, playerId: string): string | undefined;
   saveSeat(seat: SeatOwnership): void;
+  deleteSeat(roomId: string, playerId: string): void;
   deleteRoomSeats(roomId: string): void;
 }
 
@@ -64,11 +66,16 @@ export class InMemoryAccountStore implements AccountRepository {
   findSession(digest: string) { const session = this.sessionTable.get(digest); return session && structuredClone(session); }
   saveSession(session: SessionRecord) { this.sessionTable.set(session.digest, structuredClone(session)); }
   deleteSession(digest: string) { this.sessionTable.delete(digest); }
+  accountSeats(accountId: string): SeatOwnership[] {
+    return [...this.seats.values()].flatMap(seats => [...seats.values()])
+      .filter(seat => seat.accountId === accountId || seat.owner === 'account:' + accountId).map(seat => ({ ...seat }));
+  }
   ownedSeat(roomId: string, owner: string) { const seat = [...this.seats.get(roomId)?.values() ?? []].find(seat => seat.owner === owner); return seat && { ...seat }; }
   seatOwner(roomId: string, playerId: string) { return this.seats.get(roomId)?.get(playerId)?.owner; }
   saveSeat(seat: SeatOwnership) {
     let seats = this.seats.get(seat.roomId); if (!seats) { seats = new Map(); this.seats.set(seat.roomId, seats); }
     seats.set(seat.playerId, { ...seat });
   }
+  deleteSeat(roomId: string, playerId: string) { this.seats.get(roomId)?.delete(playerId); }
   deleteRoomSeats(roomId: string) { this.seats.delete(roomId); }
 }

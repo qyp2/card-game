@@ -18,7 +18,6 @@ import {
   decideRejoin,
   resolvePlayerId,
   resolveSocketId,
-  unbindRoom,
   unbindSocket,
 } from './reconnect';
 
@@ -61,6 +60,7 @@ export class RoomRuntime {
   private readonly labContexts = new Map<string, RuntimeContext>();
   private readonly engines = new Map<string, GameEngine>();
   private readonly socketRooms = new Map<string, string>();
+  private readonly departed = new Map<string, Set<string>>();
   private readonly destroyTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly identity = createIdentityMaps();
   private readonly optionService = new OptionService();
@@ -87,6 +87,7 @@ export class RoomRuntime {
   isTestRoom(roomId:string):boolean {return this.labContexts.has(roomId);}
   connect(socketId: string, authPlayerId?: PlayerId, authRoomId?: string | null): ConnectResult {
     if (!authPlayerId || !authRoomId) return { kind: 'no_rejoin' };
+    if (this.departed.get(authRoomId)?.has(authPlayerId)) return { kind: 'rejoin_failed', reason: 'not_a_member' };
 
     const decision = decideRejoin(roomId => this.store.getRoom(roomId), authPlayerId, authRoomId);
     if (decision.kind !== 'rejoin') {
@@ -153,7 +154,7 @@ export class RoomRuntime {
 
   getOptions(socketId: string, roomId: string, cardUuid: string, zone: 'hand' | 'battlefield'): ActionOption[] {
     const room = this.store.getRoom(roomId);
-    return room ? this.optionService.getOptions(room, resolvePlayerId(this.identity, socketId), cardUuid, zone) : [];
+    return room && this.socketRooms.get(socketId) === roomId ? this.optionService.getOptions(room, resolvePlayerId(this.identity, socketId), cardUuid, zone) : [];
   }
 
   executePlayerAction(socketId: string, packet: ActionPacket): PlayerActionRuntimeResult {
@@ -170,6 +171,10 @@ export class RoomRuntime {
       if (gameConfig.logging.actions) trace.warn('command:rejected', 'Room not found');
       return { kind: 'error', message: 'Room not found', commandId, action: packet.actionId };
     }
+
+    if (this.socketRooms.get(socketId) !== packet.roomId) return {
+      kind: 'error', message: 'This socket is not seated in that room', commandId, action: packet.actionId,
+    };
 
     const engine = this.getOrCreateEngine(packet.roomId);
     const oldState = engine.roomState;
@@ -215,6 +220,32 @@ export class RoomRuntime {
     }, commandId);
   }
 
+  /** The transport uses this to prevent silently replacing an occupied room binding. */
+  currentRoom(socketId: string): string | undefined { return this.socketRooms.get(socketId); }
+
+  /** Explicit departure forfeits an active match; disconnection remains reconnectable. */
+  leaveRoom(socketId: string, roomId: string): { playerId: string } | undefined {
+    if (this.socketRooms.get(socketId) !== roomId) return;
+    const playerId = resolvePlayerId(this.identity, socketId);
+    let room = this.store.getRoom(roomId);
+    if (!room) return;
+    if (room.player2Id && (room.status === 'playing' || room.status === 'RPS')) {
+      const result = this.executePlayerAction(socketId, { roomId, actionId: ACTION_IDS.concede, data: {} });
+      if (result.kind !== 'success') return;
+      room = this.store.getRoom(roomId)!;
+    }
+    const departed = this.departed.get(roomId) ?? new Set<string>();
+    departed.add(playerId);
+    this.departed.set(roomId, departed);
+    unbindSocket(this.identity, socketId);
+    this.socketRooms.delete(socketId);
+    this.cancelScheduledDestroy(roomId);
+    const remaining = [room.player1Id, room.player2Id].filter((id): id is string => !!id && !departed.has(id));
+    if (!remaining.length) this.destroyRoom(roomId);
+    else if (![...this.socketRooms.values()].includes(roomId)) this.scheduleDestroy(roomId);
+    return { playerId };
+  }
+
   disconnect(socketId: string, preserveSeat = false): void {
     const playerId = resolvePlayerId(this.identity, socketId);
     serverLogger.info('player:disconnected', `player disconnected: ${socketId}`, { playerId });
@@ -235,6 +266,7 @@ export class RoomRuntime {
     for (const engine of this.engines.values()) engine.dispose();
     this.engines.clear();
     this.labContexts.clear();
+    this.departed.clear();
     this.socketRooms.clear();
     this.identity.playerIdBySocket.clear();
     this.identity.socketIdByPlayer.clear();
@@ -282,12 +314,10 @@ export class RoomRuntime {
     this.store.deleteRoom(roomId);
     if (!room) return;
 
-    const socketIds = [room.player1Id, room.player2Id]
-      .filter((playerId): playerId is PlayerId => playerId !== null)
-      .map(playerId => this.identity.socketIdByPlayer.get(playerId))
-      .filter((socketId): socketId is string => socketId !== undefined);
+    const socketIds = [...this.socketRooms].filter(([, id]) => id === roomId).map(([socketId]) => socketId);
+    this.departed.delete(roomId);
     this.ports.roomDestroyed({ roomId, socketIds });
-    unbindRoom(this.identity, room);
+    for (const socketId of socketIds) unbindSocket(this.identity, socketId);
     for (const [socketId, knownRoomId] of this.socketRooms) {
       if (knownRoomId === roomId) this.socketRooms.delete(socketId);
     }

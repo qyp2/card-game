@@ -1,3 +1,4 @@
+import RoomControls from '@client/components/RoomControls';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -106,5 +107,15 @@ describe('action feedback and tracing', () => {
       useGameStore.getState().applyDelta({ protocolVersion: 1, viewerId: 'player1', roomId: 'room', seq: 1, timestamp: 0, changes: [] });
       expect(info).not.toHaveBeenCalled();
     } finally { (gameConfig.logging as any).actions = original; }
+  });
+});
+
+describe('room controls', () => {
+  it('offers concession during a match and only leaving after it ends', () => {
+    useGameStore.setState({ roomId: 'room', room: createTestRoom({ status: 'playing' }) });
+    expect(renderToStaticMarkup(createElement(RoomControls))).toContain('Concede and leave');
+    useGameStore.setState({ room: createTestRoom({ status: 'gameOver' }) });
+    const ended = renderToStaticMarkup(createElement(RoomControls));
+    expect(ended).toContain('Leave room'); expect(ended).not.toContain('Concede');
   });
 });

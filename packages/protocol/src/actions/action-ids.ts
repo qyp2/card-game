@@ -1,5 +1,6 @@
 /** Wire action vocabulary. A parity test keeps this aligned with the independent engine registry. */
 export const ACTION_IDS = {
+  concede: 'concede',
   castSpell: 'cast_spell',
   playLand: 'play_land',
   activateAbility: 'activate_ability',
@@ -25,6 +26,7 @@ export type ActionIdOrAbility = ActionId;
 
 /** Human-readable display labels for the known action IDs (used by GameLog). */
 export const ACTION_ID_LABELS: Record<ActionId, string> = {
+  [ACTION_IDS.concede]: 'Concede',
   [ACTION_IDS.castSpell]: 'Cast spell',
   [ACTION_IDS.playLand]: 'Play land',
   [ACTION_IDS.activateAbility]: 'Activate ability',

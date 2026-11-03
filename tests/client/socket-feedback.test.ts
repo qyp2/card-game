@@ -34,3 +34,15 @@ describe('socket rejection feedback', () => {
     expect(useAuthStore.getState().session).toBeNull(); expect(disconnect).toHaveBeenCalled();
   });
 });
+
+describe('room exit feedback', () => {
+  it('ignores old room notices and clears a confirmed departure without signing out', () => {
+    const session = { protocolVersion: 1 as const, scope: 'game' as const, sessionId: 'current', token: 'A'.repeat(43),
+      expiresAt: Date.now() + 60_000, playerId: 'player1', account: null };
+    useAuthStore.getState().setSession(session); useGameStore.setState({ roomId: 'current-room' });
+    handlers.get('roomDestroyed')!({ protocolVersion: 1, roomId: 'old-room' });
+    expect(useGameStore.getState().roomId).toBe('current-room');
+    handlers.get('roomLeft')!({ protocolVersion: 1, roomId: 'current-room' });
+    expect(useGameStore.getState().roomId).toBeNull(); expect(useAuthStore.getState().session?.sessionId).toBe('current');
+  });
+});

@@ -57,5 +57,14 @@ export function useGameActions() {
     [roomId, requestOptions],
   );
 
-  return { createRoom, joinRoom, playerAction, getOptions };
+  const leaveRoom = useCallback(() => {
+    if (!roomId) return;
+    if (socket.disconnected === true) {
+      useGameStore.getState().setError('Reconnect before leaving the room.'); return;
+    }
+    useGameStore.getState().setError(null);
+    socket.emit('leaveRoom', { protocolVersion: PROTOCOL_VERSION, roomId });
+  }, [roomId]);
+
+  return { createRoom, joinRoom, playerAction, getOptions, leaveRoom };
 }

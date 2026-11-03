@@ -262,6 +262,15 @@ export class GameEngine {
     // lower-level methods, while retaining all other addon payload fields.
     const { stackUuid: _stackUuid, ...actionData } = data as ActionData;
 
+    // Concession is a match-level decision and never requires priority or a choice answer.
+    if (actionId === 'concede') {
+      const opponent = playerId === this.room.player1Id ? this.room.player2Id : this.room.player1Id;
+      if (!opponent || !['playing', 'RPS'].includes(this.room.status)) return reject('No active opponent to concede to');
+      const outcome = { type: 'win' as const, winnerId: opponent,
+        losses: [{ playerId, reason: 'concede' as const }] };
+      return { success: true, mutations: this.applyMutations([{ type: 'END_GAME', outcome }]) };
+    }
+
     // A pending choice narrows the command surface to `choose`.
     if (this.room.pendingChoice) {
       if (actionId !== 'choose') return reject('A choice is pending');

@@ -18,6 +18,7 @@ import { clientFlags as gameConfig } from '../config';
 import { declarationPlayer, PHASE_LABELS } from '@card-game/protocol';
 import { battlefieldCardLabel } from '../card-label';
 import { describeStackObject } from '../stack-description';
+import { readGameLog, writeGameLog, clearGameLogs, GAME_LOG_LIMIT } from '../game-log-storage';
 
 export interface ContextMenuState {
   choosePayment?: boolean;
@@ -125,6 +126,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (player.life !== current.players[id]?.life) summaries.push(owner + ' life: ' + player.life);
       if (JSON.stringify(player.mana) !== JSON.stringify(current.players[id]?.mana)) summaries.push(owner + ' mana: ' + (Object.entries(player.mana).filter(([, value]) => value > 0).map(([color, value]) => `${color}:${value}`).join(' ') || 'none'));
     }
+    if (nextRoom.outcome && !current.outcome) {
+      const conceded = nextRoom.outcome.losses.find(loss => loss.reason === 'concede');
+      summaries.push(conceded ? (conceded.playerId === get().myPlayerId ? 'You conceded' : 'Opponent conceded') : 'Game over');
+    }
     const summary = summaries.join(' · ') || 'State updated';
     if (gameConfig.logging.actions) clientLogger.info('delta:applied', summary, {
       roomId: delta.roomId, commandId: delta.commandId, action: delta.action, seq: delta.seq,
@@ -162,8 +167,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           summary,
           changes: delta.changes.length,
         },
-      ].slice(-100), // keep last 100 entries
+      ].slice(-GAME_LOG_LIMIT),
     }));
+    writeGameLog(nextRoom.roomId, nextRoom.viewerId, get().log);
   },
 
   setRoom: (room, seq = 0) => {
@@ -171,7 +177,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (gameConfig.logging.actions) clientLogger.info('snapshot:applied', 'Room restored', { roomId: room.roomId, phase: room.phase, stack: room.stack.length, choiceId: (room.pendingChoice && room.pendingChoice.kind !== 'waiting' ? room.pendingChoice.id : undefined) });
     // Full restoration owns the board; an unsent local declaration is not part
     // of the snapshot. Committed combat remains on room.combat.
-    set({ room, lastSeq: seq, targeting: null, contextMenu: null, pendingCard: null, combatSelection: EMPTY_COMBAT_SELECTION, combatNotification: null });
+    const log = get().room?.roomId === room.roomId && get().room?.viewerId === room.viewerId && get().log.length
+      ? get().log.filter(entry => entry.seq <= seq) : readGameLog(room.roomId, room.viewerId, seq);
+    set({ room, log, lastSeq: seq, targeting: null, contextMenu: null, pendingCard: null, combatSelection: EMPTY_COMBAT_SELECTION, combatNotification: null });
   },
 
   setRoomId: (id) => {
@@ -182,6 +190,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearSession: () => {
     clearStoredRoomId();
+    clearGameLogs();
     set({
       room: null,
       roomId: null,
@@ -192,6 +201,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pendingCard: null,
       error: null,
       log: [],
+      combatSelection: EMPTY_COMBAT_SELECTION,
+      combatNotification: null,
     });
   },
 

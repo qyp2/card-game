@@ -93,13 +93,25 @@ socket.on('rejoined', (data: { roomId: string; playerId: string }) => {
 socket.on('rejoinFailed', (data: { reason: string }) => {
   if (!isProtocolMessage(data)) return;
   clientLogger.warn('rejoin:failed', `Rejoin failed: ${data.reason}`, { reason: data.reason });
-  useGameStore.getState().clearSession();
+  returnToLobby();
 });
 
+function returnToLobby(): void {
+  useGameStore.getState().clearSession();
+  if (typeof window !== 'undefined') {
+    window.history.replaceState(null, '', '/play');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+}
+socket.on('roomLeft', data => {
+  if (!isProtocolMessage(data) || data.roomId !== useGameStore.getState().roomId) return;
+  returnToLobby();
+});
 socket.on('roomDestroyed', (data: { roomId: string }) => {
   if (!isProtocolMessage(data)) return;
+  if (data.roomId !== useGameStore.getState().roomId) return;
   clientLogger.info('room:destroyed', 'Room was destroyed', { roomId: data.roomId });
-  useGameStore.getState().clearSession();
+  returnToLobby();
 });
 
 socket.on('playerJoined', (data: { playerId: string }) => {
