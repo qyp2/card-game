@@ -1796,3 +1796,14 @@ label {
     animation: none;
   }
 }
+
+/* Match controls stay usable while the board is waiting on a choice. */
+.room-controls, .auto-pass-control, .auto-pass-control label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.auto-pass-control { font-size: 0.85rem; }
+.auto-pass-control input { width: auto; }
+.auto-pass-control [role="status"] { font-variant-numeric: tabular-nums; }

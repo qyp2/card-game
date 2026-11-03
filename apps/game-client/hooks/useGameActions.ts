@@ -66,5 +66,13 @@ export function useGameActions() {
     socket.emit('leaveRoom', { protocolVersion: PROTOCOL_VERSION, roomId });
   }, [roomId]);
 
-  return { createRoom, joinRoom, playerAction, getOptions, leaveRoom };
+  const setAutoPass = useCallback((enabled: boolean) => {
+    if (!roomId) return;
+    if (socket.disconnected === true) {
+      useGameStore.getState().setError('Reconnect before changing auto-pass.'); return;
+    }
+    socket.emit('setAutoPass', { protocolVersion: PROTOCOL_VERSION, roomId, enabled });
+  }, [roomId]);
+
+  return { createRoom, joinRoom, playerAction, getOptions, leaveRoom, setAutoPass };
 }

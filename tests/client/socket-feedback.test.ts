@@ -46,3 +46,14 @@ describe('room exit feedback', () => {
     expect(useGameStore.getState().roomId).toBeNull(); expect(useAuthStore.getState().session?.sessionId).toBe('current');
   });
 });
+
+describe('auto-pass status', () => {
+  it('accepts only this room’s validated status and translates server deadlines to the local clock', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(50000); useGameStore.setState({ roomId: 'active', autoPass: { enabled: false, passAt: null } });
+    handlers.get('autoPassStatus')!({ protocolVersion: 1, roomId: 'other', enabled: true, passAt: 105000, serverTime: 100000 });
+    expect(useGameStore.getState().autoPass.enabled).toBe(false);
+    handlers.get('autoPassStatus')!({ protocolVersion: 1, roomId: 'active', enabled: true, passAt: 105000, serverTime: 100000 });
+    expect(useGameStore.getState().autoPass).toEqual({ enabled: true, passAt: 55000 });
+    handlers.get('disconnect')!(undefined); expect(useGameStore.getState().autoPass).toEqual({ enabled: false, passAt: null });
+  });
+});

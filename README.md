@@ -15,6 +15,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Current architecture and verification](ARCHITECTURE.md)
 - [Concede, room exit, refresh history and auto-pass assessment](docs/room-lifecycle-and-auto-pass.md)
 - [Pure legal-action query and safe unknown results](docs/legal-action-query.md)
+- [Client auto-pass toggle and five-second server countdown](docs/auto-pass-controls.md)
 - [Workspace architecture supplement](docs/workspace-architecture.md)
 - [Enforced dependency rules](docs/architecture-import-policy.md)
 - [Readability and coverage gates](docs/readability-gate.md)

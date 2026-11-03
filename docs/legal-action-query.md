@@ -1,6 +1,6 @@
 # Pure legal non-pass action query
 
-Implemented 2026-11-03. Source: packages/engine/src/engine/legal-actions.ts. This implements the engine query proposed in the [room lifecycle and auto-pass assessment](room-lifecycle-and-auto-pass.md); automatic passing remains disabled.
+Implemented 2026-11-03. Source: packages/engine/src/engine/legal-actions.ts. This implements the engine query proposed in the [room lifecycle and auto-pass assessment](room-lifecycle-and-auto-pass.md); the [opt-in five-second auto-pass coordinator](auto-pass-controls.md) now consumes it.
 
 ## API and contract
 
@@ -41,7 +41,7 @@ Unknown reasons are not_ready, search_limit, number_range_limit and unsupported_
 
 The room must be playing and unfinished, idle in waiting_for_player, owned by a seated player with priority, and have no pending choice, trigger queue, queued trigger mutations or required combat declaration. Otherwise the answer is unknown/not_ready. Even a player who can concede during a choice must not auto-pass that choice.
 
-Because this is a room-only query, the caller must additionally ensure the engine's private rules checkpoint/collector is settled before calling. A future auto-pass coordinator must recheck that, connection/preference and current state before invoking pass_priority. Loop/yield limits and opt-in UX remain separate work; this change adds no coordinator, timer, server loop or browser behavior.
+Because this is a room-only query, the caller must additionally ensure the engine's private rules checkpoint/collector is settled before calling. A future auto-pass coordinator must recheck that, connection/preference and current state before invoking pass_priority. The subsequent auto-pass coordinator owns opt-in UX, connection checks and a fresh five-second timer for each pass; this pure query still changes no game state.
 
 ## Verification
 

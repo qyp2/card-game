@@ -1,3 +1,4 @@
+import AutoPassControl from '@client/components/AutoPassControl';
 import RoomControls from '@client/components/RoomControls';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement, type ReactElement } from 'react';
@@ -114,8 +115,28 @@ describe('room controls', () => {
   it('offers concession during a match and only leaving after it ends', () => {
     useGameStore.setState({ roomId: 'room', room: createTestRoom({ status: 'playing' }) });
     expect(renderToStaticMarkup(createElement(RoomControls))).toContain('Concede and leave');
+    expect(renderToStaticMarkup(createElement(RoomControls))).toContain('Auto-pass when no actions');
     useGameStore.setState({ room: createTestRoom({ status: 'gameOver' }) });
     const ended = renderToStaticMarkup(createElement(RoomControls));
     expect(ended).toContain('Leave room'); expect(ended).not.toContain('Concede');
+  });
+});
+
+describe('auto-pass controls', () => {
+  it('sends only the preference and waits for server acknowledgment', () => {
+    useGameStore.setState({ roomId: 'room', autoPass: { enabled: false, passAt: null } });
+    let actions!: ReturnType<typeof useGameActions>;
+    renderToStaticMarkup(createElement(() => { actions = useGameActions(); return null; }));
+    actions.setAutoPass(true);
+    expect(socket.emit).toHaveBeenLastCalledWith('setAutoPass', { protocolVersion: 1, roomId: 'room', enabled: true });
+    expect(useGameStore.getState().autoPass.enabled).toBe(false);
+  });
+  it('renders the acknowledged five-second countdown and allows disabling while waiting', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(100000);
+    useGameStore.setState({ roomId: 'room', autoPass: { enabled: true, passAt: 105000 } });
+    expect(renderToStaticMarkup(createElement(AutoPassControl))).toContain('Passing in 5s');
+    useGameStore.setState({ autoPass: { enabled: true, passAt: null } });
+    expect(renderToStaticMarkup(createElement(AutoPassControl))).toContain('Waiting for no legal actions');
+    useGameStore.setState({ autoPass: { enabled: false, passAt: null } });
   });
 });

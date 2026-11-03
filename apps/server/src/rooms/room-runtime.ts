@@ -1,3 +1,6 @@
+import { AutoPassCoordinator } from './auto-pass';
+import { hasLegalNonPassAction } from '@card-game/engine/engine/legal-actions';
+import type { AutoPassStatus } from '@card-game/protocol';
 import { gameConfig } from '@card-game/engine/config';
 import { GameEngine } from '@card-game/engine/engine/game-engine';
 import { OptionService, type ActionOption } from '@card-game/engine/engine/option-service';
@@ -37,6 +40,7 @@ export interface RoomDestroyedNotice {
 }
 
 export interface RoomRuntimePorts {
+  autoPassChanged?(socketId: string, status: AutoPassStatus): void;
   publishDelta(request: RoomDeltaRequest): void;
   roomDestroyed(notice: RoomDestroyedNotice): void;
 }
@@ -57,6 +61,7 @@ export type PlayerActionRuntimeResult =
   | { kind: 'success'; commandId: string; action: string; snapshot?: GameRoom };
 
 export class RoomRuntime {
+  private readonly autoPass: AutoPassCoordinator;
   private readonly labContexts = new Map<string, RuntimeContext>();
   private readonly engines = new Map<string, GameEngine>();
   private readonly socketRooms = new Map<string, string>();
@@ -72,8 +77,41 @@ export class RoomRuntime {
     private readonly gracePeriodMs = 30_000,
     dependencies: Partial<RuntimeContext> = {},
     private readonly roomSettings?: () => RoomSettings,
+    autoPassDelayMs = 5000,
   ) {
     this.runtimeContext = resolveRuntimeContext(dependencies);
+    this.autoPass = new AutoPassCoordinator({
+      position: roomId => {
+        const engine = this.engines.get(roomId), room = engine?.roomState;
+        if (!room || !room.player2Id || !room.priorityPlayerId) return;
+        const connected = [room.player1Id, room.player2Id].every(playerId => {
+          const socketId = this.identity.socketIdByPlayer.get(playerId);
+          return !!socketId && this.socketRooms.get(socketId) === roomId;
+        });
+        const socketId = this.identity.socketIdByPlayer.get(room.priorityPlayerId);
+        return connected && socketId ? { room, socketId } : undefined;
+      },
+      eligible: ({ room }) => {
+        const engine = this.engines.get(room.roomId);
+        if (!engine || engine.hasPendingRulesWork) return false;
+        try { return hasLegalNonPassAction(room, room.priorityPlayerId!).kind === 'none'; }
+        catch {
+          serverLogger.error('auto-pass:query-failed', 'Auto-pass paused after a legality query failed', { roomId: room.roomId });
+          return false;
+        }
+      },
+      pass: (socketId, roomId) => {
+        try {
+          const result = this.executePlayerAction(socketId, { roomId, actionId: ACTION_IDS.passPriority, data: {} });
+          if (result.kind === 'success') return;
+        } catch {
+          // A background pass failure must not escape the timer callback or keep retrying.
+        }
+        serverLogger.error('auto-pass:command-failed', 'Auto-pass disabled after a pass failed', { roomId });
+        this.autoPass.setEnabled(socketId, roomId, false);
+      },
+      changed: (socketId, status) => this.ports.autoPassChanged?.(socketId, status),
+    }, autoPassDelayMs);
   }
 
   installTestRoom(room:GameRoom, random:()=>number):void {
@@ -108,6 +146,7 @@ export class RoomRuntime {
       playerId: authPlayerId,
       socketId,
     });
+    this.autoPass.refresh(authRoomId);
     return { kind: 'rejoined', roomId: authRoomId, playerId: authPlayerId, room: decision.room };
   }
 
@@ -149,6 +188,7 @@ export class RoomRuntime {
       p1Hand: rpsRoom.players[rpsRoom.player1Id].hand.map(card => card.blueprint.id),
       p2Hand: rpsRoom.players[playerId].hand.map(card => card.blueprint.id),
     });
+    this.autoPass.refresh(roomId);
     return { kind: 'joined', roomId, playerId, room: rpsRoom };
   }
 
@@ -211,6 +251,7 @@ export class RoomRuntime {
         batches,
         recipients: this.recipientsFor(currentRoom),
       });
+      this.autoPass.refresh(packet.roomId);
       return {
         kind: 'success',
         commandId,
@@ -218,6 +259,12 @@ export class RoomRuntime {
         ...(rpsResolved ? { snapshot: currentRoom } : {}),
       } as const;
     }, commandId);
+  }
+
+  /** Only the socket currently bound to this room can opt in or cancel its own auto-pass. */
+  setAutoPass(socketId: string, roomId: string, enabled: boolean): boolean {
+    if (this.socketRooms.get(socketId) !== roomId) return false;
+    this.autoPass.setEnabled(socketId, roomId, enabled); return true;
   }
 
   /** The transport uses this to prevent silently replacing an occupied room binding. */
@@ -235,6 +282,7 @@ export class RoomRuntime {
       room = this.store.getRoom(roomId)!;
     }
     const departed = this.departed.get(roomId) ?? new Set<string>();
+    this.autoPass.forgetSocket(socketId);
     departed.add(playerId);
     this.departed.set(roomId, departed);
     unbindSocket(this.identity, socketId);
@@ -243,10 +291,12 @@ export class RoomRuntime {
     const remaining = [room.player1Id, room.player2Id].filter((id): id is string => !!id && !departed.has(id));
     if (!remaining.length) this.destroyRoom(roomId);
     else if (![...this.socketRooms.values()].includes(roomId)) this.scheduleDestroy(roomId);
+    this.autoPass.refresh(roomId);
     return { playerId };
   }
 
   disconnect(socketId: string, preserveSeat = false): void {
+    this.autoPass.forgetSocket(socketId);
     const playerId = resolvePlayerId(this.identity, socketId);
     serverLogger.info('player:disconnected', `player disconnected: ${socketId}`, { playerId });
     const roomId = this.socketRooms.get(socketId);
@@ -259,9 +309,11 @@ export class RoomRuntime {
     const otherPlayerId = room.player1Id === playerId ? room.player2Id : room.player1Id;
     if (!otherPlayerId && !preserveSeat) this.destroyRoom(roomId);
     else this.scheduleDestroy(roomId);
+    this.autoPass.refresh(roomId);
   }
 
   dispose(): void {
+    this.autoPass.dispose();
     for (const roomId of [...this.destroyTimers.keys()]) this.cancelScheduledDestroy(roomId);
     for (const engine of this.engines.values()) engine.dispose();
     this.engines.clear();
@@ -282,7 +334,12 @@ export class RoomRuntime {
 
   private bindPlayerSocket(socketId: string, playerId: PlayerId): void {
     const oldSocketId = this.identity.socketIdByPlayer.get(playerId);
-    if (oldSocketId && oldSocketId !== socketId) this.socketRooms.delete(oldSocketId);
+    if (oldSocketId && oldSocketId !== socketId) {
+      const oldRoomId = this.socketRooms.get(oldSocketId);
+      this.autoPass.forgetSocket(oldSocketId);
+      this.socketRooms.delete(oldSocketId);
+      if (oldRoomId) this.autoPass.refresh(oldRoomId);
+    }
     bindSocket(this.identity, socketId, playerId);
   }
 
@@ -303,6 +360,7 @@ export class RoomRuntime {
   }
 
   private destroyRoom(roomId: string): void {
+    this.autoPass.cancel(roomId);
     this.cancelScheduledDestroy(roomId);
     const room = this.store.getRoom(roomId);
     const engine = this.engines.get(roomId);
@@ -317,7 +375,7 @@ export class RoomRuntime {
     const socketIds = [...this.socketRooms].filter(([, id]) => id === roomId).map(([socketId]) => socketId);
     this.departed.delete(roomId);
     this.ports.roomDestroyed({ roomId, socketIds });
-    for (const socketId of socketIds) unbindSocket(this.identity, socketId);
+    for (const socketId of socketIds) { this.autoPass.forgetSocket(socketId); unbindSocket(this.identity, socketId); }
     for (const [socketId, knownRoomId] of this.socketRooms) {
       if (knownRoomId === roomId) this.socketRooms.delete(socketId);
     }

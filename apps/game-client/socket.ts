@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import { PROTOCOL_VERSION, isProtocolMessage, type SnapshotMessage, type OptionsMessage, type ServerEvents, type ClientEvents } from '@card-game/protocol';
+import { PROTOCOL_VERSION, AutoPassStatusSchema, isProtocolMessage, type SnapshotMessage, type OptionsMessage, type ServerEvents, type ClientEvents } from '@card-game/protocol';
 import { useGameStore } from './store/gameStore';
 import type { ViewDelta } from '@card-game/protocol';
 import { clientLogger } from './logger';
@@ -42,6 +42,13 @@ export async function connectWithSession(preferBrowser = false): Promise<void> {
   }
   socket.connect();
 }
+
+socket.on('autoPassStatus', input => {
+  const parsed = AutoPassStatusSchema.safeParse(input);
+  if (!parsed.success || parsed.data.roomId !== useGameStore.getState().roomId) return;
+  const { enabled, passAt, serverTime } = parsed.data;
+  useGameStore.setState({ autoPass: { enabled, passAt: passAt === null ? null : Date.now() + Math.max(0, passAt - serverTime) } });
+});
 
 socket.on('sessionReady', data => {
   const parsed = SessionInfoSchema.safeParse(data), current = useAuthStore.getState().session;
@@ -151,6 +158,7 @@ socket.on('connect_error', (error: Error) => {
 });
 
 socket.on('disconnect', () => {
+  useGameStore.setState({ autoPass: { enabled: false, passAt: null } });
   clientLogger.info('disconnected', 'Disconnected from server');
 });
 

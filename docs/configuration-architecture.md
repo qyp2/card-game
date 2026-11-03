@@ -28,7 +28,7 @@ Paths below are relative to the repository root. JSON files contain data; adjace
 | `apps/server/src/config/auth.json` | Argon2id costs, fixed lifetimes, global/per-account browser/per-family tab limits and shared password rate policy | Server only |
 | `apps/server/src/config/http.json` | Port, request/page bounds and explicit false/loopback proxy trust | HTTP composition |
 | `apps/server/src/config/storage.json` | Default database path, lock timeout, decks per account | Server repository/service |
-| `apps/server/src/config/rooms.json` | Reconnect grace, selected gameplay preset and rule overrides | Room setup |
+| `apps/server/src/config/rooms.json` | Reconnect grace, auto-pass delay (5000ms), selected gameplay preset and rule overrides | Room setup |
 | `apps/server/src/config/logging.json` | Delta/audit paths, audit retry interval and log-read budgets | Server logging/admin reader |
 | `apps/server/src/config/navigation.json`, `navigation.vite.json` | Instance ID/purpose/label, built/Vite destinations and bounded extra pages | Validated public `/api/platform` metadata |
 | `packages/ui/src/config/navigation.json` | Workspace labels/IDs, destination keys and conditional admin visibility | All three frontends |

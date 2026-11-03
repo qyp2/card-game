@@ -1,1 +1,6 @@
-{ "reconnectGraceMs": 30000, "preset": "development", "rules": {} }
+{
+  "reconnectGraceMs": 30000,
+  "preset": "development",
+  "rules": {},
+  "autoPassDelayMs": 5000
+}

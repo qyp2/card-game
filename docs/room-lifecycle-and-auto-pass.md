@@ -34,7 +34,7 @@ The pure query is now [implemented](legal-action-query.md). The remaining coordi
 4. Bound passes per processing cycle, yield between cycles and stop on any new action/decision, changed preference or disconnect. Never repeatedly advance empty turns in an unbounded synchronous loop. Do not auto-answer targets, attackers, blockers, RPS or optional effects.
 5. Test available mana, no legal targets, target groups, announced X, alternative costs, free abilities, pending choices, combat declarations, both players passing, stack changes and loop limits.
 
-A conservative first version can skip only positions it can prove have no action and leave uncertain positions for manual play. Auto-pass is not enabled by this delivery.
+A conservative first version can skip only positions it can prove have no action and leave uncertain positions for manual play. The subsequent [auto-pass controls](auto-pass-controls.md) implement opt-in scheduling with a fresh five-second delay per pass.
 
 ## Verification
 

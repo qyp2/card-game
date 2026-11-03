@@ -56,6 +56,7 @@ interface GameStore {
   log: { seq: number; action?: string; playerId?: string; commandId?: string; summary?: string; changes: number }[];
   combatSelection: CombatSelection;
   combatNotification: string | null;
+  autoPass: { enabled: boolean; passAt: number | null };
 
   // Actions
   applyDelta: (delta: ViewDelta) => void;
@@ -91,6 +92,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   log: [],
   combatSelection: EMPTY_COMBAT_SELECTION,
   combatNotification: null,
+  autoPass: { enabled: false, passAt: null },
 
   applyDelta: (delta) => {
     const current = get().room;
@@ -203,6 +205,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       log: [],
       combatSelection: EMPTY_COMBAT_SELECTION,
       combatNotification: null,
+      autoPass: { enabled: false, passAt: null },
     });
   },
 

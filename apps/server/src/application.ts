@@ -3,7 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import helmet from 'helmet';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
-import { PROTOCOL_VERSION, PlatformResponseSchema, isProtocolMessage, RoomSetupRequestSchema, JoinRoomRequestSchema, type OptionsMessage } from '@card-game/protocol';
+import { PROTOCOL_VERSION, AutoPassRequestSchema, PlatformResponseSchema, isProtocolMessage, RoomSetupRequestSchema, JoinRoomRequestSchema, type OptionsMessage } from '@card-game/protocol';
 import { createBrowserRouter } from './auth/browser-routes';
 import { createPasswordLimiter } from './auth/password-rate-limit';
 import { gameConfig, getRuleDefaults, getSetupPreset, snapshotSetupConfig } from '@card-game/engine/config';
@@ -84,11 +84,12 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       const delta = sync.buildDelta(request.oldState, request.mutations, { action: request.action, playerId: request.playerId, batches: request.batches });
       sync.broadcast(delta, request.room, playerId => request.recipients.get(playerId) ?? playerId);
     },
+    autoPassChanged: (socketId, status) => { io.to(socketId).emit('autoPassStatus', status); },
     roomDestroyed: ({ roomId, socketIds }) => {
       store.auth.deleteRoomSeats(roomId);
       for (const socketId of socketIds) io.to(socketId).emit('roomDestroyed', { protocolVersion: PROTOCOL_VERSION, roomId });
     },
-  }, config.rooms.reconnectGraceMs, {}, roomSettings);
+  }, config.rooms.reconnectGraceMs, {}, roomSettings, config.rooms.autoPassDelayMs);
   const scenarios = new ScenarioService(persistent ?? new MemoryScenarioRepository(), runtime, auth, config, now);
   app.disable('x-powered-by');
   app.set('trust proxy', config.http.trustProxy);
@@ -184,6 +185,12 @@ export function createGameApplication(options: ApplicationOptions = {}) {
     socket.use((_packet, next) => {
       if (auth.sessions.validateDigest(identity.session.digest)) { next(); return; }
       if (socket.connected) retireSocket(socket);
+    });
+    socket.on('setAutoPass', (input: unknown) => {
+      const parsed = AutoPassRequestSchema.safeParse(input);
+      if (!parsed.success || !runtime.setAutoPass(socket.id, parsed.data.roomId, parsed.data.enabled)) {
+        socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Invalid auto-pass preference or room membership.' });
+      }
     });
     socket.on('leaveRoom', (input: unknown) => {
       if (!isProtocolMessage(input) || typeof input !== 'object' || input === null ||
