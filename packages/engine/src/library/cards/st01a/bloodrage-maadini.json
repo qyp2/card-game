@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "bloodrage-maadini",
   "name": "諸界六皇 血怒之馬甸尼",
   "manaCost": "{4}",
@@ -55,7 +56,8 @@
       },
       "effects": [
         {
-          "action": "MODIFY_STATS",
+          "family": "characteristics",
+          "operation": "adjust_stats_and_damage",
           "params": {
             "damage": 4
           },
@@ -73,7 +75,8 @@
           }
         },
         {
-          "action": "CREATE_CONTINUOUS_EFFECT",
+          "family": "characteristics",
+          "operation": "create_effect",
           "params": {
             "effect": {
               "type": "STAT_DELTA",
@@ -93,9 +96,11 @@
     {
       "id": "yoer-attack-bonus",
       "type": "static",
-      "effects": [
+      "rules": [
         {
-          "layer": 7,
+          "id": "yoer-attack-bonus-1",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "controller": "self",
             "cardTypes": [
@@ -105,7 +110,7 @@
               "幽爾"
             ]
           },
-          "effect": {
+          "operation": {
             "type": "STAT_DELTA",
             "power": 3
           }

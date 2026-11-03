@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "abyss-illusionist",
   "name": "深淵幻士",
   "manaCost": "{U}{U}{U}",
@@ -29,15 +30,18 @@
           "蒼巨人"
         ]
       },
-      "effectId": "DISCARD_FROM_LIBRARY",
-      "params": {
-        "amount": 1
-      },
-      "targeting": {
-        "type": "player",
-        "controller": "opponent",
-        "all": true,
-        "required": false
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": 1
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
+        }
       }
     }
   ]

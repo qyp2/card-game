@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "blazing-dragon-habitat",
   "name": "烈龍聚居地",
   "manaCost": "{0}",
@@ -19,10 +20,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "red",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "red",
+          "amount": 1
+        }
       }
     }
   ]

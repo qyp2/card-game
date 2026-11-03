@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "worlds-pyromancer",
   "name": "諸界火術士",
   "manaCost": "{2}",
@@ -31,7 +32,8 @@
       },
       "effects": [
         {
-          "action": "MODIFY_STATS",
+          "family": "characteristics",
+          "operation": "adjust_stats_and_damage",
           "params": {
             "damage": 2
           },
@@ -50,7 +52,8 @@
           ]
         },
         {
-          "action": "DRAW",
+          "family": "cards",
+          "operation": "draw",
           "params": {
             "amount": 1
           },

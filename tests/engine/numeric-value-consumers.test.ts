@@ -6,7 +6,7 @@ import { CardCharacteristicService as characteristics } from '@engine/card-chara
 import { gameReducer } from '@engine/game-reducer';
 import { planProposedMutations } from '@engine/proposed-events';
 import { resolveSourceInformation } from '@engine/source-information';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { createTestRoom } from '../helpers/test-room-factory';
 import { creature } from '../helpers/combat-fixture';
 import type { StackEffect, StackObject } from '@shared/effect.types';
@@ -79,7 +79,7 @@ describe('shared numeric consumers', () => {
     expect(buildDynamicParams(room, object, targeted).amount).toBeUndefined();
   });
 
-  it('preserves legacy nonnumeric paths, comparisons and event parameters', () => {
+  it('preserves field paths, comparisons and event parameters', () => {
     const { room, object } = fixture();
     const triggered = { ...object, triggeringEvent: { eventId: 'CUSTOM', payload: { label: 'hello' } } };
     expect(buildDynamicParams(room, triggered, { ...effect(0), params: { label: 'DYNAMIC:event.payload.label' } })).toEqual({ label: 'hello' });
@@ -139,7 +139,7 @@ describe('shared numeric consumers', () => {
     expect(characteristics.resolvePower({ ...staticRoom, battlefield: [...staticRoom.battlefield, later] }, subject)).toBe(5);
   });
 
-  it('preserves different default zones for legacy static and resolved count definitions', () => {
+  it('preserves different default zones for static and resolved count definitions', () => {
     const { room, source, subject } = fixture(), inHand = creature('in-hand', 'player1');
     inHand.state.zone = 'hand'; room.players.player1.hand = [inHand];
     const entry = { source: source.uuid, sourceControllerId: 'player1', requiredZone: null, layer: 7, duration: 'PERMANENT' as const,
@@ -170,8 +170,8 @@ describe('shared numeric consumers', () => {
 
   it('preserves numeric stat definitions through copying and ability grants', () => {
     const { room, subject } = fixture();
-    const blueprint = normalizeCard(rawCard({ abilities: [{ id: 'size', type: 'static', effects: [{ layer: 7, scope: { self: true },
-      effect: { type: 'SET_STATS', power: add(count(), 4), toughness: 4 } }] }] }));
+    const blueprint = parseCardDefinition({ schemaVersion: 1, ...(rawCard({ abilities: [{ id: 'size', type: 'static', rules: [{ id: 'size', family: 'characteristics', scope: { self: true },
+      operation: { type: 'SET_STATS', power: add(count(), 4), toughness: 4 } }] }] })) });
     let changed = gameReducer(room, { type: 'ADD_CONTINUOUS_EFFECT', entry: { source: 'global', requiredZone: null, layer: 1, duration: 'PERMANENT',
       scope: { cardUuid: subject.uuid }, effect: { type: 'COPY', blueprint } } });
     expect(characteristics.resolvePower(changed, subject)).toBe(6);
@@ -188,12 +188,12 @@ describe('shared numeric consumers', () => {
     { onCastEffects: [{ action: 'MODIFY_LIFE', targeting: { type: 'permanent', maxTargets: add(1, 2) } }] },
     { castRequirements: { cost: { mana: { generic: field('controller.life') } } } },
     { abilities: [{ id: 'size', type: 'static', effects: [{ effect: { type: 'STAT_DELTA', power: { numeric: { kind: 'binding', name: 'X' } } } }] }] },
-    { abilities: [{ id: 'trigger', type: 'triggered', effectId: 'MODIFY_LIFE', trigger: { condition: { op: 'eq', left: { numeric: { kind: 'bogus' } }, right: 1 } } }] },
-    { abilities: [{ id: 'trigger', type: 'triggered', effectId: 'MODIFY_LIFE', trigger: { condition: { all: [], unused: add(1, 2) } } }] },
-    { abilities: [{ id: 'trigger', type: 'triggered', effectId: 'MODIFY_LIFE', interveningIf: { not: { op: 'eq', left: 1, right: 2 }, unused: add(1, 2) } }] },
-    { abilities: [{ id: 'trigger', type: 'triggered', effectId: 'MODIFY_LIFE', trigger: { condition: { op: 'eq', left: 1, right: 2, unused: add(1, 2) } } }] },
+    { abilities: [{ id: 'trigger', type: 'triggered', trigger: { condition: { op: 'eq', left: { numeric: { kind: 'bogus' } }, right: 1 } }, effect: { action: 'MODIFY_LIFE' } }] },
+    { abilities: [{ id: 'trigger', type: 'triggered', trigger: { condition: { all: [], unused: add(1, 2) } }, effect: { action: 'MODIFY_LIFE' } }] },
+    { abilities: [{ id: 'trigger', type: 'triggered', interveningIf: { not: { op: 'eq', left: 1, right: 2 }, unused: add(1, 2) }, effect: { action: 'MODIFY_LIFE' } }] },
+    { abilities: [{ id: 'trigger', type: 'triggered', trigger: { condition: { op: 'eq', left: 1, right: 2, unused: add(1, 2) } }, effect: { action: 'MODIFY_LIFE' } }] },
     { abilities: [{ id: 'size', type: 'static', effects: [{ effect: { type: 'STAT_DELTA', power: { count: {}, unused: add(1, 2) } } }] }] },
   ])('rejects unsupported or malformed authored numeric values: %j', extra => {
-    expect(() => normalizeCard(rawCard(extra))).toThrow(/numeric/i);
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...(rawCard(extra)) })).toThrow(/numeric/i);
   });
 });

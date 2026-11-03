@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "andu-gittes",
   "name": "炎極三公 安度基特斯",
   "manaCost": "{R}{R}",
@@ -42,7 +43,8 @@
       },
       "effects": [
         {
-          "action": "CLAIM_REVEALED_SELF",
+          "family": "cards",
+          "operation": "claim_revealed_source",
           "params": {
             "discard": true
           },
@@ -60,7 +62,8 @@
           }
         },
         {
-          "action": "ADD_COUNTER",
+          "family": "counters",
+          "operation": "add",
           "params": {
             "counterType": "scorch",
             "amount": 2
@@ -86,7 +89,8 @@
           }
         },
         {
-          "action": "DRAW",
+          "family": "cards",
+          "operation": "draw",
           "params": {
             "amount": 1
           },

@@ -1,4 +1,4 @@
-// src/engine/modifier-registry.ts
+// Casting and targeting permission checks; value transformations use their own rule families.
 import type { GameRoom, PlayerId } from '../types/game.room.types';
 import type { CardInstance } from '../types/card.types';
 import type { TargetPointer } from '../types/effect.types';
@@ -7,9 +7,9 @@ import { actionPermission } from '../shared/action-permissions';
 
 /**
  * Permission checks shared across announcement and resolution.
- * Target rules extend built-in keyword permissions; play restrictions remain a hook.
+ * Target rules extend built-in keyword permissions; play restrictions use effective permission rules.
  */
-export class ModifierRegistry {
+export class PermissionRegistry {
   private static targetRules = new Set<(room: GameRoom, playerId: PlayerId, source: CardInstance, target: TargetPointer) => boolean>();
 
   static registerTargetRule(rule: (room: GameRoom, playerId: PlayerId, source: CardInstance, target: TargetPointer) => boolean): () => void {
@@ -17,8 +17,7 @@ export class ModifierRegistry {
     return () => { this.targetRules.delete(rule); };
   }
   /**
-   * Check if a card can be played. Stub — always returns true.
-   * Future: checks for "can't cast spells", "can't play creatures", etc.
+   * Check effective casting permissions.
    */
   static canPlay(room: GameRoom, playerId: PlayerId, card: CardInstance): boolean {
     return actionPermission(room, playerId, card, 'cast').allowed;

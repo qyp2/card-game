@@ -1,6 +1,6 @@
 import type { CardBlueprint } from '../types/card.types';
 import rawCardData from './cards';
-import { normalizeCard } from './card-parser';
+import { parseCardDefinition } from './card-parser';
 
 type BlueprintCache = Record<string, CardBlueprint>;
 const blueprintCache: BlueprintCache = {};
@@ -20,7 +20,7 @@ export function getBlueprint(cardId: string): CardBlueprint {
   }
 
   if (!blueprintCache[cardId]) {
-    blueprintCache[cardId] = deepFreeze(normalizeCard(raw));
+    blueprintCache[cardId] = deepFreeze(parseCardDefinition(raw));
   }
   return blueprintCache[cardId];
 }

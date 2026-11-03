@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "worlds-merchant",
   "name": "諸界商人",
   "manaCost": "{2}",
@@ -21,17 +22,20 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "colors": [
-          "red",
-          "black",
-          "green",
-          "yellow",
-          "white",
-          "blue"
-        ],
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "colors": [
+            "red",
+            "black",
+            "green",
+            "yellow",
+            "white",
+            "blue"
+          ],
+          "amount": 1
+        }
       }
     }
   ]

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "pursuit-of-purifying-fire",
   "name": "追求淨化之火",
   "manaCost": "{R}{R}",
@@ -12,7 +13,8 @@
   "rulesText": "主：抽兩張牌，如果我方場上存在「烈龍」僕從，就抽牌數+1",
   "onCastEffects": [
     {
-      "action": "DRAW",
+      "family": "cards",
+      "operation": "draw",
       "params": {
         "amount": {
           "numeric": {

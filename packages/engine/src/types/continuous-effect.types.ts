@@ -28,6 +28,7 @@ export type ContinuousEffect =
   | { type: 'SWITCH_STATS' }
   | { type: 'PERMISSION'; rules: PermissionRule[] };
 export interface StaticEffectDefinition {
+  condition?: import('./rule.types').RuleCondition;
   /** Parts with the same group form one effect across layers. Default: one group per ability. */
   group?: string;
   layer: number;
@@ -35,6 +36,7 @@ export interface StaticEffectDefinition {
   scope: EffectScope;
 }
 export interface StaticAbility {
+  rules?: import('../rules/schema/contracts').ModifierDefinition[];
   readonly id: string;
   type: 'static';
   activeZones?: CardZone[];
@@ -42,7 +44,7 @@ export interface StaticAbility {
   effects: StaticEffectDefinition[];
 }
 export interface ContinuousEffectEntry extends StaticEffectDefinition {
-  /** Assigned at commit; optional only for legacy in-memory fixtures. */
+  /** Assigned at commit; direct in-memory fixtures may omit it. */
   id?: string;
   timestamp?: number;
   characteristicDefining?: boolean;

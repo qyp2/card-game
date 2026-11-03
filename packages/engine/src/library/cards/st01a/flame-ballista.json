@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "flame-ballista",
   "name": "烈焰弩炮",
   "manaCost": "{R}",
@@ -23,19 +24,22 @@
           "red": 1
         }
       },
-      "effectId": "ADD_COUNTER",
-      "params": {
-        "counterType": "scorch",
-        "amount": 1
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature",
-          "Artifact"
-        ],
-        "required": true
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "scorch",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature",
+            "Artifact"
+          ],
+          "required": true
+        }
       }
     }
   ]

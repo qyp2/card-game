@@ -3,7 +3,7 @@ import type { GameRoom } from '../types/game.room.types';
 import type { CardInstance } from '../types/card.types';
 import type { StackEffect, StackTargetGroup, TargetPointer } from '../types/effect.types';
 import { describeTargetGroups, findTargetCard, isExplicitTargeting, structuralTargetLegal, targetKey } from '../shared/target-legality';
-import { ModifierRegistry } from './modifier-registry';
+import { PermissionRegistry } from './permission-registry';
 
 type TargetPlan = { success: true; effects: StackEffect[]; groups: StackTargetGroup[] } | { success: false; reason: string };
 
@@ -39,7 +39,7 @@ export function planTargetGroups(room: GameRoom, playerId: string, source: CardI
     if (targets.length < min || targets.length > (definition.targeting.maxTargets ?? Infinity) ||
         new Set(targets.map(targetKey)).size !== targets.length ||
         targets.some(target => !structuralTargetLegal(room, playerId, target, definition.targeting)) ||
-        !ModifierRegistry.canTarget(room, playerId, source, targets)) return reject('Target is not legal');
+        !PermissionRegistry.canTarget(room, playerId, source, targets)) return reject('Target is not legal');
     groups.push({ ...definition, targets: targets.map(target => {
       const card = findTargetCard(room, target);
       return card ? { targetType: target.targetType, cardUuid: card.uuid, zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 } : { targetType: target.targetType, ...(target.playerId ? { playerId: target.playerId } : {}), ...(target.stackUuid ? { stackUuid: target.stackUuid } : {}) };

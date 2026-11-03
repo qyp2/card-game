@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { GameEngine } from '@engine/game-engine';
 import { EffectRegistry } from '@engine/effect-registry';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { createTestRoom } from '../helpers/test-room-factory';
 import { creature } from '../helpers/combat-fixture';
 import { registerReplacementOperation } from '@engine/replacement-rules';
@@ -18,12 +18,11 @@ function fixture(watch = true, initial = 0) {
   const source = creature('source', 'player1'); const target = creature('target', 'player2');
   target.state.counters.charge = initial;
   const observer = creature('observer', 'player1');
-  observer.blueprint = normalizeCard({ id: 'counter-observer', cardTypes: ['Creature'], power: 2, toughness: 4,
-    abilities: [{ id: 'own-placement', type: 'triggered', triggerCondition: 'ON_COUNTER_CHANGED',
-      trigger: { subject: 'any', controller: 'self', condition: { all: [
+  observer.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'counter-observer', cardTypes: ['Creature'], power: 2, toughness: 4,
+    abilities: [{ id: 'own-placement', type: 'triggered', triggerCondition: 'ON_COUNTER_CHANGED', trigger: { subject: 'any', controller: 'self', condition: { all: [
         { op: 'eq', left: { path: 'event.payload.counterType' }, right: 'charge' },
         { op: 'gt', left: { path: 'event.payload.amount' }, right: 0 },
-      ] } }, effectId: 'MODIFY_LIFE', params: { amount: 1 }, targeting: { type: 'self', required: false } }] });
+      ] } }, effect: { action: 'MODIFY_LIFE', params: { amount: 1 }, targeting: { type: 'self', required: false } } }] }) });
   const engine = new GameEngine(createTestRoom({ battlefield: [source, target, ...(watch ? [observer] : [])] }));
   engine.initRoom(); engines.push(engine);
   const object: StackObject = { type: 'activated', uuid: 'counter-ability', source, controllerId: 'player1', countered: false, effects: [] };

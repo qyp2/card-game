@@ -3,7 +3,7 @@ import { buildPlayerView } from '@server/projection/view-builder';
 import { describe, expect, it } from 'vitest';
 import { createTestRoom } from '../helpers/test-room-factory';
 import { GameEngine } from '@engine/game-engine';
-import { normalizeCard, normalizeAbility } from '@library/card-parser';
+import { parseCardDefinition, parseAbilityDefinition } from '@library/card-parser';
 import { gameReducer } from '@engine/game-reducer';
 import { createTargetingState } from '@client/targeting';
 import { OptionService } from '@engine/option-service';
@@ -52,8 +52,7 @@ describe('minimal announcement bindings', () => {
   it('preserves bindings through a nested mana discard prompt without paying early', () => {
     const { engine, card } = fixture();
     const supply = instantiateCard('land-red'); const discarded = instantiateCard('empire-servant');
-    supply.blueprint = { ...supply.blueprint, abilities: [normalizeAbility({ id: 'supply', type: 'activated', cost: { tap: true, discard: 1 },
-      effectId: 'ADD_MANA', params: { color: 'red', amount: 2 } })!] };
+    supply.blueprint = { ...supply.blueprint, abilities: [parseAbilityDefinition({ id: 'supply', type: 'activated', cost: { tap: true, discard: 1 }, effect: { action: 'ADD_MANA', params: { color: 'red', amount: 2 } } })!] };
     supply.state = { ...supply.state, ownerId: 'player1', controllerId: 'player1', zone: 'battlefield' };
     discarded.state = { ...discarded.state, ownerId: 'player1', controllerId: 'player1', zone: 'hand' };
     engine.roomState.battlefield = [supply]; engine.roomState.players.player1.hand.push(discarded);
@@ -69,12 +68,11 @@ describe('minimal announcement bindings', () => {
   });
   it('clears copied spell declarations and gives granted abilities their own declaration scope', () => {
     const { engine, card } = fixture();
-    const copy = normalizeCard({ id: 'fixed-fixture', name: 'Fixed', cardTypes: ['Spell'], manaCost: '{1}', onCastEffects: [{ ...gain, params: { amount: 1 } }], abilities: [] });
+    const copy = parseCardDefinition({ schemaVersion: 1, ...({ id: 'fixed-fixture', name: 'Fixed', cardTypes: ['Spell'], manaCost: '{1}', onCastEffects: [{ ...gain, params: { amount: 1 } }], abilities: [] }) });
     const changed = gameReducer(engine.roomState, { type: 'ADD_CONTINUOUS_EFFECT', entry: { source: 'global', requiredZone: null, layer: 1, duration: 'PERMANENT',
       scope: { cardUuid: card.uuid, zones: ['hand'] }, effect: { type: 'COPY', blueprint: copy } } });
     expect(CardCharacteristicService.resolveBlueprint(changed, card).numericDeclarations).toEqual([]);
-    const ability = normalizeAbility({ id: 'own', type: 'activated', numericDeclarations: [{ name: 'Y', min: 0 }],
-      cost: {}, effectId: 'MODIFY_LIFE', params: { amount: { numeric: { kind: 'binding', name: 'Y' } } } });
+    const ability = parseAbilityDefinition({ id: 'own', type: 'activated', numericDeclarations: [{ name: 'Y', min: 0 }], cost: {}, effect: { action: 'MODIFY_LIFE', params: { amount: { numeric: { kind: 'binding', name: 'Y' } } } } });
     const granted = gameReducer(changed, { type: 'ADD_CONTINUOUS_EFFECT', entry: { source: 'global', requiredZone: null, layer: 6, duration: 'PERMANENT',
       scope: { cardUuid: card.uuid, zones: ['hand'] }, effect: { type: 'ABILITY', add: [ability!] } } });
     expect(CardCharacteristicService.resolveAbilities(granted, card).find(a => a.type === 'activated')?.numericDeclarations).toEqual([{ name: 'Y', min: 0 }]); engine.dispose();
@@ -85,21 +83,21 @@ describe('minimal announcement bindings', () => {
     { numericDeclarations: [{ name: '__proto__', min: 0 }] },
     { numericDeclarations: [{ name: 'X', min: 0.5 }] },
     { numericDeclarations: [{ name: 'X', min: 0, unexpected: 1 }] },
-    { abilities: [{ id: 'mana', type: 'activated', numericDeclarations: [{ name: 'X', min: 0 }], effectId: 'ADD_MANA', params: { amount: x, color: 'red' } }] },
-    { abilities: [{ id: 'trigger', type: 'triggered', numericDeclarations: [{ name: 'X', min: 0 }], effectId: 'MODIFY_LIFE', params: { amount: x } }] },
+    { abilities: [{ id: 'mana', type: 'activated', numericDeclarations: [{ name: 'X', min: 0 }], effect: { action: 'ADD_MANA', params: { amount: x, color: 'red' } } }] },
+    { abilities: [{ id: 'trigger', type: 'triggered', numericDeclarations: [{ name: 'X', min: 0 }], effect: { action: 'MODIFY_LIFE', params: { amount: x } } }] },
   ])('rejects invalid declarations and unsupported owners %j', extra => {
-    expect(() => normalizeCard(raw(extra))).toThrow();
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...(raw(extra)) })).toThrow();
   });
   it('parses repeated X through shared arithmetic and rejects unowned references', () => {
-    const definition = normalizeCard(raw({ manaCost: '{2}{X}{X}{R}' }));
+    const definition = parseCardDefinition({ schemaVersion: 1, ...(raw({ manaCost: '{2}{X}{X}{R}' })) });
     expect((definition as any).numericDeclarations).toEqual([{ name: 'X', min: 0, max: 6 }]);
     const { engine, card } = fixture(); card.blueprint = definition;
     expect(engine.executePlayerAction('player1', 'cast_spell', { cardUuid: card.uuid, numericBindings: { X: 2 } }).success).toBe(true);
     expect(Object.values(engine.roomState.players.player1.mana).reduce((a, b) => a + b, 0)).toBe(23);
     engine.resolveTopOfStack(); expect(engine.roomState.players.player1.life).toBe(22); engine.dispose();
-    expect(() => normalizeCard(raw({ numericDeclarations: [] }))).toThrow();
-    expect(() => normalizeCard(raw({ onEnterEffects: [gain] }))).toThrow();
-    expect(() => normalizeCard(raw({ abilities: [{ id: 'unowned', type: 'activated', effectId: 'MODIFY_LIFE', params: { amount: x } }] }))).toThrow();
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...(raw({ numericDeclarations: [] })) })).toThrow();
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...(raw({ onEnterEffects: [gain] })) })).toThrow();
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...(raw({ abilities: [{ id: 'unowned', type: 'activated', effect: { action: 'MODIFY_LIFE', params: { amount: x } } }] })) })).toThrow();
   });
   it('prompts before costs, retains zero, and restores the scalar request through JSON', () => {
     const { engine, card } = fixture(); const mana = structuredClone(engine.roomState.players.player1.mana);
@@ -164,8 +162,7 @@ describe('minimal announcement bindings', () => {
   });
   it('allows activation-owned bindings after the source is sacrificed', () => {
     const { engine, card } = fixture();
-    const ability = normalizeAbility({ id: 'numeric', type: 'activated', numericDeclarations: [{ name: 'X', min: 0 }],
-      cost: { mana: { generic: x }, sacrifice: true }, effectId: 'MODIFY_LIFE', params: { amount: x } });
+    const ability = parseAbilityDefinition({ id: 'numeric', type: 'activated', numericDeclarations: [{ name: 'X', min: 0 }], cost: { mana: { generic: x }, sacrifice: true }, effect: { action: 'MODIFY_LIFE', params: { amount: x } } });
     card.blueprint = { ...card.blueprint, numericDeclarations: [], abilities: [ability!] } as any;
     engine.applyMutations([{ type: 'MOVE_CARD', cardUuid: card.uuid, playerId: 'player1', from: 'hand', to: 'battlefield' }]);
     expect(engine.executePlayerAction('player1', 'activate_ability', { cardUuid: card.uuid, abilityId: 'numeric', numericBindings: { X: 2 } }).success).toBe(true);

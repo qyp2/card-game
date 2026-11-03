@@ -243,7 +243,7 @@ The negative half of the contract is documented per concept in `docs/MAP.md`'s *
 
 **How.** `ActionRegistry` is immutable: `with()` returns a **new** registry rather than mutating the
 existing one. New actions are added by supplying a handler, not by editing a `switch`. The same
-pattern appears in `CombatRuleRegistry`, `DamageRuleRegistry`, and `ModifierRegistry`.
+pattern appears in `CombatRuleRegistry`, `DamageRuleRegistry`, and `PermissionRegistry`.
 
 **Why.** Tests and future content can extend behaviour without editing the default registry, and the
 default registry cannot be corrupted by a caller.
@@ -555,7 +555,7 @@ export const ACTION_IDS = {
 
 ## 19. Plugin Registry with Disposal
 
-**How.** `CombatRuleRegistry`, `DamageRuleRegistry`, and `ModifierRegistry` accept rules at runtime
+**How.** `CombatRuleRegistry`, `DamageRuleRegistry`, and `PermissionRegistry` accept rules at runtime
 and return an **unregister function**. Rules are consulted in registration order and compose by
 reduction.
 
@@ -1155,7 +1155,7 @@ Principles are not free. These are the places where the codebase consciously cho
 |---|---|---|
 | `GameRoom` is one large aggregate | Simpler atomic commits and diffs; the reducer is a big file | `types/game.room.types.ts` |
 | `room-factory.ts` mutates the room directly | Setup happens before the mutation pipeline exists; documented as by-design | `docs/MAP.md` (*Setup / rooms* row) |
-| `ModifierRegistry` / `ModifierPipeline` are stubs | Permission checks always pass; superseded in practice by the continuous-effect pool | `ARCHITECTURE.md` §1.2 |
+| One source rule contract, separate runtime families | Characteristic/permission rules retain compiled layer effects; costs and event replacements have their own consumers. The unused generic pipeline is removed. | `docs/rule-contract-architecture.md` |
 | In-memory room storage | Rooms vanish on restart; acceptable because accounts/decks persist in SQLite | `apps/server/src/rooms/state-store.ts` |
 | `JSON.stringify` comparison in `projectViewDelta` | Simple and correct; not the fastest possible diff | `apps/server/src/projection/delta-projector.ts` |
 | Static registries (`CombatRuleRegistry`, `DamageRuleRegistry`) | Global mutable state; mitigated by disposers and test isolation | `engine/combat-rules.ts`, `engine/damage-service.ts` |

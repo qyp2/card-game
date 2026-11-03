@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameEngine } from '@engine/game-engine';
 import { instantiateCard } from '@library/card-factory';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { OptionService } from '@engine/option-service';
 import { CardCharacteristicService } from '@engine/card-characteristic-service';
 import { createTestRoom } from '../helpers/test-room-factory';
@@ -89,6 +89,7 @@ describe('selected activated abilities', () => {
     engine.dispose();
   });
   it('rejects duplicate authored ability IDs during normalization', () => {
-    expect(() => normalizeCard({ id: 'fixture', abilities: [{ id: 'same' }, { id: 'same' }] })).toThrow(/ability.*ID/i);
+    const ability = { id: 'same', type: 'activated', effect: { action: 'DRAW', params: { amount: 1 } } };
+    expect(() => parseCardDefinition({ schemaVersion: 1, id: 'fixture', abilities: [ability, ability] })).toThrow(/ability.*ID/i);
   });
 });

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "demon-flame-abyss",
   "name": "魔炎深淵",
   "manaCost": "{0}",
@@ -21,12 +22,15 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "TAP",
-      "params": {},
-      "targeting": {
-        "type": "self",
-        "subject": "source",
-        "required": false
+      "effect": {
+        "family": "orientation",
+        "operation": "tap",
+        "params": {},
+        "targeting": {
+          "type": "self",
+          "subject": "source",
+          "required": false
+        }
       }
     },
     {
@@ -35,13 +39,16 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "colors": [
-          "red",
-          "blue"
-        ],
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "colors": [
+            "red",
+            "blue"
+          ],
+          "amount": 1
+        }
       }
     }
   ]

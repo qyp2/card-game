@@ -4,7 +4,7 @@ import { instantiateCard } from '@library/card-factory';
 import { GameEngine } from '@engine/game-engine';
 import { revalidateTargets } from '@engine/effect-resolver';
 import type { EffectDefinition } from '@shared/effect.types';
-import { ModifierRegistry } from '@engine/modifier-registry';
+import { PermissionRegistry } from '@engine/permission-registry';
 import { structuralTargetLegal } from '@rules/target-legality';
 
 function fixture() {
@@ -80,7 +80,7 @@ describe('target groups', () => {
   it('applies extension permissions at both announcement and revalidation', () => {
     const { engine, spell, groups } = fixture();
     let allowed = true;
-    const dispose = ModifierRegistry.registerTargetRule(() => allowed);
+    const dispose = PermissionRegistry.registerTargetRule(() => allowed);
     try {
       expect(engine.executePlayerAction('player1', 'cast_spell', { cardUuid: spell.uuid, targetGroups: groups }).success).toBe(true);
       allowed = false;

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "trigger-probe",
   "name": "Trigger Probe",
   "manaCost": "{R}",
@@ -13,7 +14,8 @@
   "rulesText": "TEST CARD. Spell instructions: draw 1, then gain 1 life. Entry/block: gain 1. Attack: target opponent loses 1. Death: draw 1. Another creature you control enters: gain 1; dies: draw 1. Cast another creature: gain 1. Draw: gain 1. {R}: destroy target creature. No Aura or ability-resolved trigger support implied.",
   "onCastEffects": [
     {
-      "action": "DRAW",
+      "family": "cards",
+      "operation": "draw",
       "params": {
         "amount": 1
       },
@@ -23,7 +25,8 @@
       }
     },
     {
-      "action": "MODIFY_LIFE",
+      "family": "resources",
+      "operation": "adjust_life",
       "params": {
         "amount": 1
       },
@@ -41,9 +44,12 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -53,16 +59,19 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": -1
-      },
-      "targeting": {
-        "type": "player",
-        "controller": "opponent",
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": -1
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     },
     {
@@ -72,9 +81,12 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -84,9 +96,12 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -100,9 +115,12 @@
           "Creature"
         ]
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -116,9 +134,12 @@
           "Creature"
         ]
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -132,9 +153,12 @@
           "Creature"
         ]
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -144,9 +168,12 @@
       "trigger": {
         "controller": "self"
       },
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": 1
+        }
       }
     },
     {
@@ -157,16 +184,19 @@
           "red": 1
         }
       },
-      "effectId": "DESTROY",
-      "params": {},
-      "targeting": {
-        "type": "permanent",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "cards",
+        "operation": "destroy",
+        "params": {},
+        "targeting": {
+          "type": "permanent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { GameEngine } from '@engine/game-engine';
 import { instantiateCard } from '@library/card-factory';
-import { normalizeAbility, normalizeCard } from '@library/card-parser';
+import { parseAbilityDefinition, parseCardDefinition } from '@library/card-parser';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
 import { evaluateNumericValue } from '@engine/numeric-values';
 import type { TriggeredAbility } from '@shared/card.types';
@@ -20,7 +20,7 @@ function game(id = 'empire-servant') {
 const self = { type: 'self', required: false };
 const opponent = { type: 'player', controller: 'opponent', all: true, required: false };
 function spell(effects: Record<string, unknown>[]) {
-  const setup = game(); setup.source.blueprint = normalizeCard({ id: 'mechanics-fixture', cardTypes: ['Spell'], onCastEffects: effects }); return setup;
+  const setup = game(); setup.source.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'mechanics-fixture', cardTypes: ['Spell'], onCastEffects: effects }) }); return setup;
 }
 function cast(engine: GameEngine, source: ReturnType<typeof card>) {
   expect(engine.executePlayerAction('player1', 'cast_spell', { cardUuid: source.uuid }).success).toBe(true); engine.resolveTopOfStack();
@@ -53,7 +53,7 @@ describe('small card mechanics', () => {
 
   it.each(['hand', 'library'] as const)('queues only the matching source trigger for %s discard', zone => {
     const { engine, source } = game(); const observer = card('worlds-traveler', 'battlefield');
-    observer.blueprint = normalizeCard({ id: 'discard-observer', cardTypes: ['Creature'], power: 1, toughness: 2, abilities: ['HAND', 'LIBRARY'].map(from => ({ id: from, type: 'triggered', triggerCondition: 'ON_DISCARD_FROM_' + from, effectId: 'MODIFY_LIFE', params: { amount: 1 } })) });
+    observer.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'discard-observer', cardTypes: ['Creature'], power: 1, toughness: 2, abilities: ['HAND', 'LIBRARY'].map(from => ({ id: from, type: 'triggered', triggerCondition: 'ON_DISCARD_FROM_' + from, effect: { action: 'MODIFY_LIFE', params: { amount: 1 } } })) }) });
     engine.roomState.battlefield = [observer]; const subject = zone === 'hand' ? source : engine.roomState.players.player1.deck.at(-1)!;
     engine.applyMutations([{ type: 'MOVE_CARD', cardUuid: subject.uuid, playerId: 'player1', from: zone, to: 'graveyard', reason: 'discard' }]);
     expect(engine.roomState.stack.map(s => s.ability?.id)).toEqual([zone.toUpperCase()]);
@@ -108,10 +108,10 @@ describe('small card mechanics', () => {
 
   it.each([false, true])('keeps damage and draw in one ordinary trigger (target leaves=%s)', leaves => {
     const { engine, source } = game(); source.state.zone = 'battlefield'; engine.roomState.players.player1.hand = [];
-    source.blueprint = normalizeCard({ id: 'ordered-observer', cardTypes: ['Creature'], power: 1, toughness: 2, abilities: [{ id: 'attack', type: 'triggered', triggerCondition: 'ON_ATTACK', effects: [
+    source.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'ordered-observer', cardTypes: ['Creature'], power: 1, toughness: 2, abilities: [{ id: 'attack', type: 'triggered', triggerCondition: 'ON_ATTACK', effects: [
       { action: 'MODIFY_STATS', params: { damage: 2 }, tags: ['damage'], targeting: { type: 'permanent', controller: 'opponent', cardTypes: ['Creature'], required: true } },
       { action: 'DRAW', params: { amount: 1 }, targeting: self },
-    ] }] });
+    ] }] }) });
     const enemy = card('musketeer-infantry', 'battlefield', 'player2'); engine.roomState.battlefield = [source, enemy];
     engine.roomState.phase = 'declareAttackersStep'; engine.roomState.priorityPlayerId = null;
     expect(engine.executePlayerAction('player1', 'declare_attackers', { attackers: [{ cardUuid: source.uuid }] }).success).toBe(true);
@@ -122,7 +122,7 @@ describe('small card mechanics', () => {
   });
 
   it('runs an ordered delayed trigger through the same effect-list path', () => {
-    const { engine, source } = game(); const ability = normalizeAbility({ id: 'delayed', type: 'triggered', triggerCondition: 'ON_LIFE_GAIN', effects: [
+    const { engine, source } = game(); const ability = parseAbilityDefinition({ id: 'delayed', type: 'triggered', triggerCondition: 'ON_LIFE_GAIN', effects: [
       { action: 'DRAW', params: { amount: 1 }, targeting: self }, { action: 'ADD_MANA', params: { color: 'blue', amount: 1 }, targeting: self },
     ] }) as TriggeredAbility;
     engine.applyMutations([{ type: 'ADD_DELAYED_TRIGGER', registration: { id: '', source, controllerId: 'player1', ability, lifetime: 'once' } }]);
@@ -131,7 +131,7 @@ describe('small card mechanics', () => {
   });
 
   it('validates numeric expressions in every ordered trigger instruction', () => {
-    expect(() => normalizeAbility({ id: 'bad', type: 'triggered', effects: [
+    expect(() => parseAbilityDefinition({ id: 'bad', type: 'triggered', triggerCondition: 'ON_ATTACK', effects: [
       { action: 'DRAW', params: { amount: 1 }, targeting: self },
       { action: 'DRAW', params: { amount: { numeric: { kind: 'binding', name: 'X' } } }, targeting: self },
     ] })).toThrow('Numeric binding');

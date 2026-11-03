@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MANA_COLORS } from '@shared/card.types';
-import { normalizeCard, parseManaCost } from '@library/card-parser';
+import { parseCardDefinition, parseManaCost } from '@library/card-parser';
 import { instantiateCard } from '@library/card-factory';
 import { CardCharacteristicService } from '@engine/card-characteristic-service';
 import { createTestRoom } from '../helpers/test-room-factory';
@@ -13,7 +13,7 @@ describe('six game colors', () => {
   });
   it.each([['R', 'red'], ['B', 'black'], ['G', 'green'], ['Y', 'yellow'], ['W', 'white'], ['U', 'blue']])('infers %s from its cost when colors is omitted', (symbol, color) => {
     const room = createTestRoom(), source = instantiateCard('empire-servant');
-    source.blueprint = normalizeCard({ id: 'color-inference', manaCost: `{${symbol}}`, cardTypes: ['Creature'], power: 1, toughness: 1 });
+    source.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'color-inference', manaCost: `{${symbol}}`, cardTypes: ['Creature'], power: 1, toughness: 1 }) });
     room.players.player1.hand = [source];
     expect(CardCharacteristicService.resolveColors(room, source)).toEqual([color]);
   });

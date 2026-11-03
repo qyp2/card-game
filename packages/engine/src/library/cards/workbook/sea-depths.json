@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "sea-depths",
   "name": "海底深淵",
   "manaCost": "{U}{U}",
@@ -12,7 +13,8 @@
   "rulesText": "主：從我方墳墓特殊配置一張地界",
   "onCastEffects": [
     {
-      "action": "MOVE_ZONE",
+      "family": "cards",
+      "operation": "move",
       "params": {
         "origin": "graveyard",
         "destination": "battlefield"

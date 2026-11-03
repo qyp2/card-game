@@ -253,8 +253,10 @@ focused server modules own all process resources.
   target-modifier, replacement-operation, and numeric-query registries remain process-wide because
   current production composition has no per-match variants. Migrate one only when a real
   match/catalog constructor owns distinct instances.
-- **`modifier-pipeline.ts` / `modifier-registry.ts` are stubs** (superseded by the
-  continuous-effect pool + characteristic service).
+- **Contracted rules** live in `packages/engine/src/rules/schema` (pure validation/compiler) and
+  `rules/runtime` (live cast-cost/event evaluation). Characteristic/permission rules reuse layers;
+  `permission-registry.ts` keeps live permission checks. The unused modifier pipeline is removed.
+  See [the rule-contract supplement](rule-contract-architecture.md).
 - **Player clients import protocol only.** Server projection resolves card displays and target candidates. The five temporary engine exceptions are empty; see [`architecture-import-policy.md`](architecture-import-policy.md).
 
 ## Protocol and player projection

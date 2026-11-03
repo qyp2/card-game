@@ -4,7 +4,7 @@ import type { GameRoom } from '../types/game.room.types';
 import type { EffectDefinition, StackEffect, StackObject, TargetPointer } from '../types/effect.types';
 import { structuralTargetLegal, isExplicitTargeting, findTargetCard } from '../shared/target-legality';
 import { matchesTargetFilter } from '../shared/target-utils';
-import { ModifierRegistry } from './modifier-registry';
+import { PermissionRegistry } from './permission-registry';
 import { resolveSourceInformation } from './source-information';
 import { readRulePath } from './rule-conditions';
 import { evaluateNumericValue, hasNumericExpression } from './numeric-values';
@@ -98,7 +98,7 @@ export function revalidateTargets(
 
     // Concrete target → validate it is still legal
     const valid = isExplicitTargeting(effect.targeting)
-      ? structuralTargetLegal(room, controllerId, target, effect.targeting) && (!source || ModifierRegistry.canTarget(room, controllerId, source, [target]))
+      ? structuralTargetLegal(room, controllerId, target, effect.targeting) && (!source || PermissionRegistry.canTarget(room, controllerId, source, [target]))
       : (() => {
       switch (target.targetType) {
         case 'permanent':

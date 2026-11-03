@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GameEngine } from '@engine/game-engine';
 import { type ActionResult } from '@engine/action-registry';
 import { playCardHandler } from '@engine/handlers/play-card-handler';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { instantiateCard } from '@library/card-factory';
 import { buildStartingCardMutations, resolveRPS } from '@engine/room-factory';
 import { SyncService } from '@server/rooms/sync-service';
@@ -46,9 +46,9 @@ function answer(engine: GameEngine, choices: string[]) {
 function spellRoom(optionalResolution = false) {
   const room = createTestRoom(); fillTestLibraries(room);
   const card = room.players.player1.hand[0];
-  card.blueprint = normalizeCard({ id: 'cleanup-spell', cardTypes: ['Spell'], manaCost: '{R}',
+  card.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'cleanup-spell', cardTypes: ['Spell'], manaCost: '{R}',
     modes: [{ id: 'gain', label: 'Gain life', effects: [{ action: 'MODIFY_LIFE', params: { amount: 2 }, targeting: { type: 'self', required: false },
-      ...(optionalResolution ? { choice: { kind: 'optional' } } : {}) }] }] });
+      ...(optionalResolution ? { choice: { kind: 'optional' } } : {}) }] }] }) });
   return { room, card };
 }
 
@@ -160,8 +160,8 @@ describe('engine cleanup contracts', () => {
   it('preserves combat choices and resolves a dying creature’s trigger', () => {
     const attacker = creature('attacker', 'player1', 2, 2);
     const blocker = creature('blocker', 'player2', 2, 2);
-    blocker.blueprint = normalizeCard({ id: 'death-observer', cardTypes: ['Creature'], power: 2, toughness: 2,
-      abilities: [{ id: 'death', type: 'triggered', triggerCondition: 'ON_DIE', effectId: 'MODIFY_LIFE', params: { amount: 1 }, targeting: { type: 'self', required: false } }] });
+    blocker.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'death-observer', cardTypes: ['Creature'], power: 2, toughness: 2,
+      abilities: [{ id: 'death', type: 'triggered', triggerCondition: 'ON_DIE', effect: { action: 'MODIFY_LIFE', params: { amount: 1 }, targeting: { type: 'self', required: false } } }] }) });
     const room = createTestRoom({ phase: 'declareAttackersStep', priorityPlayerId: null, battlefield: [attacker, blocker] });
     fillTestLibraries(room); const engine = engineFor(room);
     const pass = (player: string) => checked(engine, () => engine.executePlayerAction(player, 'pass_priority'));

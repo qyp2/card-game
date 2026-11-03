@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "strong-ignition-wolf",
   "name": "强攻之怒焰狼",
   "manaCost": "{R}{R}",
@@ -45,9 +46,12 @@
           ]
         }
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        }
       }
     }
   ]

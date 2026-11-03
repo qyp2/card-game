@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "flame-mercenary",
   "name": "炎極雇傭兵",
   "manaCost": "{R}{R}",
@@ -27,7 +28,8 @@
       },
       "effects": [
         {
-          "action": "DESTROY",
+          "family": "cards",
+          "operation": "destroy",
           "params": {},
           "targeting": {
             "type": "permanent",
@@ -40,7 +42,8 @@
           }
         },
         {
-          "action": "DRAW",
+          "family": "cards",
+          "operation": "draw",
           "params": {
             "amount": 1
           },

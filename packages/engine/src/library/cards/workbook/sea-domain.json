@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "sea-domain",
   "name": "蒼海領地",
   "manaCost": "{0}",
@@ -19,10 +20,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "blue",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "blue",
+          "amount": 1
+        }
       }
     }
   ]

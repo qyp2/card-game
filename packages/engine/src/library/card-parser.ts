@@ -3,6 +3,8 @@ import type { CardBlueprint, CardAbility, ActivatedAbility, TriggeredAbility, Ca
 import type { AuthoredActionCost, EffectDefinition, CostRoutes } from '../types/effect.types';
 import type { NumericDeclaration, NumericValue } from '../types/numeric-value.types';
 import { assertAnnouncementCost, assertCostRoutes, assertNumericDeclarations, assertEffectNumericDefinition, assertAbilityNumericDefinition, assertBlueprintNumericDefinition } from './card-definition-validator';
+import { parseContract, parseModifierDefinition, RawAbilitySchema, RawCardSchema, type ModifierDefinition } from '../rules/schema/contracts';
+import { compileInstruction, compileStaticRules } from '../rules/schema/compile';
 
 /**
  * Parse supported mana symbols into an authored cost; {X} requires an explicit declaration.
@@ -62,7 +64,8 @@ export function normalizeActionCost(cost: Record<string, unknown> | undefined, d
   };
 }
 
-export function normalizeEffect(raw: Record<string, unknown>, declarations: NumericDeclaration[] = []): EffectDefinition {
+export function parseInstructionDefinition(raw: Record<string, unknown>, declarations: NumericDeclaration[] = []): EffectDefinition {
+  raw = compileInstruction(raw);
   const effect: EffectDefinition = {
     ...(raw.recordOutcome ? { recordOutcome: structuredClone(raw.recordOutcome) as EffectDefinition['recordOutcome'] } : {}),
     ...(typeof raw.requiresOutcome === 'string' ? { requiresOutcome: raw.requiresOutcome } : {}),
@@ -86,8 +89,8 @@ function normalizeCostRoutes(raw: Record<string, unknown>, declarations: Numeric
   };
 }
 
-export function normalizeAbility(ability: Record<string, unknown>): CardAbility | null {
-  if (!ability || typeof ability !== 'object') return null;
+export function parseAbilityDefinition(ability: Record<string, unknown>): CardAbility | null {
+  ability = parseContract(RawAbilitySchema, ability, 'ability') as Record<string, unknown>;
 
   const type = (ability.type as string) || 'activated';
   if (type !== 'activated' && (ability.alternativeCosts !== undefined || ability.additionalCost !== undefined)) throw new Error('Only ordinary activated abilities support cost routes');
@@ -95,27 +98,20 @@ export function normalizeAbility(ability: Record<string, unknown>): CardAbility 
   const declarations = ability.numericDeclarations === undefined ? [] : ability.numericDeclarations as NumericDeclaration[];
   assertNumericDeclarations(declarations);
   if (type === 'static') {
+    const rules = (ability.rules as ModifierDefinition[] | undefined)?.map((rule, i) => parseModifierDefinition(rule, `ability.${ability.id}.rules.${i}`));
+    const effects = compileStaticRules(rules ?? []);
     const normalized: CardAbility = { id: typeof ability.id === 'string' ? ability.id : '', type: 'static',
       ...(ability.activeZones ? { activeZones: structuredClone(ability.activeZones) as CardZone[] } : {}),
       ...(ability.characteristicDefining ? { characteristicDefining: true } : {}),
-      effects: structuredClone(ability.effects ?? []) as import('../types/continuous-effect.types').StaticEffectDefinition[] };
+      ...(rules ? { rules: structuredClone(rules) } : {}), effects };
     assertAbilityNumericDefinition(normalized);
     return normalized;
   }
   if (ability.effects !== undefined && (!Array.isArray(ability.effects) || !ability.effects.length)) throw new Error('Ability effects must be a nonempty list');
-  if (ability.effects !== undefined && (ability.effectId !== undefined || ability.params !== undefined || ability.targeting !== undefined || ability.choice !== undefined || ability.tags !== undefined)) throw new Error('Choose ordered effects or a single effectId definition');
-  const ordered = Array.isArray(ability.effects) ? ability.effects.map(raw => normalizeEffect(raw as Record<string, unknown>, declarations)) : undefined;
-  // Abilities use the same EffectDefinition model as spells/onEnterEffects.
-  // `effectId` is the legacy field name; `action` is the unified one. Default
-  // targeting is self (matching the old hardcoded behavior) but is now
-  // expressible per-ability via an explicit `targeting` field.
-  const effect: EffectDefinition = {
-    ...(ability.choice ? { choice: ability.choice as EffectDefinition['choice'] } : {}),
-    action: typeof ability.effectId === 'string' ? ability.effectId.toUpperCase() : '',
-    params: (ability.params as Record<string, unknown>) || {},
-    tags: (ability.tags as string[]) || [],
-    targeting: (ability.targeting as EffectDefinition['targeting']) || { type: 'self', required: false },
-  };
+  const ordered = Array.isArray(ability.effects) ? ability.effects.map(raw => parseInstructionDefinition(raw as Record<string, unknown>, declarations)) : undefined;
+  // Single and ordered instructions share the same strict contract and compiler.
+  const effect: EffectDefinition = ability.effect ? parseInstructionDefinition(ability.effect as Record<string, unknown>, declarations)
+    : { action: '', params: {}, tags: [], targeting: { type: 'self', required: false } };
 
   const base = {
     ...(ability.immediate === true ? { immediate: true } : {}),
@@ -146,14 +142,14 @@ export function normalizeAbility(ability: Record<string, unknown>): CardAbility 
     ...(declarations.length ? { numericDeclarations: structuredClone(declarations) } : {}),
     cost: normalizeActionCost(ability.cost as Record<string, unknown> | undefined, declarations),
     ...normalizeCostRoutes(ability, declarations),
-    duration: (ability.duration as string) || null,
     ...base,
   } as ActivatedAbility;
   assertAbilityNumericDefinition(normalized);
   return normalized;
 }
 
-export function normalizeCard(raw: Record<string, unknown>): CardBlueprint {
+export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint {
+  raw = parseContract(RawCardSchema, raw, typeof raw?.id === 'string' ? raw.id : 'card') as Record<string, unknown>;
   if (!raw.id) {
     throw new Error(`[CardParser] Missing absolute identifier 'id' on card name: ${raw.name}`);
   }
@@ -169,7 +165,7 @@ export function normalizeCard(raw: Record<string, unknown>): CardBlueprint {
   }
 
   const abilities = ((raw.abilities as Record<string, unknown>[]) || [])
-    .map(normalizeAbility).filter((a): a is CardAbility => a !== null);
+    .map(parseAbilityDefinition).filter((a): a is CardAbility => a !== null);
   const ids = new Set<string>();
   for (const ability of abilities) {
     if (!ability.id || ids.has(ability.id)) throw new Error(`[CardParser] Missing or duplicate ability ID on ${raw.id}`);
@@ -182,6 +178,7 @@ export function normalizeCard(raw: Record<string, unknown>): CardBlueprint {
     name: (raw.name as string) || '',
     cardTypes: (raw.cardTypes as CardType[]) || [],
     subTypes: (raw.subTypes as string[]) || [],
+    ...(raw.superTypes ? { superTypes: raw.superTypes as string[] } : {}),
     ...(raw.attachmentRequirements ? { attachmentRequirements: structuredClone(raw.attachmentRequirements) as import('../types/effect.types').TargetingDefinition } : {}),
     keywords: (raw.keywords as string[]) || [],
     ...(Array.isArray(raw.colors) ? { colors: raw.colors as ManaColor[] } : {}),
@@ -191,8 +188,8 @@ export function normalizeCard(raw: Record<string, unknown>): CardBlueprint {
     ...(Array.isArray(raw.modes) ? { modes: normalizeModes(raw.modes as Record<string, unknown>[], declarations) } : {}),
     ...(raw.modeCount ? { modeCount: raw.modeCount as { min: number; max: number } } : {}),
 
-    onCastEffects: (((raw.onCastEffects || raw.onPlay) as Record<string, unknown>[]) || []).map(effect => normalizeEffect(effect, declarations)),
-    onEnterEffects: ((raw.onEnterEffects as Record<string, unknown>[]) || []).map(effect => normalizeEffect(effect)),
+    onCastEffects: ((raw.onCastEffects as Record<string, unknown>[]) || []).map(effect => parseInstructionDefinition(effect, declarations)),
+    onEnterEffects: ((raw.onEnterEffects as Record<string, unknown>[]) || []).map(effect => parseInstructionDefinition(effect)),
 
     castRequirements: {
       allowedZones: (raw.castRequirements as Record<string, unknown>)?.allowedZones as CardZone[] || ['hand'],
@@ -211,7 +208,7 @@ export function normalizeCard(raw: Record<string, unknown>): CardBlueprint {
 export function parseAll(rawMap: Record<string, Record<string, unknown>>): Record<string, CardBlueprint> {
   const out: Record<string, CardBlueprint> = {};
   Object.keys(rawMap).forEach(k => {
-    out[k] = normalizeCard(rawMap[k]);
+    out[k] = parseCardDefinition(rawMap[k]);
   });
   return out;
 }
@@ -224,6 +221,6 @@ function normalizeModes(modes: Record<string, unknown>[], declarations: NumericD
     if (mode.castSpeed !== undefined && mode.castSpeed !== 'instant' && mode.castSpeed !== 'sorcery') throw new Error('Invalid mode castSpeed');
     return { id: mode.id, label: typeof mode.label === 'string' ? mode.label : mode.id,
       ...(mode.castSpeed !== undefined ? { castSpeed: mode.castSpeed as 'instant' | 'sorcery' } : {}),
-      effects: ((mode.effects as Record<string, unknown>[]) ?? []).map(effect => normalizeEffect(effect, declarations)) };
+      effects: ((mode.effects as Record<string, unknown>[]) ?? []).map(effect => parseInstructionDefinition(effect, declarations)) };
   });
 }

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "heavenly-gate",
   "name": "天域之門",
   "manaCost": "{1}{Y}{Y}",
@@ -12,7 +13,8 @@
   "rulesText": "① 配置時：我方玩家生命值恢復1點，並抽一張牌。② 主：犧牲場上的此遺跡，或從手牌棄置此卡，生產1點雷屬性能量。",
   "onEnterEffects": [
     {
-      "action": "MODIFY_LIFE",
+      "family": "resources",
+      "operation": "adjust_life",
       "params": {
         "amount": 1
       },
@@ -22,7 +24,8 @@
       }
     },
     {
-      "action": "DRAW",
+      "family": "cards",
+      "operation": "draw",
       "params": {
         "amount": 1
       },
@@ -36,15 +39,26 @@
     {
       "id": "discard-for-yellow",
       "type": "activated",
-      "allowedZones": ["hand"],
+      "allowedZones": [
+        "hand"
+      ],
       "castSpeed": "sorcery",
       "immediate": true,
-      "cost": { "discardSelf": true },
+      "cost": {
+        "discardSelf": true
+      },
       "effects": [
         {
-          "action": "ADD_MANA",
-          "params": { "color": "yellow", "amount": 1 },
-          "targeting": { "type": "self", "required": false }
+          "family": "resources",
+          "operation": "add_mana",
+          "params": {
+            "color": "yellow",
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
         }
       ]
     },
@@ -55,14 +69,17 @@
         "sacrifice": true
       },
       "castSpeed": "sorcery",
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "yellow",
-        "amount": 1
-      },
-      "targeting": {
-        "type": "self",
-        "required": false
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "yellow",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
       }
     }
   ]

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "heavenly-marquis-laila",
   "name": "天域三侯 萊拉",
   "manaCost": "{1}{Y}",
@@ -22,7 +23,8 @@
       "cost": {},
       "effects": [
         {
-          "action": "COUNTER",
+          "family": "stack",
+          "operation": "counter",
           "params": {},
           "targeting": {
             "type": "spell",
@@ -33,7 +35,8 @@
           }
         },
         {
-          "action": "MOVE_ZONE",
+          "family": "cards",
+          "operation": "move",
           "params": {
             "origin": "battlefield",
             "destination": "exile"

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "heavenly-patrol",
   "name": "天域巡邏兵",
   "manaCost": "{Y}{Y}",
@@ -49,13 +50,16 @@
           ]
         }
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
-      },
-      "targeting": {
-        "type": "self",
-        "required": false
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
       }
     }
   ]

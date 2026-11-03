@@ -25,7 +25,7 @@ import { engineLogger } from '../shared/game-logger';
  * put on the stack. It does NOT choose targets, resolve effects, or touch the
  * stack — that is the coordinator's job.
  *
- * `ability` is undefined for the legacy `onEnterEffects` path, which has no
+ * `ability` is undefined for the shorthand `onEnterEffects` path, which has no
  * TriggeredAbility wrapper.
  */
 export interface PendingTrigger {
@@ -63,18 +63,18 @@ export interface TriggerContext {
  * - `includeEventCard`: also scan the card named in the event payload, even if
  *   it has left the battlefield. This is required for
  *   PERMANENT_LEFT / PERMANENT_DIED; entry events use committed after-state.
- * - `legacyEnter`: also check the legacy `onEnterEffects` field.
+ * - `selfEntryEffects`: also check the ordered `onEnterEffects` shorthand.
  */
 interface EventMapping {
   triggerEvent: TriggerEvent;
   scanBattlefield: boolean;
   includeEventCard: boolean;
-  legacyEnter?: boolean;
+  selfEntryEffects?: boolean;
 }
 
 const EVENT_MAP: Record<string, EventMapping> = {
   CARD_REVEALED: { triggerEvent: 'ON_REVEAL', scanBattlefield: false, includeEventCard: true },
-  PERMANENT_ENTERED: { triggerEvent: 'ON_ENTER_BATTLEFIELD', scanBattlefield: true, includeEventCard: true, legacyEnter: true },
+  PERMANENT_ENTERED: { triggerEvent: 'ON_ENTER_BATTLEFIELD', scanBattlefield: true, includeEventCard: true, selfEntryEffects: true },
   PERMANENT_LEFT: { triggerEvent: 'ON_LEAVE_BATTLEFIELD', scanBattlefield: true, includeEventCard: true },
   PERMANENT_DIED: { triggerEvent: 'ON_DIE', scanBattlefield: true, includeEventCard: true },
   PERMANENT_DESTROYED: { triggerEvent: 'ON_DESTROY', scanBattlefield: true, includeEventCard: true },
@@ -173,13 +173,13 @@ export function discoverTriggers(event: GameEvent, context: TriggerContext): Pen
       });
     }
 
-    // Legacy onEnterEffects path (PERMANENT_ENTERED only). No TriggeredAbility
+    // Ordered onEnterEffects shorthand (PERMANENT_ENTERED only). No TriggeredAbility
     // wrapper, so `ability` is left undefined.
     const enterEffects = context.room ? CardCharacteristicService.resolve(context.room, card).onEnterEffects : card.blueprint.onEnterEffects;
-    if (mapping.legacyEnter && enterEffects?.length && triggerMatches(event, card, { subject: 'self' }, controllerId, context.room)) {
-      const legacyEffects = buildStackEffects(enterEffects, controllerId, card);
-      if (legacyEffects.length > 0) {
-        pending.push({ source: card, controllerId, effects: legacyEffects, event: triggeringEvent });
+    if (mapping.selfEntryEffects && enterEffects?.length && triggerMatches(event, card, { subject: 'self' }, controllerId, context.room)) {
+      const entryEffects = buildStackEffects(enterEffects, controllerId, card);
+      if (entryEffects.length > 0) {
+        pending.push({ source: card, controllerId, effects: entryEffects, event: triggeringEvent });
       }
     }
   }
@@ -278,7 +278,7 @@ export class TriggerManager {
   /**
    * Queue a PUSH_STACK mutation. The engine publishes its event after application.
    */
-  private pushTrigger(trigger: PendingTrigger, room: GameRoom, sourceInfo?: CardSnapshot, useKey = abilityUseKey(trigger.source, trigger.ability?.id ?? 'legacy')): boolean {
+  private pushTrigger(trigger: PendingTrigger, room: GameRoom, sourceInfo?: CardSnapshot, useKey = abilityUseKey(trigger.source, trigger.ability?.id ?? 'on-enter')): boolean {
     const limit = trigger.ability?.limitPerTurn;
     const turnNumber = room.turnNumber ?? 1;
     const reserved = this.collector.filter(mutation => mutation.type === 'RECORD_ABILITY_USE' && mutation.key === useKey && (mutation.turnNumber ?? turnNumber) === turnNumber).length;
@@ -300,7 +300,7 @@ export class TriggerManager {
     if (gameConfig.logging.appliedEvents) {
       engineLogger.withContext({ roomId: room.roomId, commandId: trigger.event.commandId, batchId: trigger.event.batchId })
         .debug('trigger:queued', trigger.event.eventId, { eventUuid: trigger.event.eventUuid, stackUuid: stackObj.uuid,
-          abilityId: trigger.ability?.id ?? 'legacy', sourceUuid: trigger.source.uuid, controllerId: trigger.controllerId });
+          abilityId: trigger.ability?.id ?? 'on-enter', sourceUuid: trigger.source.uuid, controllerId: trigger.controllerId });
     }
     return true;
   }

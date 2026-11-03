@@ -112,7 +112,8 @@ export function assertEffectNumericDefinition(definition: EffectDefinition, decl
 }
 
 function assertStaticDefinition(definition: StaticEffectDefinition): void {
-  const { effect, ...rest } = definition;
+  const { effect, condition, ...rest } = definition;
+  assertConditionNumericDefinition(condition);
   assertNoNumericExpressions(rest);
   assertContinuousNumericDefinition(effect);
 }
@@ -120,7 +121,11 @@ function assertStaticDefinition(definition: StaticEffectDefinition): void {
 export function assertAbilityNumericDefinition(ability: CardAbility): void {
   if (ability.type !== 'activated' && ('alternativeCosts' in ability || 'additionalCost' in ability)) throw new Error('Only ordinary activated abilities support cost routes');
   if (ability.type === 'static') {
-    const { effects, ...rest } = ability; assertNoNumericExpressions(rest);
+    const { effects, rules, ...rest } = ability; assertNoNumericExpressions(rest);
+    for (const rule of rules ?? []) {
+      assertConditionNumericDefinition(rule.condition);
+      if (rule.family === 'costs' && 'amount' in rule.operation) assertNumericDefinition(rule.operation.amount);
+    }
     effects.forEach(assertStaticDefinition); return;
   }
   const declarations = ability.type === 'activated' ? ability.numericDeclarations ?? [] : [];

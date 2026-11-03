@@ -119,7 +119,7 @@ export function prepareActionChoice(
     return reject('Mana abilities do not support cost routes');
   }
 
-  const announcement = prepareAnnouncement(card, definition, data);
+  const announcement = prepareAnnouncement(card, definition, data, actionId === 'cast_spell' ? { room, playerId } : undefined);
   if (!announcement.success) {
     return reject(announcement.reason);
   }

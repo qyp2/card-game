@@ -4,6 +4,8 @@ import type { ProposedEvent, ReplacementDefinition, ReplacementOperationMap } fr
 import { CardCharacteristicService } from './card-characteristic-service';
 import { roomCards } from './continuous-effect-state';
 import { protectionApplies } from '../shared/protection';
+import { staticEventReplacements } from '../rules/runtime/event-replacements';
+import { ruleUseAvailable } from '../rules/runtime/active-rules';
 
 export interface ReplacementResult { events: ProposedEvent[]; mutations?: GameMutation[]; prevented?: number }
 export interface ReplacementOperationHandler<K extends keyof ReplacementOperationMap = keyof ReplacementOperationMap> {
@@ -20,6 +22,7 @@ export function registerReplacementOperation<K extends keyof ReplacementOperatio
 }
 
 export function replacementIsActive(room: GameRoom, rule: ReplacementDefinition): boolean {
+  if (!ruleUseAvailable(room, rule.ruleUse)) return false;
   if (rule.uses !== undefined && rule.uses <= 0 || rule.remaining !== undefined && rule.remaining <= 0) return false;
   if (rule.expiresTurn !== undefined && (room.turnNumber ?? 1) > rule.expiresTurn) return false;
   return rule.duration !== 'while_source' || !!rule.source && room.battlefield.some(card => card.uuid === rule.source!.cardUuid && (card.state.zoneRevision ?? 0) === rule.source!.zoneRevision);
@@ -94,9 +97,10 @@ registerReplacementOperation('regenerate', {
 });
 
 export function builtinReplacements(room: GameRoom, event: ProposedEvent): ReplacementDefinition[] {
-  if (event.kind !== 'damage' || event.assignment.recipient.kind !== 'permanent') return [];
+  const statics = staticEventReplacements(room, event, eventCard(room, event), affectedPlayer(room, event));
+  if (event.kind !== 'damage' || event.assignment.recipient.kind !== 'permanent') return statics;
   const card = eventCard(room, event);
-  return card && protectionApplies(room, card, event.assignment.source.card) ? [{ id: `protection:${card.uuid}:${card.state.zoneRevision ?? 0}`, label: 'Protection', operation: { type: 'prevent_damage' } }] : [];
+  return [...statics, ...card && protectionApplies(room, card, event.assignment.source.card) ? [{ id: `protection:${card.uuid}:${card.state.zoneRevision ?? 0}`, label: 'Protection', operation: { type: 'prevent_damage' as const } }] : []];
 }
 
 export function eventProhibited(room: GameRoom, event: ProposedEvent): boolean {

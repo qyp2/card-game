@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "choice-practice",
   "name": "Choice practice",
   "cardTypes": [
@@ -45,7 +46,8 @@
   },
   "onCastEffects": [
     {
-      "action": "MODIFY_LIFE",
+      "family": "resources",
+      "operation": "adjust_life",
       "params": {
         "amount": {
           "numeric": {

@@ -4,7 +4,7 @@ import type { TargetingDefinition, TargetPointer } from '../types/effect.types';
 import type { ChoiceAnswer, ChoiceOption, PendingChoice, ListedChoice, NumericChoice } from '../types/choice.types';
 import type { ActionData } from './action-registry';
 import { structuralTargetLegal, targetKey } from '../shared/target-legality';
-import { ModifierRegistry } from './modifier-registry';
+import { PermissionRegistry } from './permission-registry';
 import { collectCards } from '../shared/card-query';
 import { CardCharacteristicService } from './card-characteristic-service';
 
@@ -28,7 +28,7 @@ export function targetOptions(room: GameRoom, playerId: string, source: CardInst
     : def.type === 'spell' || def.type === 'stack' ? room.stack.map(object => ({ targetType: def.type, stackUuid: object.uuid }))
     : cards.map(card => ({ targetType: def.type, cardUuid: card.uuid,
       zone: card.state.zone, zoneRevision: card.state.zoneRevision ?? 0 }));
-  return pointers.filter(pointer => structuralTargetLegal(room, playerId, pointer, def) && (!targeted || ModifierRegistry.canTarget(room, playerId, source, [pointer])))
+  return pointers.filter(pointer => structuralTargetLegal(room, playerId, pointer, def) && (!targeted || PermissionRegistry.canTarget(room, playerId, source, [pointer])))
     .map(pointer => {
       const card = byId.get(pointer.cardUuid!);
       return { id: targetKey(pointer), label: (pointer.playerId ? pointer.playerId === playerId ? 'You' : 'Opponent' : undefined) ?? pointer.stackUuid ??

@@ -7,6 +7,8 @@ import { loadServerConfig, mergeConfig, configRevision } from '@server/config';
 import { gameConfig, triggerTestSetup, st01aTestSetup, workbookTestSetup, smallMechanicsTestSetup } from '@config';
 import cards from '@library/cards';
 import baseline from '../fixtures/config-baseline.json';
+import schemaBaseline from '../fixtures/rule-contract-baseline.json';
+import { cardDefinitionHash } from '../helpers/card-definition-hash';
 import { getBlueprint } from '@library/card-catalog';
 import { createRoom } from '@engine/room-factory';
 import { createGameApplication } from '@server/application';
@@ -19,9 +21,9 @@ function hash(value: unknown): string {
 }
 describe('configuration ownership and preserved content', () => {
   it('preserves all authored definitions and every pre-extraction preset exactly', () => {
-    const originalCards = Object.fromEntries(baseline.cardIds.map(id => [id, cards[id]]));
+    const originalCards = Object.fromEntries(baseline.cardIds.map(id => [id, getBlueprint(id)]));
     expect(Object.keys(originalCards)).toHaveLength(baseline.cardCount);
-    expect(hash(originalCards)).toBe(baseline.catalogHash);
+    expect(cardDefinitionHash(originalCards)).toBe(schemaBaseline.originalSemanticCatalogHash);
     const presets = { gameConfig: gameConfig.setup, triggerTestSetup, st01aTestSetup, workbookTestSetup, smallMechanicsTestSetup };
     for (const [name, setup] of Object.entries(presets)) expect(hash(setup)).toBe(baseline.presets[name as keyof typeof baseline.presets]);
     for (const [id, card] of Object.entries(cards)) { expect((card as { id: string }).id).toBe(id); expect(getBlueprint(id).id).toBe(id); }

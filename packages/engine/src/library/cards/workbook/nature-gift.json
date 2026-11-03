@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "nature-gift",
   "name": "自然的賜予",
   "manaCost": "{G}",
@@ -15,7 +16,8 @@
   },
   "onCastEffects": [
     {
-      "action": "GRANT_STATS",
+      "family": "characteristics",
+      "operation": "temporary_stats",
       "params": {
         "power": 2,
         "toughness": 0

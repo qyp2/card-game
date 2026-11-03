@@ -5,7 +5,7 @@ import { createTestRoom } from '../helpers/test-room-factory';
 import { GameEngine } from '@engine/game-engine';
 import { playCardHandler } from '@engine/handlers/play-card-handler';
 import { instantiateCard } from '@library/card-factory';
-import { normalizeCard, normalizeAbility } from '@library/card-parser';
+import { parseCardDefinition, parseAbilityDefinition } from '@library/card-parser';
 import { prepareAnnouncement, spellAnnouncementDefinition } from '@engine/announcement-values';
 import { gameReducer } from '@engine/game-reducer';
 import { createTargetingState } from '@client/targeting';
@@ -112,8 +112,8 @@ describe('payment cost routes', () => {
   });
   it('normalizes authored routes and their declared generic expressions', () => {
     const x = { numeric: { kind: 'binding', name: 'X' } };
-    const blueprint = normalizeCard({ id: 'payment-fixture', numericDeclarations: [{ name: 'X', min: 0 }], manaCost: '{3}',
-      castRequirements: { speed: 'instant', alternativeCosts: [{ id: 'variable', label: 'Variable', cost: { mana: { generic: x } } }], additionalCost: { mana: { red: 1 } } } });
+    const blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'payment-fixture', numericDeclarations: [{ name: 'X', min: 0 }], manaCost: '{3}',
+      castRequirements: { speed: 'instant', alternativeCosts: [{ id: 'variable', label: 'Variable', cost: { mana: { generic: x } } }], additionalCost: { mana: { red: 1 } } } }) });
     expect((blueprint.castRequirements as any).alternativeCosts?.[0].cost.mana.generic).toEqual(x);
     const { engine, card } = fixture(); card.blueprint = blueprint;
     expect(engine.executePlayerAction('player1', 'cast_spell', { cardUuid: card.uuid, numericBindings: { X: 2 }, costRoute: { kind: 'alternative', id: 'variable' }, payment: { red: 1, blue: 2 } }).success).toBe(true);
@@ -140,11 +140,11 @@ describe('payment cost routes', () => {
     { additionalCost: { loyalty: -1 } },
     { additionalCost: { mana: { generic: { numeric: { kind: 'binding', name: 'unowned' } } } } },
   ])('rejects unsupported authored cost routes %j before normalization', requirements => {
-    expect(() => normalizeCard({ id: 'invalid-payment-fixture', castRequirements: requirements })).toThrow();
+    expect(() => parseCardDefinition({ schemaVersion: 1, ...({ id: 'invalid-payment-fixture', castRequirements: requirements }) })).toThrow();
   });
   it('rejects payment routes on mana and triggered abilities', () => {
-    expect(() => normalizeAbility({ id: 'mana', type: 'activated', effectId: 'ADD_MANA', params: { color: 'red', amount: 1 }, alternativeCosts: alternatives })).toThrow();
-    expect(() => normalizeAbility({ id: 'trigger', type: 'triggered', effectId: 'MODIFY_LIFE', additionalCost: { life: 1 } })).toThrow();
+    expect(() => parseAbilityDefinition({ id: 'mana', type: 'activated', alternativeCosts: alternatives, effect: { action: 'ADD_MANA', params: { color: 'red', amount: 1 } } })).toThrow();
+    expect(() => parseAbilityDefinition({ id: 'trigger', type: 'triggered', additionalCost: { life: 1 }, effect: { action: 'MODIFY_LIFE' } })).toThrow();
   });
   it('does not disable an unresolved alternative based on base affordability', () => {
     const { engine, card } = fixture({ cost: { mana: { generic: 99 } } }, { onCastEffects: [{ ...gain, targeting: { type: 'player', required: true } }] });
@@ -159,8 +159,7 @@ describe('payment cost routes', () => {
     const options = new OptionService();
     expect(options.getOptions(engine.roomState, 'player1', card.uuid, 'hand')[0].disabled).toBe(true);
     card.state = { ...card.state, zone: 'battlefield', summoningSickness: false };
-    card.blueprint = { ...card.blueprint, abilities: [normalizeAbility({ id: 'known', type: 'activated', cost, additionalCost,
-      effectId: 'MODIFY_LIFE', params: { amount: 1 } })!] };
+    card.blueprint = { ...card.blueprint, abilities: [parseAbilityDefinition({ id: 'known', type: 'activated', cost, additionalCost, effect: { action: 'MODIFY_LIFE', params: { amount: 1 } } })!] };
     engine.roomState.battlefield = [card]; engine.roomState.players.player1.hand = [discard];
     expect(options.getOptions(engine.roomState, 'player1', card.uuid, 'battlefield').find(o => o.data?.abilityId === 'known')?.disabled).toBe(true); engine.dispose();
   });
@@ -197,8 +196,7 @@ describe('payment cost routes', () => {
   it('uses the same route composition for ordinary activated abilities', () => {
     const { engine, card, discard } = fixture();
     card.state = { ...card.state, zone: 'battlefield', summoningSickness: false };
-    card.blueprint = { ...card.blueprint, abilities: [normalizeAbility({ id: 'pay', type: 'activated', cost: { mana: { generic: 99 } },
-      alternativeCosts: alternatives, additionalCost: { tap: true, discard: 1 }, effectId: 'MODIFY_LIFE', params: { amount: 1 } })!] };
+    card.blueprint = { ...card.blueprint, abilities: [parseAbilityDefinition({ id: 'pay', type: 'activated', cost: { mana: { generic: 99 } }, alternativeCosts: alternatives, additionalCost: { tap: true, discard: 1 }, effect: { action: 'MODIFY_LIFE', params: { amount: 1 } } })!] };
     engine.roomState.players.player1.hand = [discard]; engine.roomState.battlefield = [card];
     expect(new OptionService().getOptions(engine.roomState, 'player1', card.uuid, 'battlefield').find(o => o.data?.abilityId === 'pay')?.disabled).toBe(false);
     expect(engine.executePlayerAction('player1', 'activate_ability', { cardUuid: card.uuid, abilityId: 'pay' }).success).toBe(true);
@@ -210,8 +208,7 @@ describe('payment cost routes', () => {
     const { engine, card, discard } = fixture({ alternativeCosts: [{ id: 'red', label: 'Pay red', cost: { mana: { red: 2 } } }] });
     const supply = instantiateCard('land-red');
     supply.state = { ...supply.state, zone: 'battlefield', ownerId: 'player1', controllerId: 'player1' };
-    supply.blueprint = { ...supply.blueprint, abilities: [normalizeAbility({ id: 'supply', type: 'activated', cost: { tap: true, discard: 1 },
-      effectId: 'ADD_MANA', params: { color: 'red', amount: 2 } })!] };
+    supply.blueprint = { ...supply.blueprint, abilities: [parseAbilityDefinition({ id: 'supply', type: 'activated', cost: { tap: true, discard: 1 }, effect: { action: 'ADD_MANA', params: { color: 'red', amount: 2 } } })!] };
     const extra = instantiateCard('empire-servant'); extra.state = { ...extra.state, ownerId: 'player1', controllerId: 'player1', zone: 'hand' };
     engine.roomState.players.player1.hand.push(extra); engine.roomState.battlefield = [supply];
     for (const color of Object.keys(engine.roomState.players.player1.mana)) (engine.roomState.players.player1.mana as any)[color] = 0;

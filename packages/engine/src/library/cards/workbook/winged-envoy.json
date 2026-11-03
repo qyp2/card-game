@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "winged-envoy",
   "name": "小翼使者",
   "manaCost": "{Y}{Y}",
@@ -21,10 +22,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "yellow",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "yellow",
+          "amount": 1
+        }
       }
     }
   ]

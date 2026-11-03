@@ -4,7 +4,7 @@ import { createTestRoom } from '../helpers/test-room-factory';
 import { instantiateCard } from '@library/card-factory';
 import { CardCharacteristicService } from '@engine/card-characteristic-service';
 import type { ActionCost, EffectDefinition } from '@shared/effect.types';
-import { ModifierRegistry } from '@engine/modifier-registry';
+import { PermissionRegistry } from '@engine/permission-registry';
 
 function fixture(cost: ActionCost = {}, effect: EffectDefinition = { action: 'MODIFY_STATS', params: { damage: 'DYNAMIC:source.power' }, targeting: { type: 'permanent', required: true, maxTargets: 1 } }) {
   const room = createTestRoom(); const source = instantiateCard('card_09876_core_set'), target = instantiateCard('empire-servant');
@@ -80,7 +80,7 @@ describe('independent ability sources and last-known information', () => {
   });
   it('uses current source information for target permission revalidation', () => {
     const { engine, source, target, activate } = fixture();
-    const unregister = ModifierRegistry.registerTargetRule((_room, _player, card) => (card.state.counters['+1/+1'] ?? 0) < 2);
+    const unregister = PermissionRegistry.registerTargetRule((_room, _player, card) => (card.state.counters['+1/+1'] ?? 0) < 2);
     try {
       activate(); engine.applyMutations([{ type: 'ADD_COUNTER', cardUuid: source.uuid, counterType: '+1/+1', amount: 2 }]);
       engine.resolveTopOfStack(); expect(engine.roomState.battlefield.find(card => card.uuid === target.uuid)!.state.damageTaken).toBe(0);

@@ -3,14 +3,14 @@ import { GameEngine } from '@engine/game-engine';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
 import { creature } from '../helpers/combat-fixture';
 import { instantiateCard } from '@library/card-factory';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { targetOptions } from '@engine/choices';
 import { structuralTargetLegal } from '@rules/target-legality';
 const engines: GameEngine[] = [];
 afterEach(() => { engines.splice(0).forEach(e => e.dispose()); });
 function game() {
   const room = createTestRoom(); fillTestLibraries(room); const source=room.players.player1.hand[0];
-  source.blueprint = normalizeCard({ id:'any-damage-fixture', name:'Any damage', cardTypes:['Spell'], keywords:['Lifelink'], onCastEffects:[{action:'DEAL_DAMAGE',params:{amount:3},targeting:{type:'any',cardTypes:['Creature'],required:true,maxTargets:1}}] });
+  source.blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id:'any-damage-fixture', name:'Any damage', cardTypes:['Spell'], keywords:['Lifelink'], onCastEffects:[{action:'DEAL_DAMAGE',params:{amount:3},targeting:{type:'any',cardTypes:['Creature'],required:true,maxTargets:1}}] }) });
   const enemy=creature('enemy','player2',2,8), land=instantiateCard('land-red'); land.state={...land.state,zone:'battlefield',controllerId:'player2',ownerId:'player2'};
   room.battlefield=[enemy,land]; const engine=new GameEngine(room);engine.initRoom(); engines.push(engine); return {engine,source,enemy,land};
 }

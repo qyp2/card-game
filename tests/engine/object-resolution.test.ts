@@ -3,7 +3,7 @@ import { createTestRoom } from '../helpers/test-room-factory';
 import { instantiateCard } from '@library/card-factory';
 import { GameEngine } from '@engine/game-engine';
 import { EffectRegistry } from '@engine/effect-registry';
-import { ModifierRegistry } from '@engine/modifier-registry';
+import { PermissionRegistry } from '@engine/permission-registry';
 import type { EffectDefinition } from '@shared/effect.types';
 
 function fixture(cardTypes = ['Spell']) {
@@ -76,7 +76,7 @@ describe('whole-object resolution', () => {
   });
   it('does not recheck permissions between instructions in the same resolution', () => {
     const f = fixture(); let allowed = true; let calls = 0;
-    const remove = ModifierRegistry.registerTargetRule(() => allowed);
+    const remove = PermissionRegistry.registerTargetRule(() => allowed);
     EffectRegistry.TEST_CHANGE_PERMISSION = () => { allowed = false; calls++; return []; };
     EffectRegistry.TEST_USE_TARGET = (_room, _stack, effect) => { if (effect.targets.length) calls++; return []; };
     try {

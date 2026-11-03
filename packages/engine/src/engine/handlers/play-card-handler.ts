@@ -2,7 +2,7 @@ import { CardCharacteristicService } from '../card-characteristic-service';
 // src/engine/handlers/play-card-handler.ts
 import type { ActionHandler, ActionData, ActionResult } from '../action-registry';
 import { ActionValidator } from '../action-validator';
-import { ModifierRegistry } from '../modifier-registry';
+import { PermissionRegistry } from '../permission-registry';
 import { buildStackEffects } from '../effect-resolver';
 import { planActionCosts } from '../action-costs';
 import { resetCardForZone } from '../zone-transitions';
@@ -14,6 +14,7 @@ import { planTargetGroups } from '../target-groups';
 import { selectModeEffects } from '../../shared/action-modes';
 import { planAnnouncedDistributions } from '../announced-distributions';
 import { prepareAnnouncement, spellAnnouncementDefinition } from '../announcement-values';
+import { recordRuleUse } from '../../rules/runtime/active-rules';
 
 function findCardInHand(room: GameRoom, playerId: PlayerId, cardUuid: string): CardInstance | undefined {
   return room.players[playerId].hand.find(c => c.uuid === cardUuid);
@@ -30,10 +31,10 @@ export const playCardHandler: ActionHandler = {
     }
 
     if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) return { success: false, phase: 'validate', reason: 'Lands are played directly, not cast as spells' };
-    if (!ModifierRegistry.canPlay(room, playerId, card)) {
+    if (!PermissionRegistry.canPlay(room, playerId, card)) {
       return { success: false, phase: 'validate', reason: 'A modifier prevents playing this card' };
     }
-    const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action);
+    const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action, { room, playerId });
     if (!announcement.success) return { success: false, phase: 'validate', reason: announcement.reason };
     if (announcement.missing) return { success: false, phase: 'validate', reason: 'Choose all declared numbers' };
     if (announcement.missingCostRoute) return { success: false, phase: 'validate', reason: 'Choose a cost route' };
@@ -71,13 +72,13 @@ export const playCardHandler: ActionHandler = {
     }
     if (CardCharacteristicService.resolveTypes(room, card).includes('Land')) return { success: false, phase: 'propose', reason: 'Lands are played directly, not cast as spells' };
 
-    const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action);
+    const announcement = prepareAnnouncement(card, spellAnnouncementDefinition(CardCharacteristicService.resolveBlueprint(room, card)), action, { room, playerId });
     if (!announcement.success) return { success: false, phase: 'propose', reason: announcement.reason };
     if (announcement.missing) return { success: false, phase: 'propose', reason: 'Choose all declared numbers' };
     if (announcement.missingCostRoute) return { success: false, phase: 'propose', reason: 'Choose a cost route' };
     const costs = planActionCosts(room, playerId, card, announcement.cost, action);
     if (!costs.success) return { success: false, phase: 'propose', reason: costs.reason };
-    const mutations: GameMutation[] = [...costs.mutations];
+    const mutations: GameMutation[] = [...costs.mutations, ...(announcement.ruleUses ?? []).map(use => recordRuleUse(room, use))];
 
     // --- BUILD STACK OBJECT (snapshot values locked here) ---
     const onCastEffects = selectModeEffects(CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [], CardCharacteristicService.resolveBlueprint(room, card).modes, action.modes, CardCharacteristicService.resolveBlueprint(room, card).modeCount, { room, playerId });

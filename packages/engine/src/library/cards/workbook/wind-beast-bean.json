@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "wind-beast-bean",
   "name": "風靈獸 魔豆",
   "manaCost": "{G}",
@@ -21,10 +22,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "green",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "green",
+          "amount": 1
+        }
       }
     }
   ]

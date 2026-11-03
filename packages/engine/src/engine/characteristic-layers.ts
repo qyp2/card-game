@@ -8,6 +8,8 @@ import { printedAbilities } from './printed-abilities';
 import { nextEffectIndex } from './effect-ordering';
 import { createBoardNumericContext, requireCharacteristicNumber } from './numeric-characteristics';
 import { hasNumericExpression } from './numeric-values';
+import { conditionMatches } from '../shared/rule-condition-matcher';
+import { operationStage } from '../rules/operation-stage';
 
 type LayerValue = CardCharacteristics & { abilityTimestamps: Record<string, number> };
 type Board = Map<string, LayerValue>;
@@ -23,18 +25,7 @@ function printed(blueprint: CardBlueprint, controllerId: string): LayerValue {
     ...(blueprint.modes ? { modes: structuredClone(blueprint.modes) } : {}), ...(blueprint.modeCount ? { modeCount: { ...blueprint.modeCount } } : {}) };
 }
 function stage(entry: ContinuousEffectEntry): number {
-  switch (entry.effect.type) {
-    case 'COPY': return 1;
-    case 'CONTROL': return 2;
-    case 'TEXT': return 3;
-    case 'TYPE': return 4;
-    case 'COLOR': return 5;
-    case 'ABILITY': return 6;
-    case 'SET_STATS': return entry.characteristicDefining ? 70 : 71;
-    case 'STAT_DELTA': return 72;
-    case 'SWITCH_STATS': return 73;
-    case 'PERMISSION': return 80;
-  }
+  return operationStage(entry.effect, entry.characteristicDefining);
 }
 function staticEntries(cards: CardInstance[], board: Board): ContinuousEffectEntry[] {
   return cards.flatMap((source, index) => board.get(source.uuid)!.abilities.flatMap(ability => {
@@ -60,7 +51,9 @@ function textChange<T>(value: T, replacements: Record<string, string>): T {
     return (keys.length ? value.replace(new RegExp(`\\b(${keys.join('|')})\\b`, 'g'), word => replacements[word]) : value) as T;
   }
   if (Array.isArray(value)) return value.map(v => textChange(v, replacements)) as T;
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, ['id', 'cardUuid', 'controllerId', 'sourceControllerId', 'numericDeclarations'].includes(k) ? v : textChange(v, replacements)])) as T;
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k,
+    ['id', 'ids', 'group', 'cardUuid', 'controllerId', 'sourceControllerId', 'numericDeclarations', 'family', 'operation', 'action', 'type', 'kind', 'castSpeed', 'triggerCondition', 'duration', 'period', 'identity', 'consume', 'mode'].includes(k)
+      ? v : textChange(v, replacements)])) as T;
   return value;
 }
 function transform(value: LayerValue, entry: ContinuousEffectEntry, cards: CardInstance[], board: Board, target: CardInstance): LayerValue {
@@ -104,17 +97,24 @@ function applicable(entry: ContinuousEffectEntry, cards: CardInstance[], board: 
   if (!entry.sourceAbilityId) return true;
   return board.get(entry.source)?.abilities.some(a => a.id === entry.sourceAbilityId && a.type === 'static') ?? false;
 }
-function affected(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board): CardInstance[] {
+function affected(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board, room: GameRoom): CardInstance[] {
   if (!applicable(entry, cards, board)) return [];
   const source = effectSource(cards, entry);
   const controller = entry.origin === 'resolved' ? entry.sourceControllerId : source ? board.get(source.uuid)!.controllerId : entry.sourceControllerId;
   const scope = entry.effect.type === 'PERMISSION' ? entry.scope : characteristicScope(entry.scope);
-  return cards.filter(c => scopeMatches(scope, c, board.get(c.uuid)!, source, controller));
+  return cards.filter(c => {
+    if (!scopeMatches(scope, c, board.get(c.uuid)!, source, controller)) return false;
+    if (!entry.condition) return true;
+    const fields = { source: source ? { ...source, ...board.get(source.uuid) } : undefined, target: { ...c, ...board.get(c.uuid) },
+      controller: controller ? room.players[controller] : undefined, room: { phase: room.phase, turnNumber: room.turnNumber ?? 1, activeTurnPlayerId: room.activeTurnPlayerId },
+      history: { ...room.turnHistory, own: controller ? room.turnHistory?.playerCounts[controller] : undefined } };
+    return conditionMatches(entry.condition, fields, createBoardNumericContext({ cards, characteristics: card => board.get(card.uuid)!, source, controllerId: controller, fields, defaultCountZones: ['battlefield'] }));
+  });
 }
-function apply(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board): Board {
+function apply(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board, room: GameRoom): Board {
   entry = currentStaticEntry(entry, cards, board);
   const next = new Map(board);
-  for (const card of affected(entry, cards, board)) next.set(card.uuid, transform(board.get(card.uuid)!, entry, cards, board, card));
+  for (const card of affected(entry, cards, board, room)) next.set(card.uuid, transform(board.get(card.uuid)!, entry, cards, board, card));
   return next;
 }
 /** Unstarted static definitions follow text/ability changes in the intermediate board. */
@@ -122,9 +122,9 @@ function currentStaticEntry(entry: ContinuousEffectEntry, cards: CardInstance[],
   return entry.sourceAbilityId ? staticEntries(cards, board).find(current => current.id === entry.id) ?? entry : entry;
 }
 /** Compare the operation's effect, avoiding unrelated changes to its recipients. */
-function signature(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board): string {
+function signature(entry: ContinuousEffectEntry, cards: CardInstance[], board: Board, room: GameRoom): string {
   entry = currentStaticEntry(entry, cards, board);
-  return JSON.stringify(affected(entry, cards, board).map(card => {
+  return JSON.stringify(affected(entry, cards, board, room).map(card => {
     const old = board.get(card.uuid)!;
     const effect = entry.effect;
     const operation = effect.type === 'SET_STATS' || effect.type === 'STAT_DELTA'
@@ -134,23 +134,23 @@ function signature(entry: ContinuousEffectEntry, cards: CardInstance[], board: B
   }));
 }
 function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Board, layer: number,
-  continuations: Map<string, ContinuousEffectEntry>, startedGroups: Set<string>): Board {
+  continuations: Map<string, ContinuousEffectEntry>, startedGroups: Set<string>, room: GameRoom): Board {
   const pending = [...entries].sort((a, b) => Number(!a.characteristicDefining) - Number(!b.characteristicDefining) || (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const seen = new Set(pending.map(e => e.id).filter(Boolean));
   while (pending.length) {
     for (let i = 0; i < pending.length; i++) pending[i] = currentStaticEntry(pending[i], cards, board);
     const ready = nextEffectIndex(pending, (a, b) => (!a.characteristicDefining && !!b.characteristicDefining) ||
-      (!!a.characteristicDefining === !!b.characteristicDefining && signature(a, cards, board) !== signature(a, cards, apply(b, cards, board))));
+      (!!a.characteristicDefining === !!b.characteristicDefining && signature(a, cards, board, room) !== signature(a, cards, apply(b, cards, board, room), room)));
     const [entry] = pending.splice(ready, 1);
-    if (entry.groupId && !startedGroups.has(entry.groupId)) {
+    if (entry.groupId && !startedGroups.has(entry.groupId) && (!entry.condition || affected(entry, cards, board, room).length)) {
       startedGroups.add(entry.groupId);
-      const objects = affected(entry, cards, board).map(c => ({ cardUuid: c.uuid, zoneRevision: c.state.zoneRevision ?? 0 }));
+      const objects = affected(entry, cards, board, room).map(c => ({ cardUuid: c.uuid, zoneRevision: c.state.zoneRevision ?? 0 }));
       for (const part of staticEntries(cards, board).filter(e => e.groupId === entry.groupId)) {
-        continuations.set(part.id!, { ...part, sourceAbilityId: undefined, scope: { objects } });
+        continuations.set(part.id!, { ...part, condition: undefined, sourceAbilityId: undefined, scope: { objects } });
       }
       for (let i = 0; i < pending.length; i++) pending[i] = continuations.get(pending[i].id ?? '') ?? pending[i];
     }
-    board = apply(entry, cards, board);
+    board = apply(entry, cards, board, room);
     // Granted static abilities can contribute in the same layer. An entry is
     // applied at most once; removing/regranting it cannot create a query loop.
     for (const gained of staticEntries(cards, board)) if (stage(gained) === layer && !seen.has(gained.id)) {
@@ -179,7 +179,7 @@ export function resolveRoomCharacteristics(room: GameRoom, throughLayer = 80): M
 
 function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: number): Map<string, CardCharacteristics> {
   let board: Board = new Map(cards.map(c => [c.uuid, printed(c.blueprint, c.state.controllerId)]));
-  const entries = room.continuousEffectPool.map((entry, index) => ({ ...entry, id: entry.id ?? `legacy:${index}`, timestamp: entry.timestamp ?? index }));
+  const entries = room.continuousEffectPool.map((entry, index) => ({ ...entry, id: entry.id ?? `inline-effect:${index}`, timestamp: entry.timestamp ?? index }));
   const continuations = new Map<string, ContinuousEffectEntry>();
   const startedGroups = new Set<string>();
   for (const layer of [1, 2, 3, 4, 5, 6, 70, 71, 72, 73, 80]) {
@@ -191,7 +191,7 @@ function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: numbe
     }
     const statics = new Map(staticEntries(cards, board).map(e => [e.id!, e]));
     for (const [id, part] of continuations) statics.set(id, part);
-    board = fold([...entries, ...statics.values()].filter(e => stage(e) === layer), cards, board, layer, continuations, startedGroups);
+    board = fold([...entries, ...statics.values()].filter(e => stage(e) === layer), cards, board, layer, continuations, startedGroups, room);
   }
   return new Map([...board].map(([uuid, { abilityTimestamps, ...result }]) => [uuid, result]));
 }

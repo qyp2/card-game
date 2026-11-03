@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "fireball",
   "name": "火球術",
   "manaCost": "{R}{R}",
@@ -29,7 +30,8 @@
       "castSpeed": "sorcery",
       "effects": [
         {
-          "action": "ADD_COUNTER",
+          "family": "counters",
+          "operation": "add",
           "params": {
             "counterType": "scorch",
             "amount": 2
@@ -54,7 +56,8 @@
       "castSpeed": "instant",
       "effects": [
         {
-          "action": "MODIFY_LIFE",
+          "family": "resources",
+          "operation": "adjust_life",
           "params": {
             "amount": -5
           },

@@ -52,9 +52,9 @@ external-module import-equals forms.
    `mutation-committer.ts`, and `room-runtime.ts`) cannot import `uuid` or call `Math.random`
    directly. UUID and random capabilities enter through `packages/engine/src/shared/runtime-context.ts`, which is
    the only production default owner protected by this focused check.
-7. Card content under `packages/engine/src/library/**` cannot import `packages/engine/src/engine/**`, including type-only imports.
+7. Card content under `packages/engine/src/library/**` and pure contracts under `packages/engine/src/rules/schema/**` cannot import `packages/engine/src/engine/**` or `packages/engine/src/rules/runtime/**`, including type-only imports.
    Content normalization and catalog construction may depend on stable contracts in `packages/engine/src/types/**`
-   and `packages/engine/src/shared/**`; engine rules may consume the library's public content APIs.
+   and `packages/engine/src/shared/**`, plus the pure `rules/schema/**` and `rules/operation-stage.ts` contract/compiler modules; engine rules may consume the library's public content APIs. `rules/runtime/**` contains engine-dependent evaluators and is not a library dependency.
 8. Type declarations under `packages/engine/src/types/**` cannot import executable `packages/engine/src/config.ts` or `packages/engine/src/config/**`, including
    type-only imports. Serializable configuration contracts belong in `packages/engine/src/types/**`; runtime
    defaults, validation, and snapshot construction remain in `packages/engine/src/config/`, with `config.ts` as a compatibility entry.

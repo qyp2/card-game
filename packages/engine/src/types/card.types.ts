@@ -73,7 +73,6 @@ export interface ActivatedAbilityBase extends CostRoutes {
      * `targeting` (self / opponent / permanent / all) and `tags` instead of
      * being hardcoded to target their controller.
      */
-    duration?: string | null;
     castSpeed: ActionSpeed;
 }
 export type ActivatedAbility = ActivatedAbilityBase & (
@@ -98,7 +97,7 @@ export interface TriggeredAbilityBase {
     modes?: import('./effect.types').ModeDefinition[];
     modeCount?: { min: number; max: number };
     trigger?: TriggerFilter;
-    /** Normalized card data always has an ID; legacy in-memory trigger fixtures may omit it. */
+    /** Parsed card data always has an ID; direct in-memory trigger fixtures may omit it. */
     readonly id?: string;
     type: 'triggered';
     triggerCondition: TriggerEvent;

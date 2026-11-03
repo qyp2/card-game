@@ -71,7 +71,7 @@ Known product gaps outside the completed architecture modernization scope:
 
 | Area | Status | Description |
 |---|---|---|
-| `ModifierRegistry` / `ModifierPipeline` | 🔶 Stub | Permission checks always pass; value transforms return input unchanged. Superseded in practice by the continuous-effect pool + characteristic service |
+| Contracted rule families / `PermissionRegistry` | ✅ Implemented | Strict shared authoring, characteristic/permission layers, cast-cost evaluation and live event replacements; unused modifier pipeline removed |
 | Generic activated abilities | 🔶 Partial | `activate_ability` handler exists; action IDs identify effects rather than distinct abilities |
 | Mana payment model | 🔶 Partial | Numeric costs treated as colorless; no generic-vs-colorless payment choice |
 | Private snapshot projection | ✅ Implemented | Shared server policy for snapshots, deltas, choices, displays and reconnect; client imports protocol only |
@@ -110,6 +110,11 @@ packages/engine/src/
 │   ├── card-definition-validator.ts   # Pure card/effect schema validation
 │   ├── card-catalog.ts                # Lazy, recursively frozen blueprint cache
 │   └── card-factory.ts                # CardInstance factory + compatible catalog re-export
+├── rules/
+│   ├── parse.ts                       # Public versioned authoring boundary
+│   ├── schema/                        # Pure strict schemas and functional compiler
+│   ├── runtime/                       # Live cost and static event-rule evaluation
+│   └── operation-stage.ts             # Shared operation-to-layer order
 ├── engine/                            # Core game logic — no socket/HTTP knowledge
 │   ├── game-engine.ts                 # Unified public API: owns EventBus, StateMachine, ActionService
 │   ├── game-reducer.ts                # Pure (state, mutation) → newState; reduceGameOperation
@@ -145,8 +150,7 @@ packages/engine/src/
 │   ├── option-service.ts              # Computes available actions for a card in a zone
 │   ├── room-factory.ts                # createRoom, joinRoom, setupRPS, resolveRPS, buildStartingCardMutations
 │   ├── turn-history.ts / library-operations.ts / card-utils.ts
-│   ├── modifier-pipeline.ts           # Stub: value-transformation modifier chain
-│   ├── modifier-registry.ts           # Stub: permission-check modifiers
+│   ├── permission-registry.ts         # Live cast and target permission checks
 │   └── handlers/                      # One file per registered action
 │       ├── play-card-handler.ts       # cast_spell
 │       ├── play-land-handler.ts       # play_land (land special action; no stack)
@@ -310,9 +314,11 @@ Bridges raw JSON card data to typed runtime instances.
 
 ### 4.1 `card-parser.ts`
 
-Pure normalization functions: `normalizeActionCost()`, `normalizeEffect()`, `normalizeAbility()`
-(builds an `EffectDefinition` from legacy `effectId`/`params`), `normalizeCard()` (throws on
-missing `id`), `parseAll()`.
+Strict version-1 parsing: `parseCardDefinition()`, `parseAbilityDefinition()` and
+`parseInstructionDefinition()` validate through `rules/schema`, then compile functional instructions
+and static rules into the existing execution representation. `rules/parse.ts` is the shared public
+facade. `normalizeActionCost()` and `parseAll()` remain internal library utilities. Unknown or ignored
+fields are rejected before normalization; flattened ability `effectId` and the `onPlay` alias are retired.
 
 ### 4.2 Catalog and instance construction
 
@@ -327,7 +333,7 @@ missing `id`), `parseAll()`.
 > **Gotcha:** `instantiateCard()` returns instances that **share** a deeply frozen cached
 > blueprint. Tests that need synthetic content must replace the whole local fixture reference,
 > for example `card.blueprint = { ...card.blueprint, power: 2 }`; do not mutate nested catalog
-> fields. `normalizeCard()` remains mutable for isolated parser fixtures.
+> fields. `parseCardDefinition()` returns mutable results for isolated parser fixtures.
 
 **Data flow:** `library/cards/*/*.json` + explicit manifest → `card-parser.ts` → `card-catalog.ts` (cached and frozen)
 → `card-factory.ts` → `CardInstance` (runtime).
@@ -557,10 +563,13 @@ normalization; it re-exports the state queries for compatibility. Shared `numeri
 owns pure dynamic-value evaluation and query registration; the engine path is a compatibility
 re-export, while `numeric-characteristics.ts` supplies engine-owned characteristic queries.
 
-#### `modifier-pipeline.ts` / `modifier-registry.ts` — Stubs
+#### Contracted rules and permissions
 
-Intended for value-transformation and permission-check modifiers. Currently no-ops; the
-continuous-effect pool + characteristic service cover most of this ground in practice.
+The unused `ModifierPipeline` is removed. The live registry is named `PermissionRegistry` and
+keeps cast/target permission checks. `rules/schema` owns strict shared contracts; `rules/runtime`
+evaluates cost and static event-replacement rules. Characteristic and permission rules compile
+into the existing layer system. See [the rule-contract supplement](docs/rule-contract-architecture.md)
+for family ownership, lifetimes, usage identities, migration and remaining card blockers.
 
 ---
 
@@ -839,11 +848,11 @@ function; events are derived from state diffs rather than hand-emitted.
 
 Stable player ids, identity remapping, rejoin snapshots, and grace timers are implemented.
 
-### 10.9 🔶 OPEN: Stub Modifiers in the Critical Path
+### 10.9 ✅ RESOLVED: Modifier ownership and authoring contracts
 
-`ModifierRegistry` and `ModifierPipeline` remain no-ops. The continuous-effect pool and
-characteristic service now cover most of the intended ground; decide whether to remove the stubs
-or fold them into the characteristic system.
+The unused pipeline was removed; the live registry was renamed for permissions. Versioned strict
+authoring contracts group characteristic, permission, cost and event-replacement families, sharing
+parsing without duplicating existing layer or proposed-event execution. See the rule-contract supplement.
 
 ### 10.10 ✅ RESOLVED: `server.ts` Growing Responsibilities
 

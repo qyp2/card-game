@@ -6,6 +6,9 @@ import { assertAnnouncementCost, assertCostRoutes, assertEffectNumericDefinition
 import { evaluateNumericValue } from './numeric-values';
 import { composeActionCosts } from './cost-composition';
 import { abilityEffects } from './ability-effects';
+import type { GameRoom } from '../types/game.room.types';
+import { applyCostRules } from '../rules/runtime/costs';
+import type { RuleUse } from '../rules/runtime/active-rules';
 
 export interface AnnouncementDefinition extends CostRoutes {
   abilityId?: string;
@@ -26,6 +29,7 @@ export const abilityAnnouncementDefinition = (ability: ActivatedAbility): Announ
   effects: abilityEffects(ability), modes: ability.modes, modeCount: ability.modeCount,
 });
 export interface AnnouncementSnapshot {
+  costRules?: unknown[];
   source: { uuid: string; zone: string; zoneRevision: number };
   definition: AnnouncementDefinition;
 }
@@ -51,8 +55,8 @@ export function materializeAnnouncementCost(cost: AuthoredActionCost = {}, bindi
 }
 
 /** Validates an unfinished announcement without choices, payment or room mutation. */
-export function prepareAnnouncement(source: CardInstance, definition: AnnouncementDefinition, data: ActionData):
-  | { success: true; bindings: NumericBindings; missing?: NumericDeclaration; missingCostRoute?: boolean; cost?: ActionCost; snapshot: AnnouncementSnapshot }
+export function prepareAnnouncement(source: CardInstance, definition: AnnouncementDefinition, data: ActionData, context?: { room: GameRoom; playerId: string }):
+  | { success: true; bindings: NumericBindings; missing?: NumericDeclaration; missingCostRoute?: boolean; cost?: ActionCost; snapshot: AnnouncementSnapshot; ruleUses?: RuleUse[] }
   | { success: false; reason: string } {
   try {
     const declarations = definition.numericDeclarations ?? [];
@@ -62,6 +66,10 @@ export function prepareAnnouncement(source: CardInstance, definition: Announceme
     definition.effects.forEach(effect => assertEffectNumericDefinition(effect, declarations));
     definition.modes?.forEach(mode => mode.effects.forEach(effect => assertEffectNumericDefinition(effect, declarations)));
     const snapshot: AnnouncementSnapshot = { source: { uuid: source.uuid, zone: source.state.zone, zoneRevision: source.state.zoneRevision ?? 0 }, definition };
+    if (context) {
+      const signature = applyCostRules(context.room, context.playerId, source, {}).signature;
+      if (signature.length) snapshot.costRules = signature;
+    }
     if (data.announcement !== undefined && !equal(data.announcement, snapshot)) throw new Error('Announcement source or definition changed; cancel and restart');
     const supplied = data.numericBindings === undefined ? {} : data.numericBindings;
     if (!object(supplied)) throw new Error('Invalid numeric binding record');
@@ -84,11 +92,15 @@ export function prepareAnnouncement(source: CardInstance, definition: Announceme
       }
     }
     let cost: ActionCost | undefined;
+    let ruleUses: RuleUse[] | undefined;
     if (!missing && !missingCostRoute) {
       cost = materializeAnnouncementCost(selected, bindings);
-      if (definition.additionalCost !== undefined || definition.alternativeCosts !== undefined) cost = composeActionCosts([cost, materializeAnnouncementCost(definition.additionalCost, bindings)]);
+      if (context && snapshot.costRules?.length) {
+        const adjusted = applyCostRules(context.room, context.playerId, source, cost, materializeAnnouncementCost(definition.additionalCost, bindings));
+        cost = adjusted.cost; ruleUses = adjusted.uses;
+      } else if (definition.additionalCost !== undefined || definition.alternativeCosts !== undefined) cost = composeActionCosts([cost, materializeAnnouncementCost(definition.additionalCost, bindings)]);
     }
-    return { success: true, bindings, missing, missingCostRoute, cost, snapshot: structuredClone(snapshot) };
+    return { success: true, bindings, missing, missingCostRoute, cost, snapshot: structuredClone(snapshot), ...(ruleUses?.length ? { ruleUses } : {}) };
   } catch (error) {
     return { success: false, reason: error instanceof Error ? error.message : 'Invalid announcement' };
   }

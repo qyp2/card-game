@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "phantom-captain",
   "name": "幻影營長",
   "manaCost": "{B}{B}{1}",
@@ -22,23 +23,26 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "GRANT_STATS",
-      "params": {
-        "power": 1,
-        "toughness": 0
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "self",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "subTypes": [
-          "幻影木偶"
-        ],
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "characteristics",
+        "operation": "temporary_stats",
+        "params": {
+          "power": 1,
+          "toughness": 0
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "subTypes": [
+            "幻影木偶"
+          ],
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

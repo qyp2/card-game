@@ -62,8 +62,6 @@ export interface ActionCondition {
         minCount?: number;
         filter?: CardFilter;
     };
-    /** Open string for extensibility — new flags added without type changes */
-    globalFlag?: string;
 }
 
 export interface ActionRequirements extends CostRoutes {

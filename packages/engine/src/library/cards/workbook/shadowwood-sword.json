@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "shadowwood-sword",
   "name": "影木劍",
   "manaCost": "{B}{B}",
@@ -31,41 +32,48 @@
       "type": "activated",
       "cost": {},
       "castSpeed": "sorcery",
-      "effectId": "ATTACH",
-      "targeting": {
-        "type": "permanent",
-        "controller": "self",
-        "cardTypes": [
-          "Creature"
-        ],
-        "subTypes": [
-          "幻影木偶"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "attachments",
+        "operation": "attach",
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "subTypes": [
+            "幻影木偶"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     },
     {
       "id": "equipped-creature",
       "type": "static",
-      "effects": [
+      "rules": [
         {
-          "layer": 7,
+          "id": "equipped-creature-1",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "attachedToSource": true
           },
-          "effect": {
+          "operation": {
             "type": "STAT_DELTA",
             "power": 1
           }
         },
         {
-          "layer": 6,
+          "id": "equipped-creature-2",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "attachedToSource": true
           },
-          "effect": {
+          "operation": {
             "type": "ABILITY",
             "add": [
               {
@@ -78,7 +86,8 @@
                 },
                 "effects": [
                   {
-                    "action": "CREATE_CONTINUOUS_EFFECT",
+                    "family": "characteristics",
+                    "operation": "create_effect",
                     "params": {
                       "effect": {
                         "type": "STAT_DELTA",

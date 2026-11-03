@@ -27,6 +27,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Workbook card readiness and complete named-row inventory](docs/workbook-card-readiness-2026-11-03.md)
 - [Data-only card implementation and deferred-card audit](docs/workbook-data-only-batch-2026-11-03.md)
 - [Shared card-query architecture, newly unblocked cards and poison cleanup](docs/card-query-architecture.md)
+- [Strict rule contracts, functional effect families and legacy review](docs/rule-contract-architecture.md)
 - [Platform roadmap](docs/platform-plan-2026-10-24.md)
 - [Navigation and Test Lab roadmap](docs/navigation-test-lab-plan.md)
 - [Current navigation, shared sign-in and migration](docs/navigation-session-architecture.md)

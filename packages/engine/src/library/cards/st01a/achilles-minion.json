@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "achilles-minion",
   "name": "阿基里斯爪牙",
   "manaCost": "{R}",
@@ -19,24 +20,27 @@
       "id": "entry-scorch-one",
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
-      "effectId": "ADD_COUNTER",
-      "params": {
-        "counterType": "scorch",
-        "amount": 1
-      },
-      "choice": {
-        "kind": "optional"
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature",
-          "Artifact"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "scorch",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature",
+            "Artifact"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        },
+        "choice": {
+          "kind": "optional"
+        }
       }
     }
   ]

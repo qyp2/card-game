@@ -5,7 +5,7 @@ import { instantiateCard } from '@library/card-factory';
 import { captureSourceInformation } from '@engine/source-information';
 import type { CardInstance, TriggeredAbility } from '@shared/card.types';
 import { planActionCosts, planManaActivation } from '@engine/action-costs';
-import { normalizeAbility } from '@library/card-parser';
+import { parseAbilityDefinition } from '@library/card-parser';
 import { SyncService } from '@server/rooms/sync-service';
 import { applyDeltaChanges } from '@client/store/deltaReducer';
 import { abilityUseKey } from '@engine/turn-history';
@@ -86,7 +86,7 @@ describe('delayed triggers and event-derived turn history', () => {
     expect(planManaActivation(engine.roomState, 'player1', selection).success).toBe(false); engine.dispose();
   });
   it('preserves activation limits in normalized definitions and does not consume them for rejected or canceled announcements', () => {
-    expect(normalizeAbility({ id: 'limited', type: 'activated', effectId: 'MODIFY_LIFE', limitPerTurn: 1 })?.limitPerTurn).toBe(1);
+    expect(parseAbilityDefinition({ id: 'limited', type: 'activated', limitPerTurn: 1, effect: { action: 'MODIFY_LIFE', params: { amount: 1 } } })?.limitPerTurn).toBe(1);
     const { engine, source } = fixture();
     source.blueprint = { ...source.blueprint, abilities: [{ id: 'limited', type: 'activated', castSpeed: 'instant', cost: {}, limitPerTurn: 1,
       effect: { action: 'MODIFY_LIFE', params: { amount: -1 }, targeting: { type: 'player', required: true } } }] };

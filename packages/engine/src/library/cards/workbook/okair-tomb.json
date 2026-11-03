@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "okair-tomb",
   "name": "歐凱爾之墓",
   "manaCost": "{G}{G}{G}{G}{1}",
@@ -16,22 +17,25 @@
       "type": "activated",
       "castSpeed": "instant",
       "cost": {},
-      "effectId": "GRANT_STATS",
-      "params": {
-        "power": 2,
-        "toughness": 0
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "self",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": false,
-        "subTypes": [
-          "風獸"
-        ],
-        "all": true
+      "effect": {
+        "family": "characteristics",
+        "operation": "temporary_stats",
+        "params": {
+          "power": 2,
+          "toughness": 0
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": false,
+          "subTypes": [
+            "風獸"
+          ],
+          "all": true
+        }
       }
     }
   ]

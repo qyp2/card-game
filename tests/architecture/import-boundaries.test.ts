@@ -113,6 +113,8 @@ describe('repository architecture policy', () => {
       all: new Map([
         ['packages/engine/src/engine/rule.ts', new Set(['apps/server/src/index.ts'])],
         ['packages/engine/src/library/parser.ts', new Set(['packages/engine/src/engine/internal.ts'])],
+        ['packages/engine/src/library/invalid.ts', new Set(['packages/engine/src/rules/runtime/costs.ts'])],
+        ['packages/engine/src/rules/schema/invalid.ts', new Set(['packages/engine/src/engine/internal.ts'])],
         ['packages/engine/src/types/room.ts', new Set(['packages/engine/src/config.ts', 'packages/engine/src/config/index.ts'])],
         ['apps/server/src/index.ts', new Set([
           'packages/engine/src/engine/game-engine.ts',
@@ -131,7 +133,11 @@ describe('repository architecture policy', () => {
       runtimeCycles: [['packages/engine/src/engine/self-cycle.ts']],
       appToApp: [],
       packageToApp: ['packages/engine/src/engine/rule.ts -> apps/server/src/index.ts'],
-      cardContentToEngine: ['packages/engine/src/library/parser.ts -> packages/engine/src/engine/internal.ts'],
+      cardContentToEngine: [
+        'packages/engine/src/library/invalid.ts -> packages/engine/src/rules/runtime/costs.ts',
+        'packages/engine/src/library/parser.ts -> packages/engine/src/engine/internal.ts',
+        'packages/engine/src/rules/schema/invalid.ts -> packages/engine/src/engine/internal.ts',
+      ],
       typesToExecutableConfig: ['packages/engine/src/types/room.ts -> packages/engine/src/config.ts', 'packages/engine/src/types/room.ts -> packages/engine/src/config/index.ts'],
       engineToTransport: ['packages/engine/src/engine/rule.ts -> apps/server/src/index.ts'],
       transportToHandlers: ['apps/server/src/index.ts -> packages/engine/src/engine/handlers/concrete.ts'],
@@ -149,7 +155,7 @@ describe('repository architecture policy', () => {
       `Runtime import cycles:\n${JSON.stringify(policy.runtimeCycles, null, 2)}`).toEqual([]);
   });
 
-  it('keeps card content independent of engine implementations', () => {
+  it('keeps card content and schema/compiler modules independent of engine implementations', () => {
     expect(policy.cardContentToEngine,
       `Card-content-to-engine imports:\n${policy.cardContentToEngine.join('\n')}`).toEqual([]);
   });

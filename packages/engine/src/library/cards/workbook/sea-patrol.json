@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "sea-patrol",
   "name": "蒼海巡察組",
   "manaCost": "{U}",
@@ -22,15 +23,18 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "DISCARD_FROM_LIBRARY",
-      "params": {
-        "amount": 2
-      },
-      "targeting": {
-        "type": "player",
-        "controller": "opponent",
-        "all": true,
-        "required": false
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": 2
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
+        }
       }
     }
   ]

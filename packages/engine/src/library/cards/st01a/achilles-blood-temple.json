@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "achilles-blood-temple",
   "name": "阿基里斯血炎神殿",
   "manaCost": "{R}{R}{R}",
@@ -15,19 +16,22 @@
       "id": "entry-lowest-health-destroy",
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
-      "effectId": "DESTROY",
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1,
-        "extrema": {
-          "field": "remainingHealth",
-          "order": "min"
+      "effect": {
+        "family": "cards",
+        "operation": "destroy",
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1,
+          "extrema": {
+            "field": "remainingHealth",
+            "order": "min"
+          }
         }
       }
     },
@@ -35,22 +39,6 @@
       "id": "flamebeast-attack-scorch-three",
       "type": "triggered",
       "triggerCondition": "ON_ATTACK",
-      "effectId": "ADD_COUNTER",
-      "params": {
-        "counterType": "scorch",
-        "amount": 3
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature",
-          "Artifact"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
-      },
       "trigger": {
         "subject": "any",
         "controller": "self",
@@ -60,6 +48,25 @@
         "subTypes": [
           "炎獸"
         ]
+      },
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "scorch",
+          "amount": 3
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature",
+            "Artifact"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

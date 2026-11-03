@@ -4,7 +4,7 @@ import { GameEngine } from '@engine/game-engine';
 import { instantiateCard } from '@library/card-factory';
 import type { EffectDefinition, EffectChoice } from '@shared/effect.types';
 import { OptionService } from '@engine/option-service';
-import { normalizeAbility } from '@library/card-parser';
+import { parseAbilityDefinition } from '@library/card-parser';
 import { choiceCanComplete } from '@engine/choices';
 
 const gain = (amount: number): EffectDefinition => ({ action: 'MODIFY_LIFE', params: { amount }, targeting: { type: 'self', required: false } });
@@ -236,9 +236,9 @@ describe('room-owned pending choices', () => {
     expect(engine.roomState).toEqual(before); engine.dispose();
   });
   it('preserves authored ability resolution choices during normalization', () => {
-    expect(normalizeAbility({ id: 'optional', type: 'activated', effectId: 'MODIFY_LIFE', params: { amount: 1 }, choice: { kind: 'optional' } })?.effect.choice).toEqual({ kind: 'optional' });
+    expect(parseAbilityDefinition({ id: 'optional', type: 'activated', effect: { action: 'MODIFY_LIFE', params: { amount: 1 }, choice: { kind: 'optional' } } })?.effect.choice).toEqual({ kind: 'optional' });
     const search = { kind: 'search', zone: 'library', ordered: true, min: 1, max: 2 };
-    expect(normalizeAbility({ id: 'search', type: 'activated', effectId: 'REORDER_LIBRARY', params: { placement: 'top' }, choice: search })?.effect.choice).toEqual(search);
+    expect(parseAbilityDefinition({ id: 'search', type: 'activated', effect: { action: 'REORDER_LIBRARY', params: { placement: 'top' }, choice: search } })?.effect.choice).toEqual(search);
   });
   it('settles state based actions only after an interrupted resolution finishes', () => {
     const { engine, card } = fixture([gain(-20), { ...gain(2), choice: { kind: 'optional' } }]);

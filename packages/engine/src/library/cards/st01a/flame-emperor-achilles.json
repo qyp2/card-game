@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "flame-emperor-achilles",
   "name": "極炎皇帝 阿基里斯",
   "manaCost": "{1}{R}{R}{R}",
@@ -29,74 +30,80 @@
           "炎獸"
         ]
       },
-      "effectId": "REVEAL_TOP",
-      "params": {
-        "amount": 3,
-        "disposition": "scorch",
-        "matchingClauses": [
-          {
-            "cardTypes": [
-              "Creature"
-            ],
-            "subTypes": [
-              "炎獸"
-            ]
-          },
-          {
-            "cardTypes": [
-              "Spell"
-            ],
-            "subTypes": [
-              "炎兵"
-            ]
-          }
-        ]
-      },
-      "choice": {
-        "kind": "optional",
-        "prompt": "極炎皇帝：公開牌組頂3張卡並放置灼熱？"
+      "effect": {
+        "family": "cards",
+        "operation": "reveal_top",
+        "params": {
+          "amount": 3,
+          "disposition": "scorch",
+          "matchingClauses": [
+            {
+              "cardTypes": [
+                "Creature"
+              ],
+              "subTypes": [
+                "炎獸"
+              ]
+            },
+            {
+              "cardTypes": [
+                "Spell"
+              ],
+              "subTypes": [
+                "炎兵"
+              ]
+            }
+          ]
+        },
+        "choice": {
+          "kind": "optional",
+          "prompt": "極炎皇帝：公開牌組頂3張卡並放置灼熱？"
+        }
       }
     },
     {
       "id": "scorch-attack-damage",
       "type": "triggered",
       "triggerCondition": "ON_ATTACK",
-      "effectId": "DEAL_DAMAGE",
-      "params": {
-        "amount": {
-          "numeric": {
-            "kind": "multiply",
-            "left": 3,
-            "right": {
-              "numeric": {
-                "kind": "query",
-                "id": "counterTotal",
-                "args": {
-                  "counterType": "scorch",
-                  "scope": {
-                    "zones": [
-                      "battlefield"
-                    ],
-                    "controller": "opponent"
+      "effect": {
+        "family": "damage",
+        "operation": "deal",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "multiply",
+              "left": 3,
+              "right": {
+                "numeric": {
+                  "kind": "query",
+                  "id": "counterTotal",
+                  "args": {
+                    "counterType": "scorch",
+                    "scope": {
+                      "zones": [
+                        "battlefield"
+                      ],
+                      "controller": "opponent"
+                    }
                   }
                 }
               }
             }
           }
-        }
-      },
-      "tags": [
-        "damage"
-      ],
-      "targeting": {
-        "type": "any",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
+        },
+        "tags": [
+          "damage"
         ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+        "targeting": {
+          "type": "any",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

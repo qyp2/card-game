@@ -4,6 +4,8 @@
 
 The [shared-query follow-up](card-query-architecture.md) subsequently removes the basic zone/filter blockers and adds another five cards.
 
+The [rule-contract follow-up](rule-contract-architecture.md#what-this-removes-from-the-blocker-list) adds conditional modifiers, cast pricing and passive event-replacement authoring. It adds no workbook cards; its blocker table distinguishes supported mechanics from remaining wording and engine work.
+
 **Reviewed commit:** 488195e. Read-only workbook assessment; no cards/rules were changed. Local source: tem/六界之峰.xlsx (ignored author workbook, not a committed repository dependency). SHA-256: 27b91d995e22fb8540a04c78a73d41f64daa08b216b275aceb1f282723a64d7d.
 
 ## What the numbers mean

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "heavenly-lance",
   "name": "天域長槍",
   "manaCost": "{Y}{Y}",
@@ -28,38 +29,45 @@
       "type": "activated",
       "cost": {},
       "castSpeed": "sorcery",
-      "effectId": "ATTACH",
-      "targeting": {
-        "type": "permanent",
-        "controller": "self",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "attachments",
+        "operation": "attach",
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     },
     {
       "id": "equipped-creature",
       "type": "static",
-      "effects": [
+      "rules": [
         {
-          "layer": 7,
+          "id": "equipped-creature-1",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "attachedToSource": true
           },
-          "effect": {
+          "operation": {
             "type": "STAT_DELTA",
             "power": 1
           }
         },
         {
-          "layer": 6,
+          "id": "equipped-creature-2",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "attachedToSource": true
           },
-          "effect": {
+          "operation": {
             "type": "ABILITY",
             "add": [
               {
@@ -72,7 +80,8 @@
                 },
                 "effects": [
                   {
-                    "action": "MODIFY_LIFE",
+                    "family": "resources",
+                    "operation": "adjust_life",
                     "params": {
                       "amount": 1
                     },
@@ -82,7 +91,8 @@
                     }
                   },
                   {
-                    "action": "DRAW",
+                    "family": "cards",
+                    "operation": "draw",
                     "params": {
                       "amount": 1
                     },

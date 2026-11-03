@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "wind-call",
   "name": "風之呼喚",
   "manaCost": "{G}{G}",
@@ -12,7 +13,8 @@
   "rulesText": "主：從牌組選擇一張「迅靈」僕從卡，加入手牌，然後洗牌",
   "onCastEffects": [
     {
-      "action": "MOVE_ZONE",
+      "family": "cards",
+      "operation": "move",
       "params": {
         "origin": "library",
         "destination": "hand"
@@ -35,7 +37,8 @@
       }
     },
     {
-      "action": "SHUFFLE",
+      "family": "cards",
+      "operation": "shuffle",
       "params": {},
       "targeting": {
         "type": "self",

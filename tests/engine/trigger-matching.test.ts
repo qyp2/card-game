@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { discoverTriggers } from '@engine/trigger-manager';
-import { normalizeAbility } from '@library/card-parser';
+import { parseAbilityDefinition } from '@library/card-parser';
 import { instantiateCard } from '@library/card-factory';
 import type { TriggeredAbility, CardInstance } from '@shared/card.types';
 
@@ -32,7 +32,7 @@ describe('declarative trigger matching', () => {
     const current = source(), previous = { ...current, state: { ...current.state, zoneRevision: 1 } };
     expect(enter(previous, [current])).toEqual([]);
   });
-  it('legacy entry effects run only for the entering object', () => {
+  it('self-entry shorthand runs only for the entering object', () => {
     const a = source(), b = source();
     for (const card of [a, b]) card.blueprint = { ...card.blueprint, abilities: [], onEnterEffects: [{ action: 'DRAW', params: { amount: 0 }, targeting: { type: 'self', required: false } }] };
     expect(enter(a, [a, b]).map(trigger => trigger.source.uuid)).toEqual([a.uuid]);
@@ -45,6 +45,6 @@ describe('declarative trigger matching', () => {
     expect(discover('p1')).toHaveLength(2); expect(discover('p2')).toEqual([]);
   });
   it('retains authored predicates through normalization', () => {
-    expect(normalizeAbility({ type: 'triggered', id: 'test', trigger: { subject: 'another', controller: 'opponent', cardTypes: ['Creature'] } })).toMatchObject({ trigger: { subject: 'another', controller: 'opponent', cardTypes: ['Creature'] } });
+    expect(parseAbilityDefinition({ type: 'triggered', id: 'test', triggerCondition: 'ON_ATTACK', effect: { family: 'cards', operation: 'draw', params: { amount: 1 } }, trigger: { subject: 'another', controller: 'opponent', cardTypes: ['Creature'] } })).toMatchObject({ trigger: { subject: 'another', controller: 'opponent', cardTypes: ['Creature'] } });
   });
 });

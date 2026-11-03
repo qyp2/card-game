@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "ignition-wolf",
   "name": "點火狼",
   "manaCost": "{R}",
@@ -19,28 +20,31 @@
       "id": "entry-scorch-three",
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
-      "effectId": "ADD_COUNTER",
-      "params": {
-        "counterType": "scorch",
-        "amount": 3
-      },
-      "choice": {
-        "kind": "optional"
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature",
-          "Artifact"
-        ],
-        "counter": {
-          "type": "scorch",
-          "max": 0
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "scorch",
+          "amount": 3
         },
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature",
+            "Artifact"
+          ],
+          "counter": {
+            "type": "scorch",
+            "max": 0
+          },
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        },
+        "choice": {
+          "kind": "optional"
+        }
       }
     }
   ]

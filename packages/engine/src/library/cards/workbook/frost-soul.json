@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "frost-soul",
   "name": "冰霜之魂",
   "manaCost": "{W}",
@@ -47,17 +48,20 @@
         },
         "right": 0
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
-      },
-      "targeting": {
-        "type": "self",
-        "required": false
-      },
-      "choice": {
-        "kind": "optional",
-        "prompt": "抽一張牌？"
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "choice": {
+          "kind": "optional",
+          "prompt": "抽一張牌？"
+        }
       }
     }
   ]

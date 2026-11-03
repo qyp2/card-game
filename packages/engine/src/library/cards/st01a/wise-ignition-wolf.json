@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "wise-ignition-wolf",
   "name": "睿智之怒焰狼",
   "manaCost": "{R}{R}{R}",
@@ -28,19 +29,22 @@
       "cost": {
         "discardSelf": true
       },
-      "effectId": "ADD_COUNTER",
-      "params": {
-        "counterType": "scorch",
-        "amount": 2
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature",
-          "Artifact"
-        ],
-        "required": true
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "scorch",
+          "amount": 2
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature",
+            "Artifact"
+          ],
+          "required": true
+        }
       }
     }
   ]

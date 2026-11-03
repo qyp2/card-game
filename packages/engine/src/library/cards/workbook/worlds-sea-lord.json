@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "worlds-sea-lord",
   "name": "諸界海之主",
   "manaCost": "{U}{U}",
@@ -22,40 +23,43 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "DISCARD_FROM_LIBRARY",
-      "params": {
-        "amount": {
-          "numeric": {
-            "kind": "multiply",
-            "left": 2,
-            "right": {
-              "numeric": {
-                "kind": "query",
-                "id": "count",
-                "args": {
-                  "scope": {
-                    "zones": [
-                      "battlefield"
-                    ],
-                    "cardTypes": [
-                      "Creature"
-                    ],
-                    "subTypes": [
-                      "幽爾"
-                    ],
-                    "controller": "self"
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "multiply",
+              "left": 2,
+              "right": {
+                "numeric": {
+                  "kind": "query",
+                  "id": "count",
+                  "args": {
+                    "scope": {
+                      "zones": [
+                        "battlefield"
+                      ],
+                      "cardTypes": [
+                        "Creature"
+                      ],
+                      "subTypes": [
+                        "幽爾"
+                      ],
+                      "controller": "self"
+                    }
                   }
                 }
               }
             }
           }
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
         }
-      },
-      "targeting": {
-        "type": "player",
-        "controller": "opponent",
-        "all": true,
-        "required": false
       }
     }
   ]

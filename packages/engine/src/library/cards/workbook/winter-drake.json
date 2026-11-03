@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "winter-drake",
   "name": "寒冬幼龍",
   "manaCost": "{W}",
@@ -21,10 +22,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "white",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "white",
+          "amount": 1
+        }
       }
     }
   ]

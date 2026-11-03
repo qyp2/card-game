@@ -1,694 +1,1601 @@
-// AUTHORING EXAMPLES ONLY. This file is not loaded by the game.
-// Full field reference: ./README.md
-// Save one entry's definition under cards/<group>/<id>.json and REMOVE COMMENTS.
-// Add its matching import/key to cards/index.ts. Keep manifest key == filename == id.
-// No _comment/$schema entry belongs in the live catalog: every entry is a card.
+// Version 1 authoring examples. All entries are validated by authoring-examples.test.ts.
+// Full explanations and fields: README.md and docs/rule-contract-architecture.md.
+// This catalog is instructional and is not loaded into matches.
 {
-  // Equipment enters unattached; activation uses normal sorcery timing and exact object targets.
-  // The real worlds-flameblade also grants an ordered DRAW -> damage attack trigger.
   "example-equipment": {
-    "id": "example-equipment", "name": "Equipment example", "manaCost": "{2}",
-    "cardTypes": ["Artifact"], "subTypes": ["Equipment"],
-    "attachmentRequirements": { "type": "permanent", "controller": "self", "cardTypes": ["Creature"] },
+    "schemaVersion": 1,
+    "id": "example-equipment",
+    "name": "Equipment example",
+    "manaCost": "{2}",
+    "cardTypes": [
+      "Artifact"
+    ],
+    "subTypes": [
+      "Equipment"
+    ],
+    "attachmentRequirements": {
+      "type": "permanent",
+      "controller": "self",
+      "cardTypes": [
+        "Creature"
+      ],
+      "required": true
+    },
     "abilities": [
-      { "id": "attach", "type": "activated", "cost": {}, "castSpeed": "sorcery", "effectId": "ATTACH",
-        "targeting": { "type": "permanent", "controller": "self", "cardTypes": ["Creature"], "required": true, "maxTargets": 1 } },
-      { "id": "equipped-power", "type": "static", "effects": [
-        { "layer": 7, "scope": { "attachedToSource": true }, "effect": { "type": "STAT_DELTA", "power": 2 } }
-      ] }
-    ]
-  },
-  // Bounded starter reveal. No whole-library search: only the exact top three
-  // are retained across the hand-pick and remainder-order choices.
-  "example-bounded-reveal": {
-    "id": "example-bounded-reveal", "name": "Reveal example",
-    "cardTypes": ["Creature"], "subTypes": ["炎獸"], "power": 2, "toughness": 2,
-    "onEnterEffects": [{ "action": "REVEAL_TOP", "params": {
-      "amount": 3, "subTypes": ["炎獸"], "excludedNames": ["赤狼"]
-    }, "targeting": { "type": "self", "required": false } }]
-  },
-  // 1. Printed identity and stats. rulesText is display only.
-  "example-vanilla": {
-    "id": "example-vanilla",
-    "name": "Example creature",
-    "manaCost": "{R}", // One red. {3} = any three; {Y} = specifically yellow.
-    "cardTypes": ["Creature"],
-    "subTypes": ["炎獸"],
-    "colors": ["red"], // Explicit for workbook element; useful with generic costs.
-    "power": 2,
-    "toughness": 3,
-    "rulesText": "",
-    "abilities": [] // No invented ability just because this card has text/stats.
-  },
-
-  // 2. An activated mana ability. No stack response window for this mana effect.
-  "example-mana-creature": {
-    "id": "example-mana-creature",
-    "name": "Example energy servant",
-    "manaCost": "{R}",
-    "cardTypes": ["Creature"],
-    "subTypes": ["炎獸"],
-    "power": 1,
-    "toughness": 1,
-    "rulesText": "Tap: add one red energy.",
-    "abilities": [{
-      "id": "produce-red", // Unique within this card; another card can reuse it.
-      "type": "activated",
-      "castSpeed": "instant", // Ability timing; card casting uses speed instead.
-      "cost": { "tap": true }, // Creature must be able to pay tap (sickness applies).
-      "effectId": "ADD_MANA", // Raw ABILITY spelling: effectId, not action/effect.
-      "params": { "color": "red", "amount": 1 },
-      "targeting": { "type": "self", "required": false } // self defaults to player.
-    }]
-  },
-
-  // 3. One spell, two ordered instructions. These run at RESOLUTION, not cast.
-  "example-destroy-draw": {
-    "id": "example-destroy-draw",
-    "name": "Example land destruction",
-    "manaCost": "{R}{R}",
-    "cardTypes": ["Spell"],
-    "castRequirements": { "speed": "instant", "allowedZones": ["hand"] },
-    "rulesText": "Destroy target opposing land. Then draw one card.",
-    "onCastEffects": [
       {
-        "action": "DESTROY", // Raw spell EFFECT spelling: action, not effectId.
-        "params": {},
-        "targeting": {
-          "type": "permanent", "controller": "opponent", "cardTypes": ["Land"],
-          "required": true, "minTargets": 1, "maxTargets": 1
+        "id": "attach",
+        "type": "activated",
+        "cost": {},
+        "castSpeed": "sorcery",
+        "effect": {
+          "family": "attachments",
+          "operation": "attach",
+          "targeting": {
+            "type": "permanent",
+            "controller": "self",
+            "cardTypes": [
+              "Creature"
+            ],
+            "required": true,
+            "maxTargets": 1
+          }
         }
       },
       {
-        "action": "DRAW",
-        "params": { "amount": 1 },
-        "targeting": { "type": "self", "required": false }
+        "id": "equipped-power",
+        "type": "static",
+        "rules": [
+          {
+            "id": "equipped-power-1",
+            "group": "effect",
+            "family": "characteristics",
+            "scope": {
+              "attachedToSource": true
+            },
+            "operation": {
+              "type": "STAT_DELTA",
+              "power": 2
+            }
+          }
+        ]
       }
     ]
   },
 
-  // 4. Distinct triggers on a single card. Each is a separate stack object.
-  // Do NOT split "deal damage, then draw" into two triggers to fake one ability.
+  "example-bounded-reveal": {
+    "schemaVersion": 1,
+    "id": "example-bounded-reveal",
+    "name": "Reveal example",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "炎獸"
+    ],
+    "power": 2,
+    "toughness": 2,
+    "onEnterEffects": [
+      {
+        "family": "cards",
+        "operation": "reveal_top",
+        "params": {
+          "amount": 3,
+          "subTypes": [
+            "炎獸"
+          ],
+          "excludedNames": [
+            "赤狼"
+          ]
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
+  "example-vanilla": {
+    "schemaVersion": 1,
+    "id": "example-vanilla",
+    "name": "Example creature",
+    "manaCost": "{R}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "炎獸"
+    ],
+    "colors": [
+      "red"
+    ],
+    "power": 2,
+    "toughness": 3,
+    "rulesText": "",
+    "abilities": []
+  },
+
+  "example-mana-creature": {
+    "schemaVersion": 1,
+    "id": "example-mana-creature",
+    "name": "Example energy servant",
+    "manaCost": "{R}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "炎獸"
+    ],
+    "power": 1,
+    "toughness": 1,
+    "rulesText": "Tap: add one red energy.",
+    "abilities": [
+      {
+        "id": "produce-red",
+        "type": "activated",
+        "castSpeed": "instant",
+        "cost": {
+          "tap": true
+        },
+        "effect": {
+          "family": "resources",
+          "operation": "add_mana",
+          "params": {
+            "color": "red",
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      }
+    ]
+  },
+
+  "example-destroy-draw": {
+    "schemaVersion": 1,
+    "id": "example-destroy-draw",
+    "name": "Example land destruction",
+    "manaCost": "{R}{R}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "castRequirements": {
+      "speed": "instant",
+      "allowedZones": [
+        "hand"
+      ]
+    },
+    "rulesText": "Destroy target opposing land. Then draw one card.",
+    "onCastEffects": [
+      {
+        "family": "cards",
+        "operation": "destroy",
+        "params": {},
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Land"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
+      },
+      {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
   "example-trigger-creature": {
+    "schemaVersion": 1,
     "id": "example-trigger-creature",
     "name": "Example trigger creature",
-    "manaCost": "{3}", // Generic energy, not three yellow.
-    "cardTypes": ["Creature"],
-    "subTypes": ["幽爾"],
-    "colors": ["red"],
+    "manaCost": "{3}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "幽爾"
+    ],
+    "colors": [
+      "red"
+    ],
     "power": 2,
     "toughness": 2,
     "rulesText": "On entry: gain 2 life. On attack: deal 2 to an opposing creature. On death: draw 1. When another friendly creature enters: gain 1.",
     "abilities": [
       {
-        "id": "entry-heal", "type": "triggered",
+        "id": "entry-heal",
+        "type": "triggered",
         "triggerCondition": "ON_ENTER_BATTLEFIELD",
-        "trigger": { "subject": "self" }, // This source entered, not any creature.
-        "effectId": "MODIFY_LIFE", "params": { "amount": 2 },
-        "targeting": { "type": "self", "required": false }
-      },
-      {
-        "id": "attack-damage", "type": "triggered",
-        "triggerCondition": "ON_ATTACK",
-        "trigger": { "subject": "self" },
-        "effectId": "MODIFY_STATS", "params": { "damage": 2 }, // Positive creature damage.
-        "tags": ["damage"],
-        "targeting": {
-          "type": "permanent", "controller": "opponent", "cardTypes": ["Creature"],
-          "required": true, "minTargets": 1, "maxTargets": 1
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "resources",
+          "operation": "adjust_life",
+          "params": {
+            "amount": 2
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
         }
       },
       {
-        "id": "death-draw", "type": "triggered",
-        "triggerCondition": "ON_DIE", "trigger": { "subject": "self" },
-        "effectId": "DRAW", "params": { "amount": 1 }
-        // Omitted targeting defaults to self player. Explicit is clearer for new cards.
+        "id": "attack-damage",
+        "type": "triggered",
+        "triggerCondition": "ON_ATTACK",
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "characteristics",
+          "operation": "adjust_stats_and_damage",
+          "params": {
+            "damage": 2
+          },
+          "tags": [
+            "damage"
+          ],
+          "targeting": {
+            "type": "permanent",
+            "controller": "opponent",
+            "cardTypes": [
+              "Creature"
+            ],
+            "required": true,
+            "minTargets": 1,
+            "maxTargets": 1
+          }
+        }
       },
       {
-        "id": "watch-other-entry", "type": "triggered",
+        "id": "death-draw",
+        "type": "triggered",
+        "triggerCondition": "ON_DIE",
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "cards",
+          "operation": "draw",
+          "params": {
+            "amount": 1
+          }
+        }
+      },
+      {
+        "id": "watch-other-entry",
+        "type": "triggered",
         "triggerCondition": "ON_ENTER_BATTLEFIELD",
-        "trigger": { "subject": "another", "controller": "self", "cardTypes": ["Creature"] },
-        "effectId": "MODIFY_LIFE", "params": { "amount": 1 }
+        "trigger": {
+          "subject": "another",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ]
+        },
+        "effect": {
+          "family": "resources",
+          "operation": "adjust_life",
+          "params": {
+            "amount": 1
+          }
+        }
       }
     ]
   },
 
-  // 5. Optional trigger. required:false alone does not mean "may draw".
   "example-optional-draw": {
+    "schemaVersion": 1,
     "id": "example-optional-draw",
     "name": "Example life-loss observer",
     "manaCost": "{2}",
-    "cardTypes": ["Artifact"],
+    "cardTypes": [
+      "Artifact"
+    ],
     "rulesText": "When an opponent loses life, you may draw a card.",
-    "abilities": [{
-      "id": "opponent-life-loss", "type": "triggered",
-      "triggerCondition": "ON_LIFE_LOSS",
-      "trigger": { "controller": "opponent" }, // Event player, not draw recipient.
-      "effectId": "DRAW", "params": { "amount": 1 },
-      "choice": { "kind": "optional", "prompt": "Draw one card?" }
-    }]
-  },
-
-  // 6. A normal paid activated effect; unlike ADD_MANA, this goes on the stack.
-  "example-activated-buff": {
-    "id": "example-activated-buff", "name": "Example trained creature",
-    "manaCost": "{R}", "cardTypes": ["Creature"], "power": 1, "toughness": 2,
-    "rulesText": "One red: this gets +1/+0 until end of turn. Use once each turn.",
-    "abilities": [{
-      "id": "self-buff", "type": "activated", "castSpeed": "instant",
-      "cost": { "mana": { "red": 1 } },
-      "limitPerTurn": 1,
-      "effectId": "GRANT_STATS", "params": { "power": 1, "toughness": 0 },
-      // self+source supplies the permanent. Plain self supplies its controller.
-      "targeting": { "type": "self", "subject": "source", "required": false }
-      // GRANT_STATS is always until end of turn; ability.duration isn't a switch.
-    }]
-  },
-
-  // 7. Static friendly bonus, no trigger/stack. Recalculates for new entrants.
-  "example-static-bonus": {
-    "id": "example-static-bonus", "name": "Example beast banner",
-    "manaCost": "{2}", "cardTypes": ["Artifact"],
-    "rulesText": "Friendly 炎獸 creatures get +1/+1.",
-    "abilities": [{
-      "id": "friendly-beast-bonus", "type": "static",
-      "activeZones": ["battlefield"],
-      "effects": [{
-        "layer": 7, // Actual evaluation stage follows effect.type.
-        "scope": {
-          "zones": ["battlefield"], "controller": "self",
-          "cardTypes": ["Creature"], "subTypes": ["炎獸"]
+    "abilities": [
+      {
+        "id": "opponent-life-loss",
+        "type": "triggered",
+        "triggerCondition": "ON_LIFE_LOSS",
+        "trigger": {
+          "controller": "opponent"
         },
-        "effect": { "type": "STAT_DELTA", "power": 1, "toughness": 1 }
-      }]
-    }]
+        "effect": {
+          "family": "cards",
+          "operation": "draw",
+          "params": {
+            "amount": 1
+          },
+          "choice": {
+            "kind": "optional",
+            "prompt": "Draw one card?"
+          }
+        }
+      }
+    ]
   },
 
-  // 8. Choose a number once, then reuse it for payment and life loss.
-  // Read this card as: choose X from 0 to 4; pay the selected cost; opponent loses X.
-  // Walkthrough: choose X=3, pay 3 generic + 1 red and discard 1 card.
-  // On resolution, amount = -1 * 3 = -3, so an opponent at 20 life goes to 17.
-  // Choosing the alternative life-payment route still keeps the same chosen X.
+  "example-activated-buff": {
+    "schemaVersion": 1,
+    "id": "example-activated-buff",
+    "name": "Example trained creature",
+    "manaCost": "{R}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 1,
+    "toughness": 2,
+    "rulesText": "One red: this gets +1/+0 until end of turn. Use once each turn.",
+    "abilities": [
+      {
+        "id": "self-buff",
+        "type": "activated",
+        "castSpeed": "instant",
+        "cost": {
+          "mana": {
+            "red": 1
+          }
+        },
+        "limitPerTurn": 1,
+        "effect": {
+          "family": "characteristics",
+          "operation": "temporary_stats",
+          "params": {
+            "power": 1,
+            "toughness": 0
+          },
+          "targeting": {
+            "type": "self",
+            "subject": "source",
+            "required": false
+          }
+        }
+      }
+    ]
+  },
+
+  "example-static-bonus": {
+    "schemaVersion": 1,
+    "id": "example-static-bonus",
+    "name": "Example beast banner",
+    "manaCost": "{2}",
+    "cardTypes": [
+      "Artifact"
+    ],
+    "rulesText": "Friendly 炎獸 creatures get +1/+1.",
+    "abilities": [
+      {
+        "id": "friendly-beast-bonus",
+        "type": "static",
+        "activeZones": [
+          "battlefield"
+        ],
+        "rules": [
+          {
+            "id": "friendly-beast-bonus-1",
+            "group": "effect",
+            "family": "characteristics",
+            "scope": {
+              "zones": [
+                "battlefield"
+              ],
+              "controller": "self",
+              "cardTypes": [
+                "Creature"
+              ],
+              "subTypes": [
+                "炎獸"
+              ]
+            },
+            "operation": {
+              "type": "STAT_DELTA",
+              "power": 1,
+              "toughness": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+
   "example-announced-x": {
-    "id": "example-announced-x", "name": "Example X drain", "cardTypes": ["Spell"],
+    "schemaVersion": 1,
+    "id": "example-announced-x",
+    "name": "Example X drain",
+    "cardTypes": [
+      "Spell"
+    ],
     "rulesText": "Choose X (0–4). Pay X energy or 2 life, plus one red and discard a card. Opponent loses X life.",
-    // DECLARE the player choice. This does not set X to a value or apply an effect.
-    // When casting, the engine asks for a whole number within these inclusive bounds.
-    "numericDeclarations": [{
-      "name": "X", // Name used to look up the chosen number elsewhere on this spell.
-      "min": 0,    // Smallest permitted choice.
-      "max": 4     // Largest permitted choice: player may choose 0, 1, 2, 3 or 4.
-    }],
-    // No manaCost here: the mana requirement below reads the chosen X directly.
+    "numericDeclarations": [
+      {
+        "name": "X",
+        "min": 0,
+        "max": 4
+      }
+    ],
     "castRequirements": {
-      "speed": "sorcery", "allowedZones": ["hand"],
+      "speed": "sorcery",
+      "allowedZones": [
+        "hand"
+      ],
       "cost": {
         "mana": {
           "generic": {
-            "numeric": { // Calculate this requirement instead of using a fixed number.
-              "kind": "binding", // Read a number already chosen for this spell.
-              "name": "X"        // Must match numericDeclarations[].name above.
+            "numeric": {
+              "kind": "binding",
+              "name": "X"
             }
           }
         }
       },
-      "alternativeCosts": [{ "id": "life", "label": "Pay 2 life", "cost": { "life": 2 } }],
-      "additionalCost": { "mana": { "red": 1 }, "discard": 1 } // Both cost routes.
+      "alternativeCosts": [
+        {
+          "id": "life",
+          "label": "Pay 2 life",
+          "cost": {
+            "life": 2
+          }
+        }
+      ],
+      "additionalCost": {
+        "mana": {
+          "red": 1
+        },
+        "discard": 1
+      }
     },
-    "onCastEffects": [{
-      "action": "MODIFY_LIFE",
-      "params": { // Inputs for MODIFY_LIFE. Other actions have different inputs.
-        // amount is the CHANGE in life, not the final life total:
-        // +3 gains 3 life; -3 loses 3 life. We want -X, not +X.
-        "amount": {
-          "numeric": { // This object's contents describe how to calculate amount.
-            "kind": "multiply", // Calculate left * right, here: -1 * chosen X.
-            "left": -1,         // Fixed multiplier makes the result negative.
-            "right": {
+    "onCastEffects": [
+      {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "multiply",
+              "left": -1,
+              "right": {
+                "numeric": {
+                  "kind": "binding",
+                  "name": "X"
+                }
+              }
+            }
+          }
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
+      }
+    ]
+  },
+
+  "example-modal-spell": {
+    "schemaVersion": 1,
+    "id": "example-modal-spell",
+    "name": "Example choice",
+    "manaCost": "{1}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "rulesText": "Choose one: draw a card; or gain 2 life.",
+    "modeCount": {
+      "min": 1,
+      "max": 1
+    },
+    "onCastEffects": [],
+    "modes": [
+      {
+        "id": "draw",
+        "label": "Draw one",
+        "effects": [
+          {
+            "family": "cards",
+            "operation": "draw",
+            "params": {
+              "amount": 1
+            },
+            "targeting": {
+              "type": "self",
+              "required": false
+            }
+          }
+        ]
+      },
+      {
+        "id": "heal",
+        "label": "Gain two life",
+        "effects": [
+          {
+            "family": "resources",
+            "operation": "adjust_life",
+            "params": {
+              "amount": 2
+            },
+            "targeting": {
+              "type": "self",
+              "required": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+
+  "example-hand-count": {
+    "schemaVersion": 1,
+    "id": "example-hand-count",
+    "name": "Example hand count",
+    "manaCost": "{2}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "rulesText": "Draw cards equal to the number of cards in your hand as this instruction resolves.",
+    "onCastEffects": [
+      {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "query",
+              "id": "count",
+              "args": {
+                "scope": {
+                  "zones": [
+                    "hand"
+                  ],
+                  "controller": "self"
+                }
+              }
+            }
+          }
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
+  "example-damage-event": {
+    "schemaVersion": 1,
+    "id": "example-damage-event",
+    "name": "Example damage observer",
+    "manaCost": "{R}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 1,
+    "toughness": 3,
+    "rulesText": "Whenever this deals damage, gain life equal to that damage event's amount.",
+    "abilities": [
+      {
+        "id": "gain-triggering-damage",
+        "type": "triggered",
+        "triggerCondition": "ON_DAMAGE_DEALT",
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "resources",
+          "operation": "adjust_life",
+          "params": {
+            "amount": {
               "numeric": {
-                "kind": "binding", // Read the SAME chosen X; do not ask again.
-                "name": "X"
+                "kind": "query",
+                "id": "field",
+                "args": {
+                  "path": "event.payload.amount"
+                }
+              }
+            }
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      }
+    ]
+  },
+
+  "example-turn-damage-count": {
+    "schemaVersion": 1,
+    "id": "example-turn-damage-count",
+    "name": "Example turn event count",
+    "manaCost": "{1}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "rulesText": "Gain one life for each damage-dealt event recorded so far this turn.",
+    "onCastEffects": [
+      {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "query",
+              "id": "field",
+              "args": {
+                "path": "history.counts.DAMAGE_DEALT"
+              }
+            }
+          }
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
+  "example-whole-library-search": {
+    "schemaVersion": 1,
+    "id": "example-whole-library-search",
+    "name": "Example spirit search",
+    "manaCost": "{G}{G}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "colors": [
+      "green"
+    ],
+    "onCastEffects": [
+      {
+        "family": "cards",
+        "operation": "move",
+        "params": {
+          "origin": "library",
+          "destination": "hand"
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "choice": {
+          "kind": "search",
+          "zone": "library",
+          "cardTypes": [
+            "Creature"
+          ],
+          "subTypes": [
+            "迅靈"
+          ],
+          "min": 1,
+          "max": 1
+        }
+      },
+      {
+        "family": "cards",
+        "operation": "shuffle",
+        "params": {},
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
+  "example-entry-hand-land": {
+    "schemaVersion": 1,
+    "id": "example-entry-hand-land",
+    "name": "Example land planter",
+    "manaCost": "{G}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 1,
+    "toughness": 1,
+    "abilities": [
+      {
+        "id": "place-land",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "cards",
+          "operation": "move",
+          "params": {
+            "origin": "hand",
+            "destination": "battlefield"
+          },
+          "choice": {
+            "kind": "search",
+            "zone": "hand",
+            "cardTypes": [
+              "Land"
+            ],
+            "min": 0,
+            "max": 1
+          }
+        }
+      }
+    ]
+  },
+
+  "example-static-draw-grant": {
+    "schemaVersion": 1,
+    "id": "example-static-draw-grant",
+    "name": "Example puppet castle",
+    "manaCost": "{B}{B}",
+    "cardTypes": [
+      "Artifact"
+    ],
+    "abilities": [
+      {
+        "id": "grant-draw",
+        "type": "static",
+        "activeZones": [
+          "battlefield"
+        ],
+        "rules": [
+          {
+            "id": "grant-draw-1",
+            "group": "effect",
+            "family": "characteristics",
+            "scope": {
+              "zones": [
+                "battlefield"
+              ],
+              "controller": "self",
+              "cardTypes": [
+                "Creature"
+              ],
+              "subTypes": [
+                "幻影木偶"
+              ]
+            },
+            "operation": {
+              "type": "ABILITY",
+              "add": [
+                {
+                  "id": "tap-draw",
+                  "type": "activated",
+                  "castSpeed": "instant",
+                  "cost": {
+                    "tap": true
+                  },
+                  "effect": {
+                    "family": "cards",
+                    "operation": "draw",
+                    "params": {
+                      "amount": 1
+                    },
+                    "tags": [],
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+
+  "example-other-spirit-condition": {
+    "schemaVersion": 1,
+    "id": "example-other-spirit-condition",
+    "name": "Example swift envoy",
+    "manaCost": "{G}{G}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "迅靈"
+    ],
+    "power": 1,
+    "toughness": 3,
+    "castRequirements": {
+      "speed": "instant"
+    },
+    "abilities": [
+      {
+        "id": "other-spirit-draw",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "trigger": {
+          "subject": "self"
+        },
+        "interveningIf": {
+          "op": "gte",
+          "left": {
+            "numeric": {
+              "kind": "query",
+              "id": "count",
+              "args": {
+                "scope": {
+                  "zones": [
+                    "battlefield"
+                  ],
+                  "controller": "self",
+                  "cardTypes": [
+                    "Creature"
+                  ],
+                  "subTypes": [
+                    "迅靈"
+                  ]
+                }
+              }
+            }
+          },
+          "right": 2
+        },
+        "effect": {
+          "family": "cards",
+          "operation": "draw",
+          "params": {
+            "amount": 1
+          }
+        }
+      }
+    ]
+  },
+
+  "example-dual-land": {
+    "schemaVersion": 1,
+    "id": "example-dual-land",
+    "name": "Example thunder snow land",
+    "manaCost": "{0}",
+    "cardTypes": [
+      "Land"
+    ],
+    "subTypes": [
+      "地界"
+    ],
+    "colors": [
+      "yellow",
+      "white"
+    ],
+    "abilities": [
+      {
+        "id": "entry-tap",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "trigger": {
+          "subject": "self"
+        },
+        "effect": {
+          "family": "orientation",
+          "operation": "tap",
+          "params": {},
+          "targeting": {
+            "type": "self",
+            "subject": "source",
+            "required": false
+          }
+        }
+      },
+      {
+        "id": "produce-chosen-color",
+        "type": "activated",
+        "cost": {
+          "tap": true
+        },
+        "effect": {
+          "family": "resources",
+          "operation": "add_mana",
+          "params": {
+            "colors": [
+              "yellow",
+              "white"
+            ],
+            "amount": 1
+          }
+        }
+      }
+    ]
+  },
+
+  "example-sea-entry-recovery": {
+    "schemaVersion": 1,
+    "id": "example-sea-entry-recovery",
+    "name": "Example sea corporal",
+    "manaCost": "{U}{U}{1}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "蒼巨人"
+    ],
+    "colors": [
+      "blue"
+    ],
+    "power": 3,
+    "toughness": 3,
+    "onEnterEffects": [
+      {
+        "family": "cards",
+        "operation": "move",
+        "params": {
+          "origin": "graveyard",
+          "destination": "battlefield"
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "choice": {
+          "kind": "search",
+          "zone": "graveyard",
+          "cardTypes": [
+            "Land"
+          ],
+          "min": 1,
+          "max": 1
+        }
+      },
+      {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    ]
+  },
+
+  "example-existence-bonus": {
+    "schemaVersion": 1,
+    "id": "example-existence-bonus",
+    "name": "Example conditional draw",
+    "manaCost": "{R}{R}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "onCastEffects": [
+      {
+        "family": "cards",
+        "operation": "draw",
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "add",
+              "left": 2,
+              "right": {
+                "numeric": {
+                  "kind": "query",
+                  "id": "exists",
+                  "args": {
+                    "scope": {
+                      "zones": [
+                        "battlefield"
+                      ],
+                      "controller": "self",
+                      "cardTypes": [
+                        "Creature"
+                      ],
+                      "subTypes": [
+                        "烈龍"
+                      ]
+                    }
+                  }
+                }
               }
             }
           }
         }
-      },
-      // No damage tag: this is life LOSS, not damage.
-      "targeting": { "type": "player", "controller": "opponent", "required": true, "minTargets": 1, "maxTargets": 1 }
-    }]
-  },
-
-  // 9. Action modes: choose before stacking; selected modes append to base effects.
-  "example-modal-spell": {
-    "id": "example-modal-spell", "name": "Example choice", "manaCost": "{1}",
-    "cardTypes": ["Spell"], "rulesText": "Choose one: draw a card; or gain 2 life.",
-    "modeCount": { "min": 1, "max": 1 },
-    "onCastEffects": [],
-    "modes": [
-      { "id": "draw", "label": "Draw one", "effects": [{
-        "action": "DRAW", "params": { "amount": 1 }, "targeting": { "type": "self", "required": false }
-      }] },
-      { "id": "heal", "label": "Gain two life", "effects": [{
-        "action": "MODIFY_LIFE", "params": { "amount": 2 }, "targeting": { "type": "self", "required": false }
-      }] }
+      }
     ]
-    // Modes inherit the action speed unless each mode supplies castSpeed; see example-mixed-speed.
   },
 
-  // 10. State query: draw as many cards as are in your hand when this resolves.
-  // No numericDeclarations: the engine calculates the number; the player does not choose X.
-  "example-hand-count": {
-    "id": "example-hand-count", "name": "Example hand count", "manaCost": "{2}",
-    "cardTypes": ["Spell"],
-    "rulesText": "Draw cards equal to the number of cards in your hand as this instruction resolves.",
-    "onCastEffects": [{
-      "action": "DRAW",
-      "params": {
-        "amount": {
-          "numeric": {
-            "kind": "query", // Ask the engine for a number, not a saved binding.
-            "id": "count",   // Count cards matching this scope.
-            "args": {
-              "scope": { "zones": ["hand"], "controller": "self" }
-              // For friendly creatures instead: zones:["battlefield"],
-              // controller:"self", cardTypes:["Creature"].
-            }
-          }
-        }
-      },
-      "targeting": { "type": "self", "required": false }
-    }]
-    // This spell is already out of hand when counted. Hand size 3 -> draw 3.
-    // Repeating this query in a later instruction recalculates it after the draw.
-    // There is NO bind/store instruction to preserve the first count for later use.
-  },
-
-  // 11. Event query: gain life equal to THIS source's triggering damage event.
-  "example-damage-event": {
-    "id": "example-damage-event", "name": "Example damage observer", "manaCost": "{R}",
-    "cardTypes": ["Creature"], "power": 1, "toughness": 3,
-    "rulesText": "Whenever this deals damage, gain life equal to that damage event's amount.",
-    "abilities": [{
-      "id": "gain-triggering-damage", "type": "triggered",
-      "triggerCondition": "ON_DAMAGE_DEALT",
-      "trigger": { "subject": "self" }, // Only events whose source is this card.
-      "effectId": "MODIFY_LIFE",
-      "params": {
-        "amount": {
-          "numeric": {
-            "kind": "query", "id": "field", // Read a numeric field, not a card count.
-            "args": { "path": "event.payload.amount" } // E.g. this event dealt 3 -> gain 3.
-          }
-        }
-      },
-      "targeting": { "type": "self", "required": false }
-    }]
-    // event means the snapshot that caused THIS trigger, not the latest global event.
-    // Later events do not change it. Repeated reads of this event amount stay the same.
-    // No declaration/binding needed. Ordinary spells/activated abilities have no event.
-  },
-
-  // 12. History query: how many damage events occurred, NOT how many damage points.
-  "example-turn-damage-count": {
-    "id": "example-turn-damage-count", "name": "Example turn event count", "manaCost": "{1}",
-    "cardTypes": ["Spell"],
-    "rulesText": "Gain one life for each damage-dealt event recorded so far this turn.",
-    "onCastEffects": [{
-      "action": "MODIFY_LIFE",
-      "params": {
-        "amount": {
-          "numeric": {
-            "kind": "query", "id": "field",
-            "args": { "path": "history.counts.DAMAGE_DEALT" } // Both players; current turn.
-          }
-        }
-      },
-      "targeting": { "type": "self", "required": false }
-    }]
-    // Separate damage events for 3 and 4 points -> count 2 -> gain 2, NOT 7.
-    // Read at resolution; history resets each turn. This is not a game-long total.
-    // Total damage points / filtered event sums have NO authored query yet.
-    // Declaring a binding named "damageTotal" would ask the player for a number;
-    // it would not compute, assign, or freeze this query. See README section 8.
-  },
-
-  // 13. Whole-library search followed by shuffle, as used by 風之呼喚.
-  "example-whole-library-search": {
-    "id": "example-whole-library-search", "name": "Example spirit search",
-    "manaCost": "{G}{G}", "cardTypes": ["Spell"], "colors": ["green"],
-    "onCastEffects": [{
-      "action": "MOVE_ZONE",
-      "params": { "origin": "library", "destination": "hand" },
-      "targeting": { "type": "self", "required": false },
-      // self identifies whose zone is searched; the chosen card becomes the
-      // MOVE_ZONE recipient. This is NOT a target selected while casting.
-      "choice": {
-        "kind": "search", "zone": "library", // Entire controller's library.
-        "cardTypes": ["Creature"], "subTypes": ["迅靈"], // Creature AND this tribe.
-        "min": 1, "max": 1 // Select exactly one when an eligible card exists.
-      }
-    }, {
-      "action": "SHUFFLE", "params": {},
-      "targeting": { "type": "self", "required": false }
-    }]
-    // The search pauses this spell. Its answer moves the selected card, then
-    // the SAME spell continues to SHUFFLE; these are not two separate triggers.
-    // With no eligible card the search instruction skips; shuffle still runs.
-    // This does not implement top-N reveal, reveal events or reveal listeners.
-  },
-
-  // 14. Optional placement from hand, as used by 風靈獸 巧兔.
-  "example-entry-hand-land": {
-    "id": "example-entry-hand-land", "name": "Example land planter",
-    "manaCost": "{G}", "cardTypes": ["Creature"], "power": 1, "toughness": 1,
-    "abilities": [{
-      "id": "place-land", "type": "triggered",
-      "triggerCondition": "ON_ENTER_BATTLEFIELD", "trigger": { "subject": "self" },
-      "effectId": "MOVE_ZONE", // Ordinary ability uses effectId, not action.
-      "params": { "origin": "hand", "destination": "battlefield" },
-      "choice": {
-        "kind": "search", "zone": "hand", "cardTypes": ["Land"],
-        "min": 0, "max": 1 // Zero means decline; one means choose a hand land.
-      }
-    }]
-    // No energy is paid for the chosen land. This effect's direct placement
-    // does not consume the turn's normal play_land allowance. Entry triggers run.
-    // For 幻影地界兵, use graveyard for both origin/zone and min:1.
-  },
-
-  // 15. Static ability grant, as used by 幻影魔城.
-  "example-static-draw-grant": {
-    "id": "example-static-draw-grant", "name": "Example puppet castle",
-    "manaCost": "{B}{B}", "cardTypes": ["Artifact"],
-    "abilities": [{
-      "id": "grant-draw", "type": "static", "activeZones": ["battlefield"],
-      "effects": [{
-        "layer": 6,
-        "scope": {
-          "zones": ["battlefield"], "controller": "self",
-          "cardTypes": ["Creature"], "subTypes": ["幻影木偶"]
+  "example-library-discard": {
+    "schemaVersion": 1,
+    "id": "example-library-discard",
+    "name": "Example sea patrol",
+    "manaCost": "{U}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 2,
+    "toughness": 2,
+    "abilities": [
+      {
+        "id": "entry-library-discard",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "trigger": {
+          "subject": "self"
         },
         "effect": {
-          "type": "ABILITY", "add": [{
-            "id": "tap-draw", "type": "activated", "castSpeed": "instant",
-            "cost": { "tap": true }, // Paid by the creature receiving this grant.
-            // IMPORTANT: nested grants use the NORMALIZED ability shape.
-            // Use effect:{action,params,tags,targeting}, NOT effectId/params here.
-            // The loader does not normalize abilities inside static ABILITY.add.
-            "effect": {
-              "action": "DRAW", "params": { "amount": 1 }, "tags": [],
-              "targeting": { "type": "self", "required": false }
-            }
-          }]
+          "family": "cards",
+          "operation": "mill",
+          "params": {
+            "amount": 2
+          },
+          "targeting": {
+            "type": "player",
+            "controller": "opponent",
+            "all": true,
+            "required": false
+          }
         }
-      }]
-    }]
-    // Applies to existing and later friendly puppets while the castle is active.
-    // Leaving the battlefield removes the grant; blueprints are never rewritten.
-    // A granted ability already on the stack still resolves. Tap/sickness rules apply.
-    // Clients must use the effective ability ID returned by the engine; grants
-    // receive an origin-qualified identity rather than a hardcoded "tap-draw" ID.
-  },
-
-  // 16. Conditional entry draw, as used by 迅靈使者.
-  "example-other-spirit-condition": {
-    "id": "example-other-spirit-condition", "name": "Example swift envoy",
-    "manaCost": "{G}{G}", "cardTypes": ["Creature"], "subTypes": ["迅靈"],
-    "power": 1, "toughness": 3, "castRequirements": { "speed": "instant" },
-    "abilities": [{
-      "id": "other-spirit-draw", "type": "triggered",
-      "triggerCondition": "ON_ENTER_BATTLEFIELD", "trigger": { "subject": "self" },
-      "interveningIf": {
-        "op": "gte", // left >= right. Checked on discovery AND on resolution.
-        "left": { "numeric": {
-          "kind": "query", "id": "count", "args": { "scope": {
-            "zones": ["battlefield"], "controller": "self",
-            "cardTypes": ["Creature"], "subTypes": ["迅靈"]
-          } }
-        } },
-        "right": 2 // Entering source counts as one; a second spirit is needed.
-      },
-      "effectId": "DRAW", "params": { "amount": 1 }
-    }]
-    // Alone: no trigger. Two spirits: trigger may draw. Other spirit leaves
-    // before resolution: the condition is false and the ability does nothing.
-    // This count technique assumes the source itself matches the counted tribe;
-    // it is not a general "exclude source" filter or a stored numeric binding.
-  },
-
-  // 17. Dual land: normal entry trigger, then choose ONE produced color.
-  "example-dual-land": {
-    "id": "example-dual-land", "name": "Example thunder snow land",
-    "manaCost": "{0}", "cardTypes": ["Land"], "subTypes": ["地界"],
-    "colors": ["yellow", "white"], // 雷 / 雪. {Y} / {W} in energy costs.
-    "abilities": [{
-      "id": "entry-tap", "type": "triggered", "triggerCondition": "ON_ENTER_BATTLEFIELD",
-      "trigger": { "subject": "self" }, "effectId": "TAP", "params": {},
-      "targeting": { "type": "self", "subject": "source", "required": false }
-    }, {
-      "id": "produce-chosen-color", "type": "activated", "cost": { "tap": true },
-      "effectId": "ADD_MANA", "params": { "colors": ["yellow", "white"], "amount": 1 }
-    }]
-    // Entry TAP uses the stack and can be responded to. It does not make the
-    // land enter tapped atomically; that replacement rule is a different mechanic.
-    // The mana action chooses one listed color (manaColor in action data),
-    // producing one energy, not one of EACH. Mana abilities resolve immediately.
-  },
-
-  // 18. Ordered SELF-entry list, as used by 幻海人下士. 海 is blue/{U}.
-  "example-sea-entry-recovery": {
-    "id": "example-sea-entry-recovery", "name": "Example sea corporal",
-    "manaCost": "{U}{U}{1}", // Two 海 plus one generic; snow uses white/{W}.
-    "cardTypes": ["Creature"], "subTypes": ["蒼巨人"], "colors": ["blue"],
-    "power": 3, "toughness": 3,
-    "onEnterEffects": [{
-      "action": "MOVE_ZONE",
-      "params": { "origin": "graveyard", "destination": "battlefield" },
-      "targeting": { "type": "self", "required": false },
-      "choice": {
-        "kind": "search", "zone": "graveyard", "cardTypes": ["Land"],
-        "min": 1, "max": 1
       }
-    }, {
-      "action": "DRAW", "params": { "amount": 1 },
-      "targeting": { "type": "self", "required": false }
-    }]
-    // Existing legacy onEnterEffects makes ONE self-entry trigger containing
-    // this ordered list. The search pauses it; the answer places a land, then
-    // the same trigger draws. With no eligible land, the move skips but draw runs.
-    // This is different from onCastEffects: it also runs when an effect directly
-    // moves this creature onto the battlefield, without casting it.
-    // This field remains self-entry only. Named triggered abilities now support
-    // their own effects list (example 22); activated lists remain unsupported.
+    ]
   },
 
-  // 19. Existence is a bounded numeric bonus, not a creature count.
-  "example-existence-bonus": {
-    "id": "example-existence-bonus", "name": "Example conditional draw",
-    "manaCost": "{R}{R}", "cardTypes": ["Spell"],
-    "onCastEffects": [{ "action": "DRAW", "targeting": { "type": "self", "required": false },
-      "params": { "amount": { "numeric": {
-        "kind": "add", "left": 2,
-        "right": { "numeric": { "kind": "query", "id": "exists", "args": { "scope": {
-          "zones": ["battlefield"], "controller": "self", "cardTypes": ["Creature"], "subTypes": ["烈龍"]
-        } } } }
-      } } }
-    }]
-    // Read when DRAW resolves: zero matches -> 2; one OR five matches -> 3.
-    // No numericDeclarations: player does not choose the bonus.
-    // 强權崛起 instead uses 炎獸 and controller:any, including enemy creatures.
-  },
-
-  // 20. Top-N library discard. The player never chooses which cards leave.
-  "example-library-discard": {
-    "id": "example-library-discard", "name": "Example sea patrol",
-    "manaCost": "{U}", "cardTypes": ["Creature"], "power": 2, "toughness": 2,
-    "abilities": [{ "id": "entry-library-discard", "type": "triggered",
-      "triggerCondition": "ON_ENTER_BATTLEFIELD", "trigger": { "subject": "self" },
-      "effectId": "DISCARD_FROM_LIBRARY", "params": { "amount": 2 },
-      "targeting": { "type": "player", "controller": "opponent", "all": true, "required": false }
-    }]
-    // amount is a nonnegative integer, or an existing numeric expression.
-    // Take top min(amount, deck size), top first, through normal discard moves.
-    // The server stores deck top at the ARRAY END; authors do not supply indexes.
-    // Empty/short deck is not a failed draw. No reveal or shuffle is implied.
-    // Events: CARD_DISCARDED_FROM_LIBRARY; trigger: ON_DISCARD_FROM_LIBRARY.
-  },
-
-  // 21. Resolution-time hand discard, as used by 狂海幻力.
   "example-selected-hand-discard": {
-    "id": "example-selected-hand-discard", "name": "Example sea draw-discard",
-    "manaCost": "{U}{U}", "cardTypes": ["Spell"],
-    "onCastEffects": [{ "action": "DRAW", "params": { "amount": 3 },
-      "targeting": { "type": "self", "required": false }
-    }, { "action": "DISCARD_FROM_HAND", "params": { "amount": 2 },
-      "targeting": { "type": "self", "required": false },
-      "choice": { "kind": "discard", "prompt": "Discard two cards from your hand" }
-    }]
-    // The draw commits, then the affected player chooses cards from their hand.
-    // Select exactly min(amount, available hand); empty hand needs no prompt.
-    // Answer/reconnect resumes after DRAW, so it is not repeated.
-    // One affected player per discard instruction; use self or one player recipient.
-    // This choice is mandatory for selected hand discard, not a casting cost.
-    // Events: CARD_DISCARDED_FROM_HAND; trigger: ON_DISCARD_FROM_HAND.
-    // Plain MOVE_ZONE into a graveyard is NOT a discard. DISCARD_HAND remains
-    // the older discard-all action; its semantic events are hand-specific too.
-  },
-
-  // 22. One named trigger, an ordered list, one stack object.
-  "example-ordered-attack-trigger": {
-    "id": "example-ordered-attack-trigger", "name": "Example worlds pyromancer",
-    "manaCost": "{2}", "cardTypes": ["Creature"], "subTypes": ["幽爾"], "colors": ["red"],
-    "power": 2, "toughness": 2,
-    "abilities": [{ "id": "friendly-attack-damage-draw", "type": "triggered",
-      "triggerCondition": "ON_ATTACK",
-      "trigger": { "subject": "any", "controller": "self", "cardTypes": ["Creature"], "subTypes": ["幽爾"] },
-      "effects": [{ "action": "MODIFY_STATS", "params": { "damage": 2 }, "tags": ["damage"],
-        "targeting": { "type": "permanent", "controller": "opponent", "cardTypes": ["Creature"], "required": true, "minTargets": 1, "maxTargets": 1 }
-      }, { "action": "DRAW", "params": { "amount": 1 }, "targeting": { "type": "self", "required": false } }]
-    }]
-    // effects must be a nonempty array. Do NOT also put effectId/params/choice/
-    // targeting/tags at the ability level. Each instruction owns those fields.
-    // Old single-effect abilities still use effectId. Activated abilities also accept effects.
-    // Select required targets during trigger scheduling. Damage and draw resolve
-    // together through the existing cursor, with no priority pass between them.
-    // If all explicit targets are illegal at resolution, the whole trigger fizzles:
-    // no damage AND no draw. Conditional "if damage succeeded" is not added here.
-  },
-
-  // 23. Optional WHOLE sequence, as used by 幻海人 戈圖.
-  "example-optional-entry-sequence": {
-    "id": "example-optional-entry-sequence", "name": "Example optional sea entrant",
-    "manaCost": "{U}{U}", "cardTypes": ["Creature"], "power": 3, "toughness": 1,
-    "abilities": [{ "id": "entry-draw-discard", "type": "triggered", "triggerCondition": "ON_ENTER_BATTLEFIELD",
-      "effectId": "DRAW", "params": { "amount": 2 },
-      "choice": { "kind": "options", "min": 1, "max": 1, "prompt": "Draw two, then discard one?",
-        "options": [{ "id": "accept", "label": "Draw two, then discard one", "effects": [
-          { "action": "DRAW", "params": { "amount": 2 }, "targeting": { "type": "self", "required": false } },
-          { "action": "DISCARD_FROM_HAND", "params": { "amount": 1 }, "targeting": { "type": "self", "required": false }, "choice": { "kind": "discard" } }
-        ] }, { "id": "decline", "label": "Decline", "effects": [] }]
+    "schemaVersion": 1,
+    "id": "example-selected-hand-discard",
+    "name": "Example sea draw-discard",
+    "manaCost": "{U}{U}",
+    "cardTypes": [
+      "Spell"
+    ],
+    "onCastEffects": [
+      {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 3
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      },
+      {
+        "family": "cards",
+        "operation": "discard",
+        "params": {
+          "amount": 2
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "choice": {
+          "kind": "discard",
+          "prompt": "Discard two cards from your hand"
+        }
       }
-    }]
-    // Existing resolution options replace the wrapper instruction. Accept runs
-    // BOTH instructions; decline runs NEITHER. This is a real may-choice at
-    // resolution, not a spell mode selected while casting.
-    // Putting optional on DRAW alone, then an unconditional discard afterwards,
-    // would incorrectly discard even when the player declined to draw.
-  },
-
-  // 24. Observe actual named-counter placements. This does NOT define Scorch's threshold.
-  // The event card is the recipient. controller:self means OUR EFFECT placed them,
-  // even when the recipient belongs to the opponent. subject:any admits that recipient.
-  // A positive amount means placement; removal is negative. Zero/cancelled changes emit nothing.
-  "example-counter-watcher": {
-    "id": "example-counter-watcher", "name": "Counter watcher example",
-    "manaCost": "{R}", "cardTypes": ["Creature"], "power": 1, "toughness": 1,
-    "abilities": [{ "id": "watch-own-scorch-placement", "type": "triggered",
-      "triggerCondition": "ON_COUNTER_CHANGED", "sharedPerEvent": true,
-      // One trigger for this controller + blueprint ID + ability ID in this event.
-      "trigger": { "subject": "any", "controller": "self", "condition": { "all": [
-        { "op": "eq", "left": { "path": "event.payload.counterType" }, "right": "scorch" },
-        { "op": "gt", "left": { "path": "event.payload.amount" }, "right": 0 }
-      ] } },
-      "effectId": "DRAW", "params": { "amount": 1 },
-      "targeting": { "type": "self", "required": false }
-    }]
-  },
-
-  // Hand-source payment happens once before this ordered ability resolves.
-  // DRAW here is ordered, not conditional on destruction success.
-  "example-hand-ordered": {
-    "id": "example-hand-ordered", "name": "Hand activation example",
-    "cardTypes": ["Creature"], "subTypes": ["炎獸"], "power": 2, "toughness": 2,
-    "abilities": [{ "id": "discard-destroy-draw", "type": "activated", "castSpeed": "instant",
-      "allowedZones": ["hand"], "cost": { "discardSelf": true },
-      "effects": [
-        { "action": "DESTROY", "params": {}, "targeting": {
-          "type": "permanent", "controller": "opponent", "cardTypes": ["Creature"],
-          "summonKind": "effect", "required": true
-        } },
-        { "action": "DRAW", "params": { "amount": 1 }, "targeting": { "type": "self", "required": false } }
-      ]
-    }]
-  },
-
-  // Per-mode timing: the slow mode is unavailable on the opponent turn.
-  // Artifacts may receive Scorch; their destruction threshold remains deferred.
-  "example-mixed-speed": {
-    "id": "example-mixed-speed", "name": "Mixed speed example", "cardTypes": ["Spell"],
-    "castRequirements": { "speed": "instant", "allowedZones": ["hand"] },
-    "modeCount": { "min": 1, "max": 1 },
-    "modes": [
-      { "id": "main", "label": "Main: Scorch 2", "castSpeed": "sorcery", "effects": [
-        { "action": "ADD_COUNTER", "params": { "counterType": "scorch", "amount": 2 },
-          "targeting": { "type": "permanent", "controller": "opponent", "cardTypes": ["Creature", "Artifact"], "required": true } }
-      ] },
-      { "id": "fast", "label": "Fast: damage 5", "castSpeed": "instant", "effects": [
-        { "action": "MODIFY_LIFE", "params": { "amount": -5 }, "tags": ["damage"],
-          "targeting": { "type": "player", "controller": "opponent", "required": true } }
-      ] }
     ]
   },
 
-  // Success is local to this resolution, not a global history flag.
-  // Indestructible/cancellation/exile replacement do not buy the draw.
-  // kind:"discarded" similarly records an actual discard instruction's success.
-  "example-outcome-destroy": {
-    "id": "example-outcome-destroy", "name": "Successful destruction example",
-    "cardTypes": ["Creature"], "power": 4, "toughness": 4,
-    "abilities": [{ "id": "entry-destroy-draw", "type": "triggered",
-      "triggerCondition": "ON_ENTER_BATTLEFIELD", "limitPerTurn": 1,
-      "effects": [
-        { "action": "DESTROY", "params": {},
-          "targeting": { "type": "permanent", "controller": "opponent", "cardTypes": ["Creature", "Artifact"], "required": true },
-          "recordOutcome": { "name": "destroyed", "kind": "destroyed" } },
-        { "action": "DRAW", "params": { "amount": 1 },
-          "targeting": { "type": "self", "required": false }, "requiresOutcome": "destroyed" }
-      ]
-    }]
-  },
-
-  // Read all opposing battlefield Scorch counters when this damage resolves.
-  // No numeric declaration/binding: multiply one live total by -3 for one hit.
-  "example-live-counter-total": {
-    "id": "example-live-counter-total", "name": "Counter total example", "cardTypes": ["Spell"],
-    "onCastEffects": [{ "action": "MODIFY_LIFE", "params": { "amount": {
-      "numeric": { "kind": "multiply", "left": -3, "right": {
-        "numeric": { "kind": "query", "id": "counterTotal", "args": {
-          "scope": { "zones": ["battlefield"], "controller": "opponent" }, "counterType": "scorch"
-        } }
-      } }
-    } }, "tags": ["damage"], "targeting": { "type": "player", "controller": "opponent", "required": true } }]
-  },
-
-  // Shared filters apply during selection AND revalidation.
-  // Entry: zero existing Scorch. Attack: lowest current remaining health; choose ties.
-  // example-hand-ordered separately demonstrates summonKind:"effect".
-  "example-starter-target-filters": {
-    "id": "example-starter-target-filters", "name": "Target filters example",
-    "cardTypes": ["Creature"], "power": 1, "toughness": 2,
+  "example-ordered-attack-trigger": {
+    "schemaVersion": 1,
+    "id": "example-ordered-attack-trigger",
+    "name": "Example worlds pyromancer",
+    "manaCost": "{2}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "幽爾"
+    ],
+    "colors": [
+      "red"
+    ],
+    "power": 2,
+    "toughness": 2,
     "abilities": [
-      { "id": "entry-zero-scorch", "type": "triggered", "triggerCondition": "ON_ENTER_BATTLEFIELD",
-        "effectId": "ADD_COUNTER", "params": { "counterType": "scorch", "amount": 1 },
-        "targeting": { "type": "permanent", "controller": "opponent", "cardTypes": ["Creature", "Artifact"],
-          "counter": { "type": "scorch", "max": 0 }, "required": true } },
-      { "id": "attack-lowest", "type": "triggered", "triggerCondition": "ON_ATTACK",
-        "effectId": "DESTROY", "params": {}, "targeting": {
-          "type": "permanent", "controller": "opponent", "cardTypes": ["Creature"], "required": true,
-          "extrema": { "field": "remainingHealth", "order": "min" }
-        } }
+      {
+        "id": "friendly-attack-damage-draw",
+        "type": "triggered",
+        "triggerCondition": "ON_ATTACK",
+        "trigger": {
+          "subject": "any",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "subTypes": [
+            "幽爾"
+          ]
+        },
+        "effects": [
+          {
+            "family": "characteristics",
+            "operation": "adjust_stats_and_damage",
+            "params": {
+              "damage": 2
+            },
+            "tags": [
+              "damage"
+            ],
+            "targeting": {
+              "type": "permanent",
+              "controller": "opponent",
+              "cardTypes": [
+                "Creature"
+              ],
+              "required": true,
+              "minTargets": 1,
+              "maxTargets": 1
+            }
+          },
+          {
+            "family": "cards",
+            "operation": "draw",
+            "params": {
+              "amount": 1
+            },
+            "targeting": {
+              "type": "self",
+              "required": false
+            }
+          }
+        ]
+      }
     ]
   },
 
-  // Battlefield keyword: friendly Creature summons/abilities bypass the stack.
-  // immediate:true separately admits a particular ability, including a departing source.
-  // ON_DESTROY is actual destruction into graveyard, not every ON_DIE cause.
+  "example-optional-entry-sequence": {
+    "schemaVersion": 1,
+    "id": "example-optional-entry-sequence",
+    "name": "Example optional sea entrant",
+    "manaCost": "{U}{U}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 3,
+    "toughness": 1,
+    "abilities": [
+      {
+        "id": "entry-draw-discard",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "effect": {
+          "family": "cards",
+          "operation": "draw",
+          "params": {
+            "amount": 2
+          },
+          "choice": {
+            "kind": "options",
+            "min": 1,
+            "max": 1,
+            "prompt": "Draw two, then discard one?",
+            "options": [
+              {
+                "id": "accept",
+                "label": "Draw two, then discard one",
+                "effects": [
+                  {
+                    "family": "cards",
+                    "operation": "draw",
+                    "params": {
+                      "amount": 2
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    }
+                  },
+                  {
+                    "family": "cards",
+                    "operation": "discard",
+                    "params": {
+                      "amount": 1
+                    },
+                    "targeting": {
+                      "type": "self",
+                      "required": false
+                    },
+                    "choice": {
+                      "kind": "discard"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "decline",
+                "label": "Decline",
+                "effects": []
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+
+  "example-counter-watcher": {
+    "schemaVersion": 1,
+    "id": "example-counter-watcher",
+    "name": "Counter watcher example",
+    "manaCost": "{R}",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 1,
+    "toughness": 1,
+    "abilities": [
+      {
+        "id": "watch-own-scorch-placement",
+        "type": "triggered",
+        "triggerCondition": "ON_COUNTER_CHANGED",
+        "sharedPerEvent": true,
+        "trigger": {
+          "subject": "any",
+          "controller": "self",
+          "condition": {
+            "all": [
+              {
+                "op": "eq",
+                "left": {
+                  "path": "event.payload.counterType"
+                },
+                "right": "scorch"
+              },
+              {
+                "op": "gt",
+                "left": {
+                  "path": "event.payload.amount"
+                },
+                "right": 0
+              }
+            ]
+          }
+        },
+        "effect": {
+          "family": "cards",
+          "operation": "draw",
+          "params": {
+            "amount": 1
+          },
+          "targeting": {
+            "type": "self",
+            "required": false
+          }
+        }
+      }
+    ]
+  },
+
+  "example-hand-ordered": {
+    "schemaVersion": 1,
+    "id": "example-hand-ordered",
+    "name": "Hand activation example",
+    "cardTypes": [
+      "Creature"
+    ],
+    "subTypes": [
+      "炎獸"
+    ],
+    "power": 2,
+    "toughness": 2,
+    "abilities": [
+      {
+        "id": "discard-destroy-draw",
+        "type": "activated",
+        "castSpeed": "instant",
+        "allowedZones": [
+          "hand"
+        ],
+        "cost": {
+          "discardSelf": true
+        },
+        "effects": [
+          {
+            "family": "cards",
+            "operation": "destroy",
+            "params": {},
+            "targeting": {
+              "type": "permanent",
+              "controller": "opponent",
+              "cardTypes": [
+                "Creature"
+              ],
+              "summonKind": "effect",
+              "required": true
+            }
+          },
+          {
+            "family": "cards",
+            "operation": "draw",
+            "params": {
+              "amount": 1
+            },
+            "targeting": {
+              "type": "self",
+              "required": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+
+  "example-mixed-speed": {
+    "schemaVersion": 1,
+    "id": "example-mixed-speed",
+    "name": "Mixed speed example",
+    "cardTypes": [
+      "Spell"
+    ],
+    "castRequirements": {
+      "speed": "instant",
+      "allowedZones": [
+        "hand"
+      ]
+    },
+    "modeCount": {
+      "min": 1,
+      "max": 1
+    },
+    "modes": [
+      {
+        "id": "main",
+        "label": "Main: Scorch 2",
+        "castSpeed": "sorcery",
+        "effects": [
+          {
+            "family": "counters",
+            "operation": "add",
+            "params": {
+              "counterType": "scorch",
+              "amount": 2
+            },
+            "targeting": {
+              "type": "permanent",
+              "controller": "opponent",
+              "cardTypes": [
+                "Creature",
+                "Artifact"
+              ],
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "fast",
+        "label": "Fast: damage 5",
+        "castSpeed": "instant",
+        "effects": [
+          {
+            "family": "resources",
+            "operation": "adjust_life",
+            "params": {
+              "amount": -5
+            },
+            "tags": [
+              "damage"
+            ],
+            "targeting": {
+              "type": "player",
+              "controller": "opponent",
+              "required": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+
+  "example-outcome-destroy": {
+    "schemaVersion": 1,
+    "id": "example-outcome-destroy",
+    "name": "Successful destruction example",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 4,
+    "toughness": 4,
+    "abilities": [
+      {
+        "id": "entry-destroy-draw",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "limitPerTurn": 1,
+        "effects": [
+          {
+            "family": "cards",
+            "operation": "destroy",
+            "params": {},
+            "targeting": {
+              "type": "permanent",
+              "controller": "opponent",
+              "cardTypes": [
+                "Creature",
+                "Artifact"
+              ],
+              "required": true
+            },
+            "recordOutcome": {
+              "name": "destroyed",
+              "kind": "destroyed"
+            }
+          },
+          {
+            "family": "cards",
+            "operation": "draw",
+            "params": {
+              "amount": 1
+            },
+            "targeting": {
+              "type": "self",
+              "required": false
+            },
+            "requiresOutcome": "destroyed"
+          }
+        ]
+      }
+    ]
+  },
+
+  "example-live-counter-total": {
+    "schemaVersion": 1,
+    "id": "example-live-counter-total",
+    "name": "Counter total example",
+    "cardTypes": [
+      "Spell"
+    ],
+    "onCastEffects": [
+      {
+        "family": "resources",
+        "operation": "adjust_life",
+        "params": {
+          "amount": {
+            "numeric": {
+              "kind": "multiply",
+              "left": -3,
+              "right": {
+                "numeric": {
+                  "kind": "query",
+                  "id": "counterTotal",
+                  "args": {
+                    "scope": {
+                      "zones": [
+                        "battlefield"
+                      ],
+                      "controller": "opponent"
+                    },
+                    "counterType": "scorch"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "damage"
+        ],
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "required": true
+        }
+      }
+    ]
+  },
+
+  "example-starter-target-filters": {
+    "schemaVersion": 1,
+    "id": "example-starter-target-filters",
+    "name": "Target filters example",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 1,
+    "toughness": 2,
+    "abilities": [
+      {
+        "id": "entry-zero-scorch",
+        "type": "triggered",
+        "triggerCondition": "ON_ENTER_BATTLEFIELD",
+        "effect": {
+          "family": "counters",
+          "operation": "add",
+          "params": {
+            "counterType": "scorch",
+            "amount": 1
+          },
+          "targeting": {
+            "type": "permanent",
+            "controller": "opponent",
+            "cardTypes": [
+              "Creature",
+              "Artifact"
+            ],
+            "counter": {
+              "type": "scorch",
+              "max": 0
+            },
+            "required": true
+          }
+        }
+      },
+      {
+        "id": "attack-lowest",
+        "type": "triggered",
+        "triggerCondition": "ON_ATTACK",
+        "effect": {
+          "family": "cards",
+          "operation": "destroy",
+          "params": {},
+          "targeting": {
+            "type": "permanent",
+            "controller": "opponent",
+            "cardTypes": [
+              "Creature"
+            ],
+            "required": true,
+            "extrema": {
+              "field": "remainingHealth",
+              "order": "min"
+            }
+          }
+        }
+      }
+    ]
+  },
+
   "example-immediate-protector": {
-    "id": "example-immediate-protector", "name": "Immediate actions example",
-    "cardTypes": ["Creature"], "power": 3, "toughness": 2, "keywords": ["ImmediateFriendlyCreatures"],
-    "abilities": [{ "id": "destroy-response", "type": "triggered", "triggerCondition": "ON_DESTROY",
-      "immediate": true, "effectId": "ADD_COUNTER", "params": { "counterType": "scorch", "amount": 2 },
-      "targeting": { "type": "permanent", "controller": "opponent", "cardTypes": ["Creature", "Artifact"], "required": true }
-    }]
+    "schemaVersion": 1,
+    "id": "example-immediate-protector",
+    "name": "Immediate actions example",
+    "cardTypes": [
+      "Creature"
+    ],
+    "power": 3,
+    "toughness": 2,
+    "keywords": [
+      "ImmediateFriendlyCreatures"
+    ],
+    "abilities": [
+      {
+        "id": "destroy-response",
+        "type": "triggered",
+        "triggerCondition": "ON_DESTROY",
+        "immediate": true,
+        "effect": {
+          "family": "counters",
+          "operation": "add",
+          "params": {
+            "counterType": "scorch",
+            "amount": 2
+          },
+          "targeting": {
+            "type": "permanent",
+            "controller": "opponent",
+            "cardTypes": [
+              "Creature",
+              "Artifact"
+            ],
+            "required": true
+          }
+        }
+      }
+    ]
   }
 }

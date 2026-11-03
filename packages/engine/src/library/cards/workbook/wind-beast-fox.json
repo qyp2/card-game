@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "wind-beast-fox",
   "name": "風靈獸 舞狐",
   "manaCost": "{G}{G}",
@@ -22,17 +23,20 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "TAP",
-      "params": {},
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "orientation",
+        "operation": "tap",
+        "params": {},
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

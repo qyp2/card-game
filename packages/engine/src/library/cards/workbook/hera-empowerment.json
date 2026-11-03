@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "hera-empowerment",
   "name": "赫拉充靈術",
   "manaCost": "{B}",
@@ -17,7 +18,8 @@
   },
   "onCastEffects": [
     {
-      "action": "GRANT_STATS",
+      "family": "characteristics",
+      "operation": "temporary_stats",
       "params": {
         "power": 1,
         "toughness": 0

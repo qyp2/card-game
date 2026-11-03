@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "thunder-main-camp",
   "name": "雷巾主陣",
   "manaCost": "{0}",
@@ -19,10 +20,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "yellow",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "yellow",
+          "amount": 1
+        }
       }
     }
   ]

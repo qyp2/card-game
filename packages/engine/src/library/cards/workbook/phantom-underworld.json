@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "phantom-underworld",
   "name": "幻影旅團地府",
   "manaCost": "{0}",
@@ -19,10 +20,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "black",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "black",
+          "amount": 1
+        }
       }
     }
   ]

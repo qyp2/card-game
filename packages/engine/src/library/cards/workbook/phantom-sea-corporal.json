@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "phantom-sea-corporal",
   "name": "幻海人下士",
   "manaCost": "{U}{U}{1}",
@@ -16,7 +17,8 @@
   "toughness": 3,
   "onEnterEffects": [
     {
-      "action": "MOVE_ZONE",
+      "family": "cards",
+      "operation": "move",
       "params": {
         "origin": "graveyard",
         "destination": "battlefield"
@@ -36,7 +38,8 @@
       }
     },
     {
-      "action": "DRAW",
+      "family": "cards",
+      "operation": "draw",
       "params": {
         "amount": 1
       },

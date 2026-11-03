@@ -22,6 +22,7 @@ export type GameOutcome =
     | { type: 'draw'; losses: PlayerLoss[] };
 
 export interface GameRoom {
+    gameRuleUses?: Record<string, number>;
     replacementEffects?: import('./proposed-event.types').ReplacementDefinition[];
     replacementSequence?: number;
     /** Monotonic characteristic/effect timestamps survive effect expiry. */

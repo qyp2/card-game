@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "okair-mountains",
   "name": "歐凱爾山脈",
   "manaCost": "{G}{1}",
@@ -17,10 +18,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "green",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "green",
+          "amount": 1
+        }
       }
     },
     {
@@ -33,17 +37,20 @@
         }
       },
       "limitPerTurn": 1,
-      "effectId": "TAP",
-      "params": {},
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "orientation",
+        "operation": "tap",
+        "params": {},
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     }
   ]

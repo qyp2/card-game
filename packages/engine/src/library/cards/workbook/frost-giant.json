@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "frost-giant",
   "name": "冰霜巨人",
   "manaCost": "{2}{W}{W}{W}",

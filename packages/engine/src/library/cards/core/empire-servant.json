@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "empire-servant",
   "name": "帝國奴僕",
   "manaCost": "{R}",
@@ -19,13 +20,15 @@
       "id": "produce-red",
       "type": "activated",
       "cost": {
-        "tap": true,
-        "mana": null
+        "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "red",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "red",
+          "amount": 1
+        }
       }
     }
   ]

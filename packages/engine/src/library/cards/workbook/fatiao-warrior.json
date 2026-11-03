@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "fatiao-warrior",
   "name": "法蒂奧戰士",
   "manaCost": "{R}{R}",
@@ -22,23 +23,26 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "MODIFY_STATS",
-      "params": {
-        "damage": 3
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
+      "effect": {
+        "family": "characteristics",
+        "operation": "adjust_stats_and_damage",
+        "params": {
+          "damage": 3
+        },
+        "tags": [
+          "damage"
         ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
-      },
-      "tags": [
-        "damage"
-      ]
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
+      }
     },
     {
       "id": "attack-damage",
@@ -47,23 +51,26 @@
       "trigger": {
         "subject": "self"
       },
-      "effectId": "MODIFY_STATS",
-      "params": {
-        "damage": 3
-      },
-      "targeting": {
-        "type": "permanent",
-        "controller": "opponent",
-        "cardTypes": [
-          "Creature"
+      "effect": {
+        "family": "characteristics",
+        "operation": "adjust_stats_and_damage",
+        "params": {
+          "damage": 3
+        },
+        "tags": [
+          "damage"
         ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
-      },
-      "tags": [
-        "damage"
-      ]
+        "targeting": {
+          "type": "permanent",
+          "controller": "opponent",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
+      }
     }
   ]
 }

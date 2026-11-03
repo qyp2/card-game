@@ -35,6 +35,7 @@ export interface ReplacementMatch {
   combat?: boolean;
 }
 export interface ReplacementDefinition {
+  ruleUse?: import('./rule.types').RuleUse;
   id: string;
   label: string;
   operation: ReplacementOperation;

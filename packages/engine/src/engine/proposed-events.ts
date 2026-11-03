@@ -8,6 +8,7 @@ import { DamageRuleRegistry, validDamageAssignments } from './damage-service';
 import { getCardInZone, validateCardMove } from './zone-transitions';
 import { captureSourceInformation } from './source-information';
 import { planDamageResults } from './damage-keywords';
+import { recordRuleUse } from '../rules/runtime/active-rules';
 
 export interface ProposedPlan { mutations: GameMutation[]; pendingChoice?: PendingChoice }
 export type ProposedPlanOptions = Pick<ProposedTransaction, 'simultaneous' | 'cause' | 'resolution'>;
@@ -60,6 +61,12 @@ function lower(room: GameRoom, events: ProposedEvent[]): GameMutation[] {
 
 function preview(room: GameRoom, transaction: ProposedTransaction): GameRoom {
   return transaction.completed.reduce(gameReducer, room);
+}
+
+/** Freeze the simultaneous board while carrying forward provisional consumable limits. */
+function simultaneousPreview(base: GameRoom, working: GameRoom): GameRoom {
+  return { ...base, replacementEffects: working.replacementEffects, gameRuleUses: working.gameRuleUses,
+    turnHistory: base.turnHistory ? { ...base.turnHistory, uses: working.turnHistory?.uses ?? base.turnHistory.uses } : working.turnHistory };
 }
 
 function settledPreview(room: GameRoom, transaction: ProposedTransaction): GameRoom {
@@ -130,6 +137,7 @@ function applyRule(room: GameRoom, transaction: ProposedTransaction, rule: Repla
   const result = applyReplacement(room, frame.event, rule);
   if (result.mutations?.length) transaction.completed.push(...result.mutations);
   const changed = !!result.mutations?.length || JSON.stringify(result.events) !== JSON.stringify([frame.event]);
+  if (changed && rule.ruleUse) transaction.completed.push(recordRuleUse(room, rule.ruleUse));
   if (changed && (rule.remaining !== undefined || rule.uses !== undefined)) {
     const remaining = rule.remaining === undefined ? undefined : rule.remaining - (result.prevented ?? 0);
     const uses = rule.uses === undefined ? undefined : rule.uses - 1;
@@ -149,7 +157,7 @@ function run(room: GameRoom, transaction: ProposedTransaction): ProposedPlan {
     while (previewed < transaction.completed.length) working = gameReducer(working, transaction.completed[previewed++]);
     // Simultaneous events use one board's characteristics, with only provisional
     // consumable registrations carried forward between events.
-    const matchingRoom = transaction.simultaneous ? { ...room, replacementEffects: working.replacementEffects } : working;
+    const matchingRoom = transaction.simultaneous ? simultaneousPreview(room, working) : working;
     if (!transaction.current) {
       let mutation = transaction.remaining.shift()!;
       // Validate the final primitive too: no transaction prefix may commit before
@@ -245,7 +253,7 @@ export function resumeProposedChoice(room: GameRoom, choice: PendingChoice, answ
   const frame = transaction.current?.frames[0];
   if (!frame || answer.values.length !== 1 || typeof answer.values[0] !== 'string') throw new Error('Invalid replacement decision');
   const working = preview(baseRoom, transaction);
-  const matchingRoom = transaction.simultaneous ? { ...baseRoom, replacementEffects: working.replacementEffects } : working;
+  const matchingRoom = transaction.simultaneous ? simultaneousPreview(baseRoom, working) : working;
   const value = answer.values[0];
   const decline = value.startsWith('skip:');
   const id = decline ? value.slice(5) : value;

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "awakened-blood-mountain",
   "name": "被啓動的血炎山",
   "manaCost": "{R}{R}",
@@ -17,13 +18,16 @@
       "trigger": {
         "controller": "opponent"
       },
-      "effectId": "DRAW",
-      "params": {
-        "amount": 1
-      },
-      "choice": {
-        "kind": "optional",
-        "prompt": "被啓動的血炎山：抽一張牌？"
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 1
+        },
+        "choice": {
+          "kind": "optional",
+          "prompt": "被啓動的血炎山：抽一張牌？"
+        }
       }
     },
     {
@@ -40,15 +44,18 @@
           "right": "炎獸"
         }
       },
-      "effectId": "CLAIM_REVEALED_SELF",
-      "params": {},
-      "targeting": {
-        "type": "self",
-        "required": false
-      },
-      "choice": {
-        "kind": "optional",
-        "prompt": "加入手牌？"
+      "effect": {
+        "family": "cards",
+        "operation": "claim_revealed_source",
+        "params": {},
+        "targeting": {
+          "type": "self",
+          "required": false
+        },
+        "choice": {
+          "kind": "optional",
+          "prompt": "加入手牌？"
+        }
       }
     }
   ]

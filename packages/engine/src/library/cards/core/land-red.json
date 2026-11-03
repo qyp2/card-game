@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "land-red",
   "name": "血炎山",
   "manaCost": "",
@@ -17,13 +18,15 @@
       "id": "produce-red",
       "type": "activated",
       "cost": {
-        "tap": true,
-        "mana": null
+        "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "red",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "red",
+          "amount": 1
+        }
       }
     }
   ]

@@ -335,6 +335,7 @@ function mutationChanges(mutation: GameMutation, oldState: GameRoom, newState: G
     case 'SET_TURN_HISTORY':
     case 'RECORD_ABILITY_USE':
     case 'RECORD_LAND_PLAY': return [updateChange('turnHistory', oldState, newState)];
+    case 'RECORD_GAME_RULE_USE': return [updateChange('gameRuleUses', oldState, newState)];
     case 'SET_TURN':
       return [updateChange('activeTurnPlayerId', oldState, newState), ...(mutation.advance ? [updateChange('turnNumber', oldState, newState), updateChange('turnHistory', oldState, newState)] : [])];
     case 'SET_PRIORITY':

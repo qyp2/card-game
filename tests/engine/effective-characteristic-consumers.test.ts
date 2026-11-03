@@ -12,7 +12,7 @@ import { discoverTriggers } from '@engine/trigger-manager';
 import { manaAbilities } from '@engine/mana-abilities';
 import { reconcileCombatSelection } from '@client/store/combatSelection';
 import { createTargetingState } from '@client/targeting';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { applyStructuralZoneChange } from '@engine/effect-resolver';
 import { deriveAppliedEvents } from '@engine/applied-events';
 import { GameEngine } from '@engine/game-engine';
@@ -98,7 +98,7 @@ describe('effective characteristic consumers', () => {
     room = gameReducer(room, { type: 'ADD_CONTINUOUS_EFFECT', entry: { source: 'global', requiredZone: null, duration: 'PERMANENT', layer: 4, effect: { type: 'TYPE', set: ['Creature'] }, scope: { cardUuid: card.uuid } } });
     expect(applyStructuralZoneChange(room, spell).mutations[0]).toMatchObject({ type: 'MOVE_CARD', to: 'battlefield' });
   });
-  it('removes legacy enter abilities and copies the donor enter effects', () => {
+  it('removes self-entry abilities and copies the donor enter effects', () => {
     let room = createTestRoom(); const card = creature('entrant', 'player1');
     const draw = { action: 'DRAW', params: { amount: 1 }, targeting: { type: 'self', required: false }, tags: [] } as const;
     Object.assign(card, { blueprint: { ...card.blueprint, onEnterEffects: [draw] } }); room.battlefield = [card];
@@ -159,8 +159,8 @@ describe('effective characteristic consumers', () => {
     expect(targeting?.groups).toHaveLength(1);
   });
   it('normalizes static definitions and explicit colors without treating them as activated abilities', () => {
-    const raw = { id: 'generic-static', name: 'generic-static', cardTypes: ['Enchantment'], colors: ['blue'], abilities: [{ id: 'anthem', type: 'static', activeZones: ['graveyard'], effects: [{ layer: 7, effect: { type: 'STAT_DELTA', power: 1 }, scope: { cardTypes: ['Creature'] } }] }] };
-    const blueprint = normalizeCard(raw);
+    const raw = { id: 'generic-static', name: 'generic-static', cardTypes: ['Enchantment'], colors: ['blue'], abilities: [{ id: 'anthem', type: 'static', activeZones: ['graveyard'], rules: [{ id: 'anthem', family: 'characteristics', operation: { type: 'STAT_DELTA', power: 1 }, scope: { cardTypes: ['Creature'] } }] }] };
+    const blueprint = parseCardDefinition({ schemaVersion: 1, ...(raw) });
     expect(blueprint.abilities[0]).toMatchObject(raw.abilities[0]);
     expect(blueprint.colors).toEqual(['blue']);
   });

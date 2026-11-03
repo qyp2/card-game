@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "heavenly-seeker-yela",
   "name": "天域尋索者 耶拉",
   "manaCost": "{Y}{Y}",
@@ -16,7 +17,8 @@
   "rulesText": "① 召喚時：從牌組頂部公開3張卡片，從中選擇一張「天域尋索者 耶拉」以外的「上使」僕從 / 雷屬性遺跡加入手牌，其餘按喜好順序放置於牌組底部",
   "onEnterEffects": [
     {
-      "action": "REVEAL_TOP",
+      "family": "cards",
+      "operation": "reveal_top",
       "params": {
         "amount": 3,
         "min": 1,

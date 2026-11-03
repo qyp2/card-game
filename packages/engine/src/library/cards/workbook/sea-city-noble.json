@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "sea-city-noble",
   "name": "蒼海城貴族",
   "manaCost": "{U}",
@@ -21,10 +22,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "blue",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "blue",
+          "amount": 1
+        }
       }
     }
   ]

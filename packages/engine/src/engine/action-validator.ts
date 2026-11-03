@@ -50,15 +50,6 @@ export class ActionValidator {
             if (targetCards.length < requiredCount) return false;
         }
 
-        // 2. Check Global Flags (e.g., tracking tracking system markers for the turn)
-        if (condition.globalFlag) {
-            // NOTE: Ensure your turnHistory system integrates properly here to avoid false negatives.
-            // if (condition.globalFlag === 'creatureDiedThisTurn') { 
-            //     const hasDied = room.turnHistory?.creatureDied ?? false;
-            //     if (!hasDied) return false;
-            // }
-        }
-
         return true;
     }
 
@@ -113,7 +104,7 @@ export class ActionValidator {
      * expected zone, and any cardTypes/subTypes/controller filters match.
      *
      * Permission-style checks (hexproof, shroud, protection) are intentionally
-     * NOT here — those live in ModifierRegistry.canTarget().
+     * NOT here — those live in PermissionRegistry.canTarget().
      *
      * @param room - The snapshot of the active game room instance.
      * @param playerId - The ID of the player choosing the targets.

@@ -13,10 +13,10 @@ import type { AuthoredActionCost } from '../types/effect.types';
 import { prepareAnnouncement, spellAnnouncementDefinition, abilityAnnouncementDefinition, type AnnouncementDefinition } from './announcement-values';
 
 /** Only unresolved alternatives/numbers defer affordability; fixed extras have a known total. */
-function optionPaymentCost(card: CardInstance, definition: AnnouncementDefinition): { cost?: AuthoredActionCost; error?: string } {
+function optionPaymentCost(card: CardInstance, definition: AnnouncementDefinition, room: GameRoom, playerId: string, cast = false): { cost?: AuthoredActionCost; error?: string } {
   if (definition.numericDeclarations?.length || definition.alternativeCosts?.length) return {};
-  if (definition.additionalCost === undefined) return { cost: definition.cost };
-  const announcement = prepareAnnouncement(card, definition, {});
+  if (!cast && definition.additionalCost === undefined) return { cost: definition.cost };
+  const announcement = prepareAnnouncement(card, definition, {}, cast ? { room, playerId } : undefined);
   return announcement.success ? { cost: announcement.cost } : { error: announcement.reason };
 }
 
@@ -68,7 +68,7 @@ export class OptionService {
         disabled: !validation.success, disabledReason: validation.success ? undefined : validation.reason }];
     }
     const announced = !!blueprint.numericDeclarations?.length || !!blueprint.castRequirements.alternativeCosts?.length;
-    const payment = optionPaymentCost(card, spellAnnouncementDefinition(blueprint));
+    const payment = optionPaymentCost(card, spellAnnouncementDefinition(blueprint), room, playerId, true);
     const canPlay = payment.error ? { valid: false, reason: payment.error } : ActionValidator.canActivate(room, playerId, card, { ...blueprint.castRequirements, cost: payment.cost });
     options.push({
       actionId: ACTION_IDS.castSpell,
@@ -113,7 +113,7 @@ export class OptionService {
     const options: ActionOption[] = [];
     for (const ability of CardCharacteristicService.resolveAbilities(room, card)) {
       if (ability.type === 'activated' && !isManaAbility(ability) && (ability.allowedZones ?? ['battlefield']).includes(card.state.zone as 'hand' | 'battlefield')) {
-        const payment = optionPaymentCost(card, abilityAnnouncementDefinition(ability));
+        const payment = optionPaymentCost(card, abilityAnnouncementDefinition(ability), room, playerId);
         const canActivate = payment.error ? { valid: false, reason: payment.error } : ActionValidator.canActivate(room, playerId, card, {
           allowedZones: ability.allowedZones ?? ['battlefield'],
           speed: ability.castSpeed,

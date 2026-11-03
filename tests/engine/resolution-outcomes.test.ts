@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { GameEngine } from '@engine/game-engine';
 import { buildStackEffects } from '@engine/effect-resolver';
-import { normalizeCard } from '@library/card-parser';
+import { parseCardDefinition } from '@library/card-parser';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
 import { creature } from '../helpers/combat-fixture';
 
@@ -12,10 +12,10 @@ function fixture(prevent: 'none' | 'indestructible' | 'exile' | 'choice') {
   const room = createTestRoom({ battlefield: [source, victim] }); fillTestLibraries(room); room.players.player1.hand = [];
   if (prevent === 'exile' || prevent === 'choice') room.replacementEffects = [{ id: 'redirect', label: 'Exile instead', match: { kinds: ['destroy'] }, operation: { type: 'move_destination', to: 'exile' }, optional: prevent === 'choice' }];
   const engine = new GameEngine(room); engine.initRoom(); engines.push(engine);
-  const blueprint = normalizeCard({ id: 'outcome-fixture', onCastEffects: [
+  const blueprint = parseCardDefinition({ schemaVersion: 1, ...({ id: 'outcome-fixture', onCastEffects: [
     { action: 'DESTROY', params: {}, targeting: { type: 'permanent', required: true }, recordOutcome: { name: 'destroyed', kind: 'destroyed' } },
     { action: 'DRAW', params: { amount: 1 }, targeting: { type: 'self', required: false }, requiresOutcome: 'destroyed' },
-  ] });
+  ] }) });
   const effects = buildStackEffects(blueprint.onCastEffects, 'player1', source);
   effects[0].targets = [{ targetType: 'permanent', cardUuid: victim.uuid, zoneRevision: 0 }];
   engine.applyMutations([{ type: 'PUSH_STACK', stackObject: { type: 'triggered', uuid: 'ability', source, controllerId: 'player1', effects, countered: false } }]);

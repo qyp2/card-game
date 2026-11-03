@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "vitality-wood-staff",
   "name": "生機木杖",
   "manaCost": "{1}{G}{G}",
@@ -28,28 +29,33 @@
       "type": "activated",
       "cost": {},
       "castSpeed": "sorcery",
-      "effectId": "ATTACH",
-      "targeting": {
-        "type": "permanent",
-        "controller": "self",
-        "cardTypes": [
-          "Creature"
-        ],
-        "required": true,
-        "minTargets": 1,
-        "maxTargets": 1
+      "effect": {
+        "family": "attachments",
+        "operation": "attach",
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "cardTypes": [
+            "Creature"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
       }
     },
     {
       "id": "equipped-creature",
       "type": "static",
-      "effects": [
+      "rules": [
         {
-          "layer": 7,
+          "id": "equipped-creature-1",
+          "group": "effect",
+          "family": "characteristics",
           "scope": {
             "attachedToSource": true
           },
-          "effect": {
+          "operation": {
             "type": "STAT_DELTA",
             "power": 2
           }
@@ -59,7 +65,8 @@
   ],
   "onEnterEffects": [
     {
-      "action": "DISCARD_HAND",
+      "family": "cards",
+      "operation": "discard_hand",
       "params": {},
       "targeting": {
         "type": "self",
@@ -76,7 +83,8 @@
             "label": "棄置所有手牌，然後抽牌",
             "effects": [
               {
-                "action": "DISCARD_HAND",
+                "family": "cards",
+                "operation": "discard_hand",
                 "params": {},
                 "targeting": {
                   "type": "self",
@@ -84,7 +92,8 @@
                 }
               },
               {
-                "action": "DRAW",
+                "family": "cards",
+                "operation": "draw",
                 "params": {
                   "amount": {
                     "numeric": {

@@ -239,7 +239,8 @@ export function architecturePolicyViolations(graph: ImportGraph,
       .filter(edge => isPackageSource(edge.from) && !!appName(edge.to))
       .map(renderEdge),
     cardContentToEngine: allEdges
-      .filter(edge => edge.from.startsWith('packages/engine/src/library/') && edge.to.startsWith('packages/engine/src/engine/'))
+      .filter(edge => (edge.from.startsWith('packages/engine/src/library/') || edge.from.startsWith('packages/engine/src/rules/schema/')) &&
+        (edge.to.startsWith('packages/engine/src/engine/') || edge.to.startsWith('packages/engine/src/rules/runtime/')))
       .map(renderEdge),
     typesToExecutableConfig: allEdges
       .filter(edge => edge.from.startsWith('packages/engine/src/types/') && (edge.to === 'packages/engine/src/config.ts' || edge.to.startsWith('packages/engine/src/config/')))

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "ancient-weapon-battlefield",
   "name": "兵器之古戰場",
   "manaCost": "{0}",
@@ -19,10 +20,13 @@
       "cost": {
         "tap": true
       },
-      "effectId": "ADD_MANA",
-      "params": {
-        "color": "white",
-        "amount": 1
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "white",
+          "amount": 1
+        }
       }
     }
   ]

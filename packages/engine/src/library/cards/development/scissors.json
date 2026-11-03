@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "scissors",
   "name": "剪刀",
   "manaCost": "{0}",
@@ -11,7 +12,8 @@
   "rulesText": "Play to choose Scissors.",
   "onCastEffects": [
     {
-      "action": "DISCARD_HAND",
+      "family": "cards",
+      "operation": "discard_hand",
       "params": {},
       "targeting": {
         "type": "self",
