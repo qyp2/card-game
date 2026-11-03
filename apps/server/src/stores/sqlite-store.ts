@@ -14,7 +14,10 @@ const accountColumns = 'id,username,role,password_hash AS passwordHash,disabled,
 const sessionColumns = 'id,digest,subject_kind AS subjectKind,subject_id AS subjectId,scope,created_at AS createdAt,expires_at AS expiresAt,kind,parent_digest AS parentDigest';
 
 /** The only application module importing the native driver. No SQL leaves this boundary. */
-export class SqliteStore implements AccountRepository, DeckRepository, AuditRepository {
+import { ScenarioRecordSchema, type ScenarioRecord } from '@card-game/protocol';
+import type { ScenarioRepository } from '../scenarios/repository';
+
+export class SqliteStore implements AccountRepository, DeckRepository, AuditRepository, ScenarioRepository {
   private readonly database: Database.Database;
   private readonly statements = new Map<string, Database.Statement>();
   private readonly seats = new Map<string, Map<string, SeatOwnership>>();
@@ -130,6 +133,19 @@ export class SqliteStore implements AccountRepository, DeckRepository, AuditRepo
     });
   }
   deleteDeck(ownerId: string, id: string) { return this.statement('DELETE FROM decks WHERE owner_id=? AND id=?').run(ownerId, id).changes === 1; }
+  auditTransaction<T>(operation:()=>T):T{return this.transaction(operation);}
+  scenarioTransaction<T>(operation:()=>T):T{return this.transaction(operation);}
+  listScenarios(offset:number,limit:number) {
+    const rows=this.statement('SELECT content FROM scenarios ORDER BY updated_at DESC,id LIMIT ? OFFSET ?').all(limit,offset) as {content:string}[];
+    return {records:rows.map(row=>ScenarioRecordSchema.parse(JSON.parse(row.content))),total:(this.statement('SELECT count(*) AS total FROM scenarios').get() as {total:number}).total};
+  }
+  findScenario(id:string){const row=this.statement('SELECT content FROM scenarios WHERE id=?').get(id) as {content:string}|undefined;return row?ScenarioRecordSchema.parse(JSON.parse(row.content)):undefined;}
+  saveScenario(record:ScenarioRecord,expectedRevision:number){
+    const content=JSON.stringify(ScenarioRecordSchema.parse(record));
+    if(expectedRevision===0)return this.statement('INSERT INTO scenarios(id,revision,content,created_at,updated_at) VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING').run(record.id,record.revision,content,record.createdAt,record.updatedAt).changes===1;
+    return this.statement('UPDATE scenarios SET revision=?,content=?,updated_at=? WHERE id=? AND revision=?').run(record.revision,content,record.updatedAt,record.id,expectedRevision).changes===1;
+  }
+  deleteScenario(id:string,expectedRevision:number){return this.statement('DELETE FROM scenarios WHERE id=? AND revision=?').run(id,expectedRevision).changes===1;}
   async backup(destination: string): Promise<void> { await this.database.backup(destination); }
   close(): void { if (this.database.open) this.database.close(); }
 }

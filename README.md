@@ -27,8 +27,10 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Platform roadmap](docs/platform-plan-2026-10-24.md)
 - [Navigation and Test Lab roadmap](docs/navigation-test-lab-plan.md)
 - [Current navigation, shared sign-in and migration](docs/navigation-session-architecture.md)
+- [Scenario Builder, lab startup and fixtures](docs/scenario-lab-architecture.md)
+- [Milestone 7 completion evidence](docs/phase-7-status-2026-11-03.md)
 
-Milestone **6 is implemented**: shared navigation, public sign-in continuity and tab-owned seats. Next are **7: admin Test Lab/Scenario Builder → 8: game UI revamp**. The UI revamp was previously numbered 6; completed milestone numbers/reports remain historical. See [navigation/session setup and migration](docs/navigation-session-architecture.md).
+Milestone **7 is implemented**: the isolated local admin Test Lab adds revisioned scenarios, assigned test seats, launch/reset/inspect/revise and fixture exports. **Next: 8 — game UI revamp**. See [lab setup and contracts](docs/scenario-lab-architecture.md). Shared navigation/public sessions from Milestone 6 remain in place. The UI revamp was previously numbered 6; completed milestone numbers/reports remain historical. See [navigation/session setup and migration](docs/navigation-session-architecture.md).
 
 Use Node `^20.19.0 || >=22.12.0` and run these commands from the repository root:
 
@@ -46,10 +48,12 @@ The player app supports guest play, registration/login while seated and selectio
 
 Open `/deck-builder/` on the built public origin, or `http://localhost:5175/deck-builder/` in Vite mode. Public users browse/draft; signed-in accounts save/load/update and import/export. Play sends only a deck ID to a separate game tab without another password login. Drafts remain per-tab; the old dedicated builder credential key is cleared. See [builder architecture](docs/deck-builder-architecture.md) and [current public-session design](docs/navigation-session-architecture.md).
 
-Milestones 2–6 use focused logic/short integration checks, all typechecks and builds. The user waived browser smoke, long socket scenarios and a blocking full suite; [Milestone 6 evidence](docs/phase-6-status-2026-10-29.md) records exact results. Full `verify` remains available for CI. Before upgrading, take the rollback backup with the pre-upgrade release; migration 003 adds browser families and binds the database to an instance ID/purpose. See [migration/operations](docs/navigation-session-architecture.md#persistence-isolation-and-rollout).
+Milestones 2–7 use focused logic/short integration checks, all typechecks and builds. The user waived browser smoke, long socket scenarios and a blocking full suite; [Milestone 6 evidence](docs/phase-6-status-2026-10-29.md) records exact results. Full `verify` remains available for CI. Before upgrading, take the rollback backup with the pre-upgrade release; migration 003 adds browser families and binds the database to an instance ID/purpose. See [migration/operations](docs/navigation-session-architecture.md#persistence-isolation-and-rollout).
 
 Editable values now live in owned config folders; card definitions are grouped under `packages/engine/src/library/cards/`. Server defaults/profiles are bundled JSON; an external `CONFIG_FILE` supplies restart-loaded operator overrides. See the configuration guide for precedence and supported fields. Secrets remain in protected external sources.
 
 For administration, provision an explicit admin username/password-file through the existing bootstrap environment and deliberately enable inspection. Run `npm run dev:admin` and open `http://localhost:5174/admin/`, or use the built development path at `http://localhost:3000/admin/`. The app provides room inspection, bounded game-log pages, account disabling and read-only effective settings. Production uses the dedicated-origin [nginx example](deploy/nginx/admin.conf.example); Linux/TLS installation remains deployment work.
 
 The individual gates are `npm run typecheck:server`, `npm run typecheck:client`, `npm run test:architecture`, `npm test`, and `npm run build`. `npm run test:watch` watches the test projects. CI runs `npm ci` followed by `npm run verify` on Node 24. See the [RPS smoke checklist](docs/smoke-test-rps.md) for the production browser flow.
+
+For the built local Scenario Lab, provision external lab operator credentials, run `npm run build`, then `npm run start:lab`. Open `http://localhost:3001/admin/`. This uses separate lab storage and loopback binding. Ordinary development now requires saved decks by default; legacy fixture shortcuts remain explicit/test-only. See the lab guide for limits and migration.

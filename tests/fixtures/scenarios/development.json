@@ -1,0 +1,96 @@
+{
+  "format": "card-game-scenario",
+  "version": 1,
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "Legacy development",
+    "rulesProfile": "standard-v1",
+    "players": [
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "empire-servant",
+            "quantity": 5
+          },
+          {
+            "cardId": "land-red",
+            "quantity": 4
+          },
+          {
+            "cardId": "choice-practice",
+            "quantity": 2
+          },
+          {
+            "cardId": "broken-fireball",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "broken-fireball",
+          "empire-servant",
+          "empire-servant",
+          "land-red",
+          "land-red",
+          "choice-practice",
+          "choice-practice",
+          "empire-servant",
+          "land-red",
+          "land-red",
+          "empire-servant",
+          "empire-servant"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      },
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "empire-servant",
+            "quantity": 5
+          },
+          {
+            "cardId": "land-red",
+            "quantity": 4
+          },
+          {
+            "cardId": "choice-practice",
+            "quantity": 2
+          },
+          {
+            "cardId": "broken-fireball",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "broken-fireball",
+          "empire-servant",
+          "empire-servant",
+          "land-red",
+          "land-red",
+          "choice-practice",
+          "choice-practice",
+          "empire-servant",
+          "land-red",
+          "land-red",
+          "empire-servant",
+          "empire-servant"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      }
+    ],
+    "openingHandSize": 5,
+    "firstPlayer": 0,
+    "shuffle": "fixed",
+    "seed": 1
+  },
+  "provenance": {
+    "sourceId": null,
+    "revision": 0,
+    "instanceId": "legacy-fixtures"
+  }
+}

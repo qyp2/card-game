@@ -29,6 +29,17 @@ const socket: Socket<ServerEvents, ClientEvents> = io({
 
 export async function connectWithSession(preferBrowser = false): Promise<void> {
   await useAuthStore.getState().ensureGuest(preferBrowser);
+  const testRoom=typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('testRoom');
+  const current=getStoredAuth();
+  if(testRoom&&current){
+    if(!/^[a-f0-9-]{36}$/.test(testRoom))throw new Error('Invalid test room reference.');
+    const response=await fetch('/api/lab/rooms/'+encodeURIComponent(testRoom)+'/claim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+current.token},body:JSON.stringify({protocolVersion:PROTOCOL_VERSION})});
+    if(!response.ok)throw new Error('Sign in with an assigned lab account before claiming this test seat.');
+    const info=SessionInfoSchema.parse(await response.json());
+    if(getStoredAuth()?.sessionId!==current.sessionId)return;
+    useAuthStore.getState().setSession({...current,...info});useGameStore.getState().setRoomId(testRoom);
+    const clean=new URL(window.location.href);clean.searchParams.delete('testRoom');window.history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
+  }
   socket.connect();
 }
 

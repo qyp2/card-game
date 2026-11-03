@@ -3,7 +3,7 @@ import type { PlayerView, ActionOption } from '../views/player-view';
 import type { ViewDelta } from '../deltas/view-delta';
 import type { SessionInfo } from '../rest/auth';
 export interface RoomSetupMessage extends Versioned { deckId?: string }
-export interface SnapshotMessage extends Versioned { seq: number; room: PlayerView }
+export interface SnapshotMessage extends Versioned { seq: number; room: PlayerView; testContext?: {scenarioId:string;revision:number;name:string} }
 export interface OptionsMessage extends Versioned { roomId: string | null; cardUuid: string | null; zone: 'hand' | 'battlefield' | null; options: ActionOption[] }
 export interface RoomMessage extends Versioned { roomId: string }
 export interface ErrorMessage extends Versioned { message: string; commandId?: string; action?: string }

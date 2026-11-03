@@ -18,7 +18,7 @@ export function useSocket(enabled = true) {
     // Set my player ID from the stable per-tab identity.
     const restore = () => { const session = getStoredAuth(); if (session) setMyPlayerId(session.playerId); };
     restore();
-    void connectWithSession().catch(() => useGameStore.getState().setError('Unable to establish a session. Try signing in again.'));
+    void connectWithSession().catch(error => useGameStore.getState().setError(error instanceof Error ? error.message : 'Unable to establish a session. Try signing in again.'));
 
     const handleConnect = () => {
       // On reconnect, keep the stable id (the server remaps socket.id → playerId).

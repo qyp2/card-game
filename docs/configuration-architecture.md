@@ -104,3 +104,7 @@ Deck format meaning remains versioned: the current stored identifier `standard` 
 | C4-05 | Read-only effective summary in admin | Operators can verify live settings without revealing credential sources; editing remains a deployment operation. |
 
 Runtime state belongs in SQLite/rooms, not config files. This refactor adds neither encrypted secret storage nor a configuration management service. Linux file permissions, secret provisioning and deployment validation remain operator responsibilities. Focused schema/content/snapshot tests and the completion report record what was verified locally.
+
+## Milestone 7 lab capability
+
+`apps/server/src/config/lab.json` owns default-off capability and scenario/run capacity bounds. Capability additionally requires `navigation.purpose=lab` and `inspectionEnabled`; it is not panel-editable. `deploy/profiles/scenario-lab.example.json` supplies distinct local paths/identity/port. `npm run start:lab` selects that override and loopback binding; ordinary starts are unchanged. See [setup](scenario-lab-architecture.md). Development defaults now disable fixture fallback/debug; the test profile and explicit operator fixture mode retain legacy regressions. Normal selected-deck rooms resolve rule defaults without validating an unrelated fallback composition.

@@ -2,13 +2,13 @@
 
 **Prepared:** 24 October 2026
 **Revised:** 29 October 2026 — navigation/session integration and the admin Test Lab are incorporated below.
-**Status:** Phases 0–6 implemented with milestone-specific verification. Next: Phase 7 admin Test Lab/Scenario Builder, then Phase 8 game UI revamp (originally Phase 6). Reports retain their historical numbering. The user’s standing gate is focused logic/short integration checks, architecture, all typechecks/builds; no browser smoke, long socket or blocking full suite. See [Milestone 6 evidence](phase-6-status-2026-10-29.md).
+**Status:** Phases 0–7 implemented with milestone-specific verification. Next: Phase 8 game UI revamp (originally Phase 6). Reports retain their historical numbering. The user’s standing gate is focused logic/short integration checks, architecture, all typechecks/builds; no browser smoke, long socket or blocking full suite. See [Milestone 6 evidence](phase-6-status-2026-10-29.md).
 **Scope:** Restructure the application into a workspace monorepo with a protocol boundary, an
 account system, an admin app, a deck-builder app, consistent navigation, an admin development workspace, and an animated game client. This plan
 changes **no game rules**. Engine rules work continues on the
 [implementation plan](implementation-plan-2026-10-07.md) inside the engine package, unaffected.
 
-The [Navigation and Test Lab supplement](navigation-test-lab-plan.md) maps the user journeys, session design, scenario/fixture ownership, environment isolation and decision records onto Phases 6–7. Navigation and public sessions are implemented in Phase 6; the admin Scenario Builder, test-room launch and fixture migration remain planned for Phase 7.
+The [Navigation and Test Lab supplement](navigation-test-lab-plan.md) maps the user journeys, session design, scenario/fixture ownership, environment isolation and decision records onto Phases 6–7. Navigation and public sessions are implemented in Phase 6; the admin Scenario Builder, test-room launch and fixture compatibility exports are implemented in Phase 7.
 
 ## Relationship to existing plans
 
@@ -182,10 +182,10 @@ Additional enforced rules, added as phases land:
 | D7 | **motion (framer-motion)** for the UI revamp | React 19 compatible; `layout` prop provides FLIP animations for zone moves and hand re-fanning without manual transform bookkeeping. | Manual CSS FLIP (more code, same result); WebGL canvas (wrong tool for DOM card UI) |
 | D8 | **Opaque scoped credentials**: Milestone 6 browser-family HttpOnly cookie; explicit per-tab game/admin bearers | Public apps reuse one host-only browser sign-in with Origin/CSRF protections; children retain tab-specific seats and admin remains separately privileged. Legacy bearer APIs retain their defined rotation semantics. | A shared ambient public/admin cookie, bearer URL forwarding, cross-origin credential copying and long-lived localStorage credentials |
 | D9 | **`PROTOCOL_VERSION` on every wire payload** from Phase 1 | Cheap insurance; a stale tab after a deploy can be detected instead of misparsed. | Ad-hoc format checks |
-| D10 | **Shared navigation/editor components; independent app builds** (Phases 6–7, planned) | A navigation registry and local sidebars give future pages a home without app-to-app imports. Home stays in the public app; the Scenario Builder stays in admin. | Merging every app, adding a microfrontend framework, copying a second editor. |
+| D10 | **Shared navigation/editor components; independent app builds** (Phases 6–7, implemented) | A navigation registry and local sidebars give future pages a home without app-to-app imports. Home stays in the public app; the Scenario Builder stays in admin. | Merging every app, adding a microfrontend framework, copying a second editor. |
 | D11 | **Public-session continuity delivered in Phase 6; privileged admin and independent lab credentials** | Browser-family cookie plus bounded tab children, fixed expiry, local/family/account-wide public revocation, migration and ownership checks are implemented. See [M6 ADRs](milestone-6-implementation.md). | Token URLs, cross-origin credential copying, implicit seat authority from player IDs, one public/admin credential |
-| D12 | **Versioned development scenarios separate from standard saved decks** (Phase 7, planned) | Admin-only tooling can allow test cards/fixed ordering/initial setup without weakening ordinary deck legality. Exported automated fixtures remain reproducible and independent of live storage. | Disabling standard validation globally or making tests depend on admin login/a seeded database. |
-| D13 | **Test Lab has its own instance/data and an explicit server-owned purpose** (Phase 7, planned) | The environment badge must describe the actual instance. Live servers reject development scenario execution; admin role alone does not turn a live room into a lab. | An unrestricted UI toggle over live data or a production admin token reused against the lab. |
+| D12 | **Versioned development scenarios separate from standard saved decks** (Phase 7, implemented) | Admin-only tooling can allow test cards/fixed ordering/initial setup without weakening ordinary deck legality. Exported automated fixtures remain reproducible and independent of live storage. | Disabling standard validation globally or making tests depend on admin login/a seeded database. |
+| D13 | **Test Lab has its own instance/data and an explicit server-owned purpose** (Phase 7, implemented) | The environment badge must describe the actual instance. Live servers reject development scenario execution; admin role alone does not turn a live room into a lab. | An unrestricted UI toggle over live data or a production admin token reused against the lab. |
 
 ---
 
@@ -402,7 +402,7 @@ User-authorized Milestone 5 verification adjustment: focused editor/API/storage/
 
 ### Phase 7 — Admin Test Lab and Scenario Builder
 
-**Dependencies:** 4, 5 and 6. **Status:** planned. Uses existing engine/setup/runtime seams; adds no gameplay rules. This application Test Lab is distinct from the security-lab deployment/monitoring/pentest phases.
+**Dependencies:** 4, 5 and 6. **Status:** implemented; see [Milestone 7 evidence](phase-7-status-2026-11-03.md) and [setup/contracts](scenario-lab-architecture.md). Uses existing engine/setup/runtime seams; adds no gameplay rules. This application Test Lab is distinct from the security-lab deployment/monitoring/pentest phases.
 
 **Goal:** an administrator builds a controlled situation, launches an isolated test room, inspects it, revises it and exports a reproducible fixture. Normal playtest decks continue through the standard builder; canonical card definitions stay in engine content.
 

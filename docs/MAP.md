@@ -271,3 +271,17 @@ focused server modules own all process resources.
 | Client version/audience/ordering checks | `apps/game-client/socket.ts`, `store/gameStore.ts` |
 
 See the [projection supplement](protocol-projection-architecture.md) for decisions and the [Milestone 1 report](phase-1-status-2026-10-26.md) for evidence.
+
+## Scenario Lab locations (platform Milestone 7)
+
+| Concept | Location |
+|---|---|
+| Scenario contracts and pure editor helpers | `packages/protocol/src/scenarios/`, `packages/protocol/src/decks/editor.ts` |
+| Shared catalog/count/transfer presentation | `packages/ui/src/BuilderControls.tsx` |
+| Admin scenario editor and test rooms | `apps/admin/pages/Scenarios.tsx` |
+| Server gates, revisions and run snapshots | `apps/server/src/scenarios/`, `apps/server/src/http/scenarios-router.ts` |
+| Persistent source migration | `apps/server/src/stores/migrations/004-scenarios.ts` |
+| Plain-data setup and gameplay seed | `packages/engine/src/engine/scenario-setup.ts` |
+| Reviewed preset exports | `tests/fixtures/scenarios/` |
+
+Setup and operations: [Scenario Lab supplement](scenario-lab-architecture.md).

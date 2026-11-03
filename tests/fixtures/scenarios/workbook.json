@@ -1,0 +1,560 @@
+{
+  "format": "card-game-scenario",
+  "version": 1,
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "Legacy workbook",
+    "rulesProfile": "standard-v1",
+    "players": [
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 4
+          },
+          {
+            "cardId": "phantom-underworld",
+            "quantity": 3
+          },
+          {
+            "cardId": "beast-holy-land",
+            "quantity": 3
+          },
+          {
+            "cardId": "aurora-northland",
+            "quantity": 2
+          },
+          {
+            "cardId": "angel-holy-land",
+            "quantity": 2
+          },
+          {
+            "cardId": "sea-domain",
+            "quantity": 2
+          },
+          {
+            "cardId": "fatiao-warrior",
+            "quantity": 1
+          },
+          {
+            "cardId": "blazing-dragon-habitat",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-land-soldier",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-captain",
+            "quantity": 1
+          },
+          {
+            "cardId": "hera-empowerment",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-castle",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-rabbit",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-fox",
+            "quantity": 1
+          },
+          {
+            "cardId": "lesser-wind-fatigue",
+            "quantity": 1
+          },
+          {
+            "cardId": "okair-mountains",
+            "quantity": 1
+          },
+          {
+            "cardId": "okair-tomb",
+            "quantity": 1
+          },
+          {
+            "cardId": "winter-drake",
+            "quantity": 1
+          },
+          {
+            "cardId": "sky-hound",
+            "quantity": 1
+          },
+          {
+            "cardId": "winged-envoy",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sin-emperor",
+            "quantity": 1
+          },
+          {
+            "cardId": "nether-ancient-land",
+            "quantity": 1
+          },
+          {
+            "cardId": "swift-spirit-envoy",
+            "quantity": 1
+          },
+          {
+            "cardId": "nature-gift",
+            "quantity": 1
+          },
+          {
+            "cardId": "divine-wind-torii",
+            "quantity": 1
+          },
+          {
+            "cardId": "frozen-snowball",
+            "quantity": 1
+          },
+          {
+            "cardId": "ancient-weapon-battlefield",
+            "quantity": 1
+          },
+          {
+            "cardId": "thunder-main-camp",
+            "quantity": 1
+          },
+          {
+            "cardId": "undying-dusk-forest",
+            "quantity": 1
+          },
+          {
+            "cardId": "blazing-wind-river",
+            "quantity": 1
+          },
+          {
+            "cardId": "far-north-graveyard",
+            "quantity": 1
+          },
+          {
+            "cardId": "thunder-tundra",
+            "quantity": 1
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "pursuit-of-purifying-fire",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-patrol",
+            "quantity": 1
+          },
+          {
+            "cardId": "abyss-illusionist",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea-lord",
+            "quantity": 1
+          },
+          {
+            "cardId": "raging-sea-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-gotu",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-corporal",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-depths",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-city-noble",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-merchant",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea",
+            "quantity": 1
+          },
+          {
+            "cardId": "demon-flame-abyss",
+            "quantity": 1
+          },
+          {
+            "cardId": "great-wave-thunder-array",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-call",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-traveler",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-bean",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "phantom-underworld",
+          "beast-holy-land",
+          "land-red",
+          "land-red",
+          "wind-beast-bean",
+          "worlds-traveler",
+          "wind-call",
+          "great-wave-thunder-array",
+          "demon-flame-abyss",
+          "sea-domain",
+          "worlds-sea",
+          "worlds-merchant",
+          "sea-city-noble",
+          "sea-depths",
+          "phantom-sea-corporal",
+          "phantom-sea-gotu",
+          "worlds-pyromancer",
+          "raging-sea-power",
+          "worlds-sea-lord",
+          "abyss-illusionist",
+          "sea-patrol",
+          "pursuit-of-purifying-fire",
+          "rise-of-power",
+          "thunder-tundra",
+          "far-north-graveyard",
+          "blazing-wind-river",
+          "undying-dusk-forest",
+          "thunder-main-camp",
+          "ancient-weapon-battlefield",
+          "frozen-snowball",
+          "divine-wind-torii",
+          "nature-gift",
+          "swift-spirit-envoy",
+          "nether-ancient-land",
+          "worlds-sin-emperor",
+          "angel-holy-land",
+          "winged-envoy",
+          "sky-hound",
+          "aurora-northland",
+          "winter-drake",
+          "beast-holy-land",
+          "okair-tomb",
+          "okair-mountains",
+          "lesser-wind-fatigue",
+          "wind-beast-fox",
+          "wind-beast-rabbit",
+          "phantom-underworld",
+          "phantom-castle",
+          "hera-empowerment",
+          "phantom-captain",
+          "phantom-land-soldier",
+          "blazing-dragon-habitat",
+          "fatiao-warrior",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      },
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 4
+          },
+          {
+            "cardId": "phantom-underworld",
+            "quantity": 3
+          },
+          {
+            "cardId": "beast-holy-land",
+            "quantity": 3
+          },
+          {
+            "cardId": "aurora-northland",
+            "quantity": 2
+          },
+          {
+            "cardId": "angel-holy-land",
+            "quantity": 2
+          },
+          {
+            "cardId": "sea-domain",
+            "quantity": 2
+          },
+          {
+            "cardId": "fatiao-warrior",
+            "quantity": 1
+          },
+          {
+            "cardId": "blazing-dragon-habitat",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-land-soldier",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-captain",
+            "quantity": 1
+          },
+          {
+            "cardId": "hera-empowerment",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-castle",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-rabbit",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-fox",
+            "quantity": 1
+          },
+          {
+            "cardId": "lesser-wind-fatigue",
+            "quantity": 1
+          },
+          {
+            "cardId": "okair-mountains",
+            "quantity": 1
+          },
+          {
+            "cardId": "okair-tomb",
+            "quantity": 1
+          },
+          {
+            "cardId": "winter-drake",
+            "quantity": 1
+          },
+          {
+            "cardId": "sky-hound",
+            "quantity": 1
+          },
+          {
+            "cardId": "winged-envoy",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sin-emperor",
+            "quantity": 1
+          },
+          {
+            "cardId": "nether-ancient-land",
+            "quantity": 1
+          },
+          {
+            "cardId": "swift-spirit-envoy",
+            "quantity": 1
+          },
+          {
+            "cardId": "nature-gift",
+            "quantity": 1
+          },
+          {
+            "cardId": "divine-wind-torii",
+            "quantity": 1
+          },
+          {
+            "cardId": "frozen-snowball",
+            "quantity": 1
+          },
+          {
+            "cardId": "ancient-weapon-battlefield",
+            "quantity": 1
+          },
+          {
+            "cardId": "thunder-main-camp",
+            "quantity": 1
+          },
+          {
+            "cardId": "undying-dusk-forest",
+            "quantity": 1
+          },
+          {
+            "cardId": "blazing-wind-river",
+            "quantity": 1
+          },
+          {
+            "cardId": "far-north-graveyard",
+            "quantity": 1
+          },
+          {
+            "cardId": "thunder-tundra",
+            "quantity": 1
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "pursuit-of-purifying-fire",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-patrol",
+            "quantity": 1
+          },
+          {
+            "cardId": "abyss-illusionist",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea-lord",
+            "quantity": 1
+          },
+          {
+            "cardId": "raging-sea-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-gotu",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-corporal",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-depths",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-city-noble",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-merchant",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea",
+            "quantity": 1
+          },
+          {
+            "cardId": "demon-flame-abyss",
+            "quantity": 1
+          },
+          {
+            "cardId": "great-wave-thunder-array",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-call",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-traveler",
+            "quantity": 1
+          },
+          {
+            "cardId": "wind-beast-bean",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "phantom-underworld",
+          "beast-holy-land",
+          "land-red",
+          "land-red",
+          "wind-beast-bean",
+          "worlds-traveler",
+          "wind-call",
+          "great-wave-thunder-array",
+          "demon-flame-abyss",
+          "sea-domain",
+          "worlds-sea",
+          "worlds-merchant",
+          "sea-city-noble",
+          "sea-depths",
+          "phantom-sea-corporal",
+          "phantom-sea-gotu",
+          "worlds-pyromancer",
+          "raging-sea-power",
+          "worlds-sea-lord",
+          "abyss-illusionist",
+          "sea-patrol",
+          "pursuit-of-purifying-fire",
+          "rise-of-power",
+          "thunder-tundra",
+          "far-north-graveyard",
+          "blazing-wind-river",
+          "undying-dusk-forest",
+          "thunder-main-camp",
+          "ancient-weapon-battlefield",
+          "frozen-snowball",
+          "divine-wind-torii",
+          "nature-gift",
+          "swift-spirit-envoy",
+          "nether-ancient-land",
+          "worlds-sin-emperor",
+          "angel-holy-land",
+          "winged-envoy",
+          "sky-hound",
+          "aurora-northland",
+          "winter-drake",
+          "beast-holy-land",
+          "okair-tomb",
+          "okair-mountains",
+          "lesser-wind-fatigue",
+          "wind-beast-fox",
+          "wind-beast-rabbit",
+          "phantom-underworld",
+          "phantom-castle",
+          "hera-empowerment",
+          "phantom-captain",
+          "phantom-land-soldier",
+          "blazing-dragon-habitat",
+          "fatiao-warrior",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      }
+    ],
+    "openingHandSize": 7,
+    "firstPlayer": 0,
+    "shuffle": "fixed",
+    "seed": 1
+  },
+  "provenance": {
+    "sourceId": null,
+    "revision": 0,
+    "instanceId": "legacy-fixtures"
+  }
+}

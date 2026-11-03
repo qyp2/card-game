@@ -56,3 +56,7 @@ Platform Milestone 5 adds the separate public builder. Its [nginx location fragm
   rule in the plan (§5).
 - These files are additive. They do not change application source.
 - Every artifact gets a verification command recorded next to it before it is called done.
+
+## Local application Scenario Lab
+
+Platform Milestone 7 is implemented separately from the security infrastructure scaffold. After building and provisioning external operator credentials, `npm run start:lab` selects [the local profile](profiles/scenario-lab.example.json), binds loopback at port 3001 and uses `data/scenario-lab/`. See [full setup, migration and limits](../docs/scenario-lab-architecture.md). No nginx/TLS/tunnel/network isolation was installed by this command's implementation.

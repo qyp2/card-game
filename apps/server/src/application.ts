@@ -6,7 +6,7 @@ import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { PROTOCOL_VERSION, PlatformResponseSchema, isProtocolMessage, RoomSetupRequestSchema, JoinRoomRequestSchema, type OptionsMessage } from '@card-game/protocol';
 import { createBrowserRouter } from './auth/browser-routes';
 import { createPasswordLimiter } from './auth/password-rate-limit';
-import { gameConfig, getSetupPreset, snapshotSetupConfig } from '@card-game/engine/config';
+import { gameConfig, getRuleDefaults, getSetupPreset, snapshotSetupConfig } from '@card-game/engine/config';
 import type { RoomSettings } from '@card-game/engine/types/setup-config.types';
 import type { GameRoom } from '@card-game/engine/types/game.room.types';
 import { serverLogger } from '@card-game/engine/shared/game-logger';
@@ -35,6 +35,10 @@ import { createDebugRouter } from './projection/debug-channel';
 import { projectActionOptions } from './projection/action-options';
 import { decodeAbilityId } from './projection/wire-identifiers';
 
+import { MemoryScenarioRepository } from './scenarios/repository';
+import { ScenarioService, scenariosEnabled } from './scenarios/service';
+import { createScenariosRouter } from './http/scenarios-router';
+
 export interface ApplicationOptions {
   environment?: NodeJS.ProcessEnv;
   settings?: AuthConfig;
@@ -53,7 +57,7 @@ export function createGameApplication(options: ApplicationOptions = {}) {
   const environment = options.environment ?? process.env, config = options.effectiveConfig ?? loadServerConfig(environment, options.configuration), settings = options.settings ?? config.auth;
   const now = options.now ?? Date.now, origins = new Set(config.origins), root = path.resolve(__dirname, '..', '..', '..');
   const inspectionEnabled = () => config.inspectionEnabled;
-  const setup = snapshotSetupConfig({ ...(config.rooms.preset === 'development' ? gameConfig.setup : getSetupPreset(config.rooms.preset)), ...config.rooms.rules });
+  const setup = config.fixturesEnabled ? snapshotSetupConfig({ ...(config.rooms.preset === 'development' ? gameConfig.setup : getSetupPreset(config.rooms.preset)), ...config.rooms.rules }) : { ...getRuleDefaults(), ...config.rooms.rules, developmentDeck: [], shuffleDevelopmentDeck: false };
   const roomSettings = options.gameplay ?? (() => ({ setup, debugMode: config.debugMode }));
   if (options.store && options.databasePath) throw new Error('Choose one storage provider');
   if (options.databasePath !== undefined && !options.databasePath.trim()) throw new Error('Database path must not be empty');
@@ -84,17 +88,18 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       for (const socketId of socketIds) io.to(socketId).emit('roomDestroyed', { protocolVersion: PROTOCOL_VERSION, roomId });
     },
   }, config.rooms.reconnectGraceMs, {}, roomSettings);
+  const scenarios = new ScenarioService(persistent ?? new MemoryScenarioRepository(), runtime, auth, config, now);
   app.disable('x-powered-by');
   app.set('trust proxy', config.http.trustProxy);
   app.use(helmet({ contentSecurityPolicy: { directives: { upgradeInsecureRequests: config.profile === 'production' ? [] : null } },
     strictTransportSecurity: config.profile === 'production' ? undefined : false }));
   app.use(originPolicy(origins));
-  app.use(express.json({ limit: config.http.bodyLimitBytes }));
+  app.use((request,response,next)=>express.json({ limit: request.path.startsWith('/api/admin/scenarios') ? 32768 : config.http.bodyLimitBytes })(request,response,next));
   app.use('/api', (_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); void ready.then(() => next()).catch(next); });
   const passwordLimiter = createPasswordLimiter(settings);
   app.use('/api/auth', createAuthRouter(auth, settings, passwordLimiter));
   app.use('/api/browser', createBrowserRouter(auth, config, passwordLimiter));
-  app.get('/api/platform', (_request, response) => response.json(PlatformResponseSchema.parse({ protocolVersion: PROTOCOL_VERSION, navigation: config.navigation, capabilities: { scenarios: false } })));
+  app.get('/api/platform', (_request, response) => response.json(PlatformResponseSchema.parse({ protocolVersion: PROTOCOL_VERSION, navigation: config.navigation, capabilities: { scenarios: scenariosEnabled(config) } })));
   app.use('/api/cards', createCatalogRouter(catalog, config.http.pageSize));
   app.use('/api/decks', createDecksRouter(auth, decks, config.http.pageSize, config));
   app.get('/api/rooms/:roomId/resume', (request, response, next) => {
@@ -105,6 +110,15 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !auth.info(session, id).roomId) throw new AuthError(404, 'This room is unavailable for this game tab.');
       response.json({ protocolVersion: PROTOCOL_VERSION, sessionId: session.id, roomId: id, playerId: auth.playerId(session, id) });
     } catch (error) { next(error); }
+  });
+  app.use('/api/admin/scenarios', createScenariosRouter(scenarios,auth,config,audit));
+  app.post('/api/lab/rooms/:id/claim',(request,response,next)=>{
+    try {
+      if(!scenariosEnabled(config))throw new AuthError(404,'Scenario capability unavailable.');
+      if(!request.body || Object.keys(request.body).length!==1 || request.body.protocolVersion!==1)throw new AuthError(400,'Invalid claim request.');
+      const session=auth.sessions.validate(bearerToken(request));if(!session)throw new AuthError(401,'Lab game sign-in required.');
+      response.json(scenarios.claim(String(request.params.id),session));
+    }catch(e){next(e);}
   });
   app.use('/api/admin', createAdminRouter({ auth, store, config, audit, logs }));
   app.use('/api/debug', createDebugRouter({ findRoom: roomId => store.getRoom(roomId), enabled: inspectionEnabled, authorize: request => inspectorIdentity(auth, request),
@@ -121,7 +135,7 @@ export function createGameApplication(options: ApplicationOptions = {}) {
   };
   app.use(errors);
 
-  const snapshot = (room: GameRoom, playerId: string) => ({ protocolVersion: PROTOCOL_VERSION, seq: sync.currentSeq(room.roomId), room: buildPlayerView(room, playerId) });
+  const snapshot = (room: GameRoom, playerId: string) => {const run=runtime.isTestRoom(room.roomId)?scenarios.run(room.roomId):null;return { protocolVersion: PROTOCOL_VERSION, seq: sync.currentSeq(room.roomId), room: buildPlayerView(room, playerId),...(run?{testContext:{scenarioId:run.scenarioId,revision:run.revision,name:run.snapshot.name}}:{}) };};
   const publishSnapshot = (room: GameRoom) => {
     for (const [playerId, socketId] of runtime.recipientsFor(room)) io.to(socketId).emit('roomSnapshot', snapshot(room, playerId));
   };
@@ -188,6 +202,7 @@ export function createGameApplication(options: ApplicationOptions = {}) {
       const parsed = JoinRoomRequestSchema.safeParse(input);
       if (!parsed.success) { socket.emit('error', { protocolVersion: PROTOCOL_VERSION, message: 'Invalid join room packet' }); return; }
       const { roomId, deckId } = parsed.data;
+      if(runtime.isTestRoom(roomId)){socket.emit('error',{protocolVersion:PROTOCOL_VERSION,message:'Claim an assigned test seat before reconnecting.'});return;}
       const ownedPlayerId = auth.playerId(identity.session, roomId);
       if (store.auth.ownedSeat(roomId, `${identity.session.subject.kind}:${identity.session.subject.id}`)) {
         const restored = runtime.connect(socket.id, ownedPlayerId, roomId);
@@ -240,5 +255,5 @@ export function createGameApplication(options: ApplicationOptions = {}) {
     socket.on('disconnect', () => { clearTimeout(expiryTimer); runtime.disconnect(socket.id, identity.session.subject.kind === 'account'); });
   });
   server.on('close', () => { if (auditTimer) clearInterval(auditTimer); unsubscribe(); runtime.dispose(); audit.flush(); persistent?.close(); });
-  return { app, server, io, store, auth, runtime, ready, decks, config, audit };
+  return { app, server, io, store, auth, runtime, ready, decks, config, audit, scenarios };
 }

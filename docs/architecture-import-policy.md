@@ -85,3 +85,5 @@ The test does not ban every cross-directory import or require a speculative pack
 TypeScript compilation, behavior tests, and architecture review remain responsible for broader
 correctness. A new rule belongs here only after the repository demonstrates a stable ownership
 boundary worth preserving.
+
+Milestone 7 keeps scenario editor/API implementations in admin/server. Shared UI owns presentation only; engine-free protocol owns scenario/deck editor data helpers. The engine scenario setup accepts plain data, imports no server/admin/protocol runtime, and never reads tests/fixtures. Public apps may claim an assigned lab seat, but do not import scenario administration code. Existing import-graph gates continue to enforce these edges.

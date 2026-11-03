@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "maxScenarios": 100,
+  "maxRooms": 16
+}

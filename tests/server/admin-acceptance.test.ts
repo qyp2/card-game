@@ -33,7 +33,7 @@ describe('Milestone 4 authenticated administration', () => {
   }
   it('requires admin scope/current role on every route and exposes only approved account/config fields', async () => {
     const game = await login('operator', 'game'), admin = await login('operator');
-    const created = app.runtime.createRoom('test-socket', 'seat');
+    const created = app.runtime.createRoom('test-socket', 'seat', Array(60).fill('land-red'));
     for (const path of ['/api/admin/me', '/api/admin/rooms', '/api/admin/rooms/' + created.roomId, '/api/admin/accounts', '/api/admin/config', '/api/admin/deltas']) {
       expect((await request(path)).status).toBe(401); expect((await request(path, game.token)).status).toBe(403); expect((await request(path, admin.token)).status).toBe(200);
     }

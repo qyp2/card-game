@@ -16,7 +16,7 @@ describe('focused authenticated HTTP and socket boundary', { timeout: 10_000 }, 
   beforeEach(async () => {
     clock = Date.now();
     gameConfig.setup = { ...originalSetup, developmentDeck: Array(8).fill('land-red'), openingHandSize: 1, shuffleDevelopmentDeck: false };
-    environment = { DELTA_LOG_PATH: '', INSPECTOR_ENABLED: 'true' };
+    environment = { NODE_ENV: 'test', DELTA_LOG_PATH: '', INSPECTOR_ENABLED: 'true' };
     application = createGameApplication({ environment, now: () => clock });
     await application.ready;
     await new Promise<void>(resolve => application.server.listen(0, '127.0.0.1', resolve));

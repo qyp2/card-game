@@ -18,7 +18,7 @@ export function RoomInspector({ room }: { room: Record<string, unknown> }) {
     <details><summary>Full room data</summary><pre>{JSON.stringify(room, null, 2)}</pre></details>
   </>;
 }
-function SelectedRoom({ api, id, refresh }: { api: AdminApi; id: string; refresh: number }) {
+export function SelectedRoom({ api, id, refresh }: { api: AdminApi; id: string; refresh: number }) {
   const load = useCallback((signal: AbortSignal) => api.get('/api/admin/rooms/' + encodeURIComponent(id), AdminRoomResponseSchema, signal), [api, id]);
   const state = useResource(load, refresh, adminUi.roomPollMs);
   return <section className="panel inspector"><h2>Room inspector</h2><p className="identifier">{id}</p>

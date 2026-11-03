@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CardSurface, WorkspaceHeader } from '@card-game/ui';
+import { CardSurface, WorkspaceHeader, CardCountControls, CatalogTile, BuilderTransfer } from '@card-game/ui';
 import { publicSession, PublicApiError } from '@card-game/browser-session';
 import { DECK_RULES, PASSWORD_LIMITS, validateDeck, type SessionInfo, type PlatformInfo, type CatalogCard, type DeckInput, type SavedDeck } from '@card-game/protocol';
 import { BuilderApi, BuilderApiError } from './api';
@@ -128,7 +128,7 @@ export default function App() {
   }
 
   return <main>
-    <WorkspaceHeader navigation={platform?.navigation ?? null} current="decks" account={session?.account ?? null} breadcrumb="Decks / Builder" accountMenu={<a href="#builder-account">Sign-in and public session controls</a>} />
+    <WorkspaceHeader navigation={platform?.navigation ?? null} scenariosAvailable={!!platform?.capabilities.scenarios} current="decks" account={session?.account ?? null} breadcrumb="Decks / Builder" accountMenu={<a href="#builder-account">Sign-in and public session controls</a>} />
     <header><div><p className="eyebrow">CARD GAME / DECK WORKSHOP</p><h1>Build your next game.</h1><p>Explore the cards, shape a deck, then take it to the table.</p></div>{gameBase && <a href={gameBase}>Open game</a>}</header>
     <section id="builder-account" className="account" aria-label="Account">
       {session ? <><strong>{session.account?.username}</strong><span>Account saves are private to you.</span><button onClick={() => void logout()} disabled={busy}>Sign out this browser</button><button onClick={() => void logout(true)} disabled={busy}>Sign out all public sessions</button></> :
@@ -153,12 +153,11 @@ export default function App() {
           <label className="checkbox"><input type="checkbox" checked={filter.legalOnly} onChange={event => setFilter({ ...filter, legalOnly: event.target.checked })} />Deck-legal only</label>
         </div>
         {catalogError ? <p role="alert">{catalogError} <button onClick={() => setCatalogRevision(value => value + 1)}>Retry catalog</button></p> : !catalogReady ? <p role="status">Loading catalog…</p> : !filtered.length ? <p>No cards match these filters.</p> : null}
-        <div className="catalog-grid">{filtered.map(card => <article key={card.id}>
+        <div className="catalog-grid">{filtered.map(card => <CatalogTile key={card.id} id={card.id} description={card.rulesText || 'No rules text.'} action={null}>
           <CardSurface card={card} />
-          <p className="card-id">{card.id}</p><p>{card.rulesText || 'No rules text.'}</p>
           <small>{card.deckLegal ? card.copyLimit === null ? 'Unlimited copies' : `Up to ${card.copyLimit} copies` : 'Not legal in saved decks'}</small>
           <button disabled={locked || !catalogReady || !card.deckLegal || deckCount(draft) >= DECK_RULES.maxCards || (draft.cards.find(entry => entry.cardId === card.id)?.quantity ?? 0) >= (card.copyLimit ?? DECK_RULES.maxCards)} onClick={() => edit(changeCopies(draft, card.id, 1))} aria-label={'Add ' + card.name}>+ Add</button>
-        </article>)}</div>
+        </CatalogTile>)}</div>
       </section>
       <aside aria-label="Deck editor">
         <h2>Your deck</h2>
@@ -171,8 +170,7 @@ export default function App() {
         {!session && <p>Sign in above to save your deck.</p>}
         <ul className="deck-list">{draft.cards.map(entry => <li key={entry.cardId}>
           <div><strong>{catalog.get(entry.cardId)?.name ?? entry.cardId}</strong><small>{entry.cardId}</small></div>
-          <button aria-label={'Remove one ' + entry.cardId} disabled={locked} onClick={() => edit(changeCopies(draft, entry.cardId, -1))}>−</button><span>{entry.quantity}</span>
-          <button aria-label={'Add one ' + entry.cardId} disabled={locked || !catalogReady || !catalog.get(entry.cardId)?.deckLegal || deckCount(draft) >= DECK_RULES.maxCards || entry.quantity >= (catalog.get(entry.cardId)?.copyLimit ?? DECK_RULES.maxCards)} onClick={() => edit(changeCopies(draft, entry.cardId, 1))}>+</button>
+          <CardCountControls label={entry.cardId} quantity={entry.quantity} disabled={locked} canAdd={catalogReady && !!catalog.get(entry.cardId)?.deckLegal && deckCount(draft) < DECK_RULES.maxCards && entry.quantity < (catalog.get(entry.cardId)?.copyLimit ?? DECK_RULES.maxCards)} onChange={delta => edit(changeCopies(draft,entry.cardId,delta))} />
           <button aria-label={'Remove all ' + entry.cardId} disabled={locked} onClick={() => edit(changeCopies(draft, entry.cardId, -entry.quantity))}>×</button>
         </li>)}</ul>
         {saved && <p>{dirty ? 'Unsaved changes. Save before playing this version.' : 'This version is saved.'}</p>}
@@ -183,10 +181,8 @@ export default function App() {
           {session ? <><button disabled={locked || listBusy} onClick={() => setListRevision(value => value + 1)}>Refresh saved decks</button>
             {listBusy ? <p role="status">Loading your decks…</p> : !decks.length ? <p>No saved decks yet.</p> : <ul className="saved-decks">{decks.map(deck => <li key={deck.id}><button disabled={locked || listBusy} onClick={() => replaceDraft(editableDeck(deck), deck)}>{deck.name}</button></li>)}</ul>}</> : <p>Sign in to load your saved decks.</p>}
         </section>
-        <section aria-label="Import and export"><h3>Text import / export</h3><p>One line per card: <code>4 empire-servant</code>. Use the card IDs shown in the catalog.</p>
-          <label>Deck text <textarea rows={7} value={text} disabled={locked} maxLength={builderConfig.maxImportBytes} onChange={event => setText(event.target.value)} /></label>
-          <div className="toolbar"><button disabled={locked || !text.trim()} onClick={() => { try { replaceDraft(importDeck(text), null); } catch (reason) { setError(message(reason)); } }}>Import text</button><button onClick={() => setText(exportDeck(draft))}>Export to text</button></div>
-        </section>
+        <h3>Text import / export</h3><p>One line per card: <code>4 empire-servant</code>. Use the card IDs shown in the catalog.</p>
+        <BuilderTransfer maxLength={builderConfig.maxImportBytes} label="Deck text" importLabel="Import text" exportLabel="Export to text" text={text} onText={setText} disabled={locked} onImport={() => { try { replaceDraft(importDeck(text), null); } catch (reason) { setError(message(reason)); } }} onExport={() => setText(exportDeck(draft))} />
       </aside>
     </div>
   </main>;

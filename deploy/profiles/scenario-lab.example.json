@@ -1,0 +1,36 @@
+{
+  "http": {
+    "port": 3001,
+    "trustProxy": false
+  },
+  "lab": {
+    "enabled": true,
+    "maxScenarios": 100,
+    "maxRooms": 16
+  },
+  "origins": [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001"
+  ],
+  "navigation": {
+    "instanceId": "scenario-lab",
+    "purpose": "lab",
+    "label": "Local Scenario Lab",
+    "home": "http://localhost:3001/home",
+    "play": "http://localhost:3001/play",
+    "decks": "http://localhost:3001/deck-builder/",
+    "admin": "http://localhost:3001/admin/",
+    "lab": null,
+    "extraPages": []
+  },
+  "storage": {
+    "databasePath": "data/scenario-lab/card-game.sqlite"
+  },
+  "logging": {
+    "deltaPath": "data/scenario-lab/deltas.jsonl",
+    "auditPath": "data/scenario-lab/admin-audit.jsonl"
+  },
+  "inspectionEnabled": true,
+  "fixturesEnabled": false,
+  "debugMode": "off"
+}

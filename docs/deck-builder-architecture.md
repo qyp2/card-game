@@ -82,3 +82,7 @@ Server-owned `navigation.json` supplies built-origin links; `navigation.vite.jso
 ## Verification contract
 
 Focused logic/render checks retain editing/filtering/import/storage/API/card-face coverage. Milestone 6 additionally proves cookie sign-in → builder save → tab-owned match/full turn → builder update without another login or game revocation. Anonymous/guest saves remain denied. All eight project typechecks, four builds and import/bundle checks are required. See the [current completion report](phase-6-status-2026-10-29.md) for exact results. Browser smoke, long socket/full-suite waits and target-host deployment remain excluded; no browser interaction/visual claim is made.
+
+## Milestone 7 shared controls
+
+Scenario administration reuses CatalogTile, CardCountControls and BuilderTransfer from UI and catalog/count helpers from protocol. The standard builder retains its own session/network/state adapters, format validation, drafts and text format. Lab scenarios use a distinct strict schema, not relaxed standard-deck policy. See [Scenario Lab](scenario-lab-architecture.md).

@@ -4,12 +4,14 @@ import { randomUUID } from 'node:crypto';
 import { AuditRecordSchema, type AuditRecord } from '@card-game/protocol';
 
 export interface AuditRepository {
+  auditTransaction<T>(operation:()=>T):T;
   appendAudit(record: AuditRecord): void;
   pendingAudit(limit: number): AuditRecord[];
   markAuditExported(id: string): void;
 }
 export class InMemoryAuditStore implements AuditRepository {
-  private readonly entries = new Map<string, { record: AuditRecord; exported: boolean }>();
+  private entries = new Map<string, { record: AuditRecord; exported: boolean }>();
+  auditTransaction<T>(operation:()=>T):T{const previous=structuredClone(this.entries);try{return operation();}catch(error){this.entries=previous;throw error;}}
   appendAudit(record: AuditRecord) { this.entries.set(record.id, { record: structuredClone(record), exported: false }); }
   pendingAudit(limit: number) { return [...this.entries.values()].filter(entry => !entry.exported).slice(0, limit).map(entry => structuredClone(entry.record)); }
   markAuditExported(id: string) { const entry = this.entries.get(id); if (entry) entry.exported = true; }
@@ -17,6 +19,7 @@ export class InMemoryAuditStore implements AuditRepository {
 /** Durable outbox first; JSONL export is at least once and identified by the event UUID. */
 export class AuditService {
   exportPending = false;
+  atomic<T>(operation:()=>T):T{return this.repository.auditTransaction(operation);}
   constructor(private readonly repository: AuditRepository, private readonly filename = '', private readonly now = Date.now) {}
   record(actorId: string | null, action: AuditRecord['action'], target: string, outcome: AuditRecord['outcome'] = 'success'): void {
     this.repository.appendAudit(AuditRecordSchema.parse({ id: randomUUID(), timestamp: this.now(), actorId, action, target, outcome }));

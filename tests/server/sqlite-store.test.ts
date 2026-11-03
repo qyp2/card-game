@@ -95,9 +95,9 @@ describe('SQLite persistence and atomic auth', () => {
     const db = new Database(':memory:');
     try {
       migrate(db); migrate(db);
-      expect(() => migrate(db, [...migrations, { version: 4, sql: 'CREATE TABLE partial_write (id TEXT); INSERT INTO missing VALUES (1);' }])).toThrow();
+      expect(() => migrate(db, [...migrations, { version: migrations.length + 1, sql: 'CREATE TABLE partial_write (id TEXT); INSERT INTO missing VALUES (1);' }])).toThrow();
       expect(db.prepare("SELECT name FROM sqlite_master WHERE name='partial_write'").get()).toBeUndefined();
-      expect(db.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
+      expect(db.prepare('SELECT version FROM schema_migrations').all()).toEqual(migrations.map(({version})=>({version})));
       db.prepare('INSERT INTO schema_migrations VALUES (99,0)').run(); expect(() => migrate(db)).toThrow('Unsupported');
     } finally { db.close(); }
   });

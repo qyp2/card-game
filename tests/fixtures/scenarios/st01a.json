@@ -1,0 +1,352 @@
+{
+  "format": "card-game-scenario",
+  "version": 1,
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "Legacy st01a",
+    "rulesProfile": "scorch-v1",
+    "players": [
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 37
+          },
+          {
+            "cardId": "red-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "strong-ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "wise-ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-mercenary",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-ballista",
+            "quantity": 1
+          },
+          {
+            "cardId": "chiron",
+            "quantity": 1
+          },
+          {
+            "cardId": "andu-gittes",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-flameblade",
+            "quantity": 1
+          },
+          {
+            "cardId": "wolf-king-keps",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-emperor-achilles",
+            "quantity": 1
+          },
+          {
+            "cardId": "achilles-blood-temple",
+            "quantity": 1
+          },
+          {
+            "cardId": "bloodrage-maadini",
+            "quantity": 1
+          },
+          {
+            "cardId": "ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "achilles-minion",
+            "quantity": 1
+          },
+          {
+            "cardId": "awakened-blood-mountain",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-rebel",
+            "quantity": 1
+          },
+          {
+            "cardId": "fireball",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-fangs",
+            "quantity": 1
+          },
+          {
+            "cardId": "broken-fireball",
+            "quantity": 1
+          },
+          {
+            "cardId": "musketeer-infantry",
+            "quantity": 1
+          },
+          {
+            "cardId": "empire-servant",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "land-red",
+          "land-red",
+          "land-red",
+          "empire-servant",
+          "musketeer-infantry",
+          "broken-fireball",
+          "flame-fangs",
+          "land-red",
+          "fireball",
+          "worlds-rebel",
+          "awakened-blood-mountain",
+          "achilles-minion",
+          "ignition-wolf",
+          "bloodrage-maadini",
+          "achilles-blood-temple",
+          "flame-emperor-achilles",
+          "wolf-king-keps",
+          "worlds-flameblade",
+          "andu-gittes",
+          "chiron",
+          "flame-ballista",
+          "flame-mercenary",
+          "rise-of-power",
+          "worlds-pyromancer",
+          "wise-ignition-wolf",
+          "strong-ignition-wolf",
+          "red-wolf",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      },
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 37
+          },
+          {
+            "cardId": "red-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "strong-ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "wise-ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-mercenary",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-ballista",
+            "quantity": 1
+          },
+          {
+            "cardId": "chiron",
+            "quantity": 1
+          },
+          {
+            "cardId": "andu-gittes",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-flameblade",
+            "quantity": 1
+          },
+          {
+            "cardId": "wolf-king-keps",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-emperor-achilles",
+            "quantity": 1
+          },
+          {
+            "cardId": "achilles-blood-temple",
+            "quantity": 1
+          },
+          {
+            "cardId": "bloodrage-maadini",
+            "quantity": 1
+          },
+          {
+            "cardId": "ignition-wolf",
+            "quantity": 1
+          },
+          {
+            "cardId": "achilles-minion",
+            "quantity": 1
+          },
+          {
+            "cardId": "awakened-blood-mountain",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-rebel",
+            "quantity": 1
+          },
+          {
+            "cardId": "fireball",
+            "quantity": 1
+          },
+          {
+            "cardId": "flame-fangs",
+            "quantity": 1
+          },
+          {
+            "cardId": "broken-fireball",
+            "quantity": 1
+          },
+          {
+            "cardId": "musketeer-infantry",
+            "quantity": 1
+          },
+          {
+            "cardId": "empire-servant",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "land-red",
+          "land-red",
+          "land-red",
+          "empire-servant",
+          "musketeer-infantry",
+          "broken-fireball",
+          "flame-fangs",
+          "land-red",
+          "fireball",
+          "worlds-rebel",
+          "awakened-blood-mountain",
+          "achilles-minion",
+          "ignition-wolf",
+          "bloodrage-maadini",
+          "achilles-blood-temple",
+          "flame-emperor-achilles",
+          "wolf-king-keps",
+          "worlds-flameblade",
+          "andu-gittes",
+          "chiron",
+          "flame-ballista",
+          "flame-mercenary",
+          "rise-of-power",
+          "worlds-pyromancer",
+          "wise-ignition-wolf",
+          "strong-ignition-wolf",
+          "red-wolf",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      }
+    ],
+    "openingHandSize": 7,
+    "firstPlayer": 0,
+    "shuffle": "fixed",
+    "seed": 1
+  },
+  "provenance": {
+    "sourceId": null,
+    "revision": 0,
+    "instanceId": "legacy-fixtures"
+  }
+}

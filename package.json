@@ -28,7 +28,8 @@
     "verify": "npm run typecheck && npm run test && npm run build",
     "build:deck-builder": "npm run build -w @card-game/deck-builder",
     "dev:deck-builder": "npm run dev -w @card-game/deck-builder",
-    "typecheck:deck-builder": "tsc -b apps/deck-builder"
+    "typecheck:deck-builder": "tsc -b apps/deck-builder",
+    "start:lab": "node apps/server/dist/index.js --lab"
   },
   "keywords": [],
   "author": "",

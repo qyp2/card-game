@@ -22,7 +22,8 @@ function createDefaultPlayer(id: PlayerId, setup: SetupConfig): PlayerState {
 }
 
 export function createRoom(roomId: string, player1Id: PlayerId, cards?: readonly string[], settings?: RoomSettings): GameRoom {
-    const setup = snapshotSetupConfig(settings?.setup);
+    const selected = settings?.setup ?? gameConfig.setup;
+    const setup = snapshotSetupConfig(cards ? { ...selected, playerDecks: { [player1Id]: [...cards] } } : selected);
     if (cards) { cards.forEach(getBlueprint); setup.playerDecks = { [player1Id]: [...cards] }; }
     else setup.developmentDeck.forEach(getBlueprint);
     return {

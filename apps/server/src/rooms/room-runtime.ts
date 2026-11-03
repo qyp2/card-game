@@ -58,6 +58,7 @@ export type PlayerActionRuntimeResult =
   | { kind: 'success'; commandId: string; action: string; snapshot?: GameRoom };
 
 export class RoomRuntime {
+  private readonly labContexts = new Map<string, RuntimeContext>();
   private readonly engines = new Map<string, GameEngine>();
   private readonly socketRooms = new Map<string, string>();
   private readonly destroyTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -75,6 +76,15 @@ export class RoomRuntime {
     this.runtimeContext = resolveRuntimeContext(dependencies);
   }
 
+  installTestRoom(room:GameRoom, random:()=>number):void {
+    if(this.store.getRoom(room.roomId))throw new Error('Room already exists');
+    this.labContexts.set(room.roomId,{...this.runtimeContext,random});
+    this.store.saveRoom(room);
+    try { this.replaceRoomEngine(room); } catch(error) { this.labContexts.delete(room.roomId);this.store.deleteRoom(room.roomId);throw error; }
+  }
+  removeTestRoom(roomId:string):void { if(!this.labContexts.has(roomId))throw new Error('Not a test room');this.destroyRoom(roomId); }
+  testRoom(roomId:string){return this.labContexts.has(roomId)?this.store.getRoom(roomId):undefined;}
+  isTestRoom(roomId:string):boolean {return this.labContexts.has(roomId);}
   connect(socketId: string, authPlayerId?: PlayerId, authRoomId?: string | null): ConnectResult {
     if (!authPlayerId || !authRoomId) return { kind: 'no_rejoin' };
 
@@ -224,6 +234,7 @@ export class RoomRuntime {
     for (const roomId of [...this.destroyTimers.keys()]) this.cancelScheduledDestroy(roomId);
     for (const engine of this.engines.values()) engine.dispose();
     this.engines.clear();
+    this.labContexts.clear();
     this.socketRooms.clear();
     this.identity.playerIdBySocket.clear();
     this.identity.socketIdByPlayer.clear();
@@ -231,7 +242,7 @@ export class RoomRuntime {
 
   private replaceRoomEngine(room: GameRoom): GameEngine {
     this.engines.get(room.roomId)?.dispose();
-    const engine = new GameEngine(room, this.runtimeContext);
+    const engine = new GameEngine(room, this.labContexts.get(room.roomId) ?? this.runtimeContext);
     engine.initRoom();
     this.engines.set(room.roomId, engine);
     return engine;
@@ -267,6 +278,7 @@ export class RoomRuntime {
       engine.dispose();
       this.engines.delete(roomId);
     }
+    this.labContexts.delete(roomId);
     this.store.deleteRoom(roomId);
     if (!room) return;
 

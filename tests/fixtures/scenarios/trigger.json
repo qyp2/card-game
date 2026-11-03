@@ -1,0 +1,106 @@
+{
+  "format": "card-game-scenario",
+  "version": 1,
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "Legacy trigger",
+    "rulesProfile": "standard-v1",
+    "players": [
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 22
+          },
+          {
+            "cardId": "trigger-probe",
+            "quantity": 3
+          }
+        ],
+        "libraryOrder": [
+          "land-red",
+          "land-red",
+          "trigger-probe",
+          "trigger-probe",
+          "trigger-probe",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      },
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 22
+          },
+          {
+            "cardId": "trigger-probe",
+            "quantity": 3
+          }
+        ],
+        "libraryOrder": [
+          "land-red",
+          "land-red",
+          "trigger-probe",
+          "trigger-probe",
+          "trigger-probe",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      }
+    ],
+    "openingHandSize": 5,
+    "firstPlayer": 0,
+    "shuffle": "fixed",
+    "seed": 1
+  },
+  "provenance": {
+    "sourceId": null,
+    "revision": 0,
+    "instanceId": "legacy-fixtures"
+  }
+}

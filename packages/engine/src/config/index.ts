@@ -44,6 +44,8 @@ export const st01aTestSetup = getSetupPreset('st01a');
 export const workbookTestSetup = getSetupPreset('workbook');
 export const smallMechanicsTestSetup = getSetupPreset('small-mechanics');
 
+export function getRuleDefaults(){return structuredClone(rules);}
+
 export function landPlayLimit(setup?: SetupConfig): number {
   return setup?.landPlaysPerTurn ?? gameConfig.setup.landPlaysPerTurn ?? rules.landPlaysPerTurn;
 }
@@ -56,11 +58,12 @@ export function snapshotSetupConfig(setup: SetupConfig = gameConfig.setup): Setu
     Number.isSafeInteger(setup.openingHandSize) && setup.openingHandSize >= 0;
   const hasValidDevelopmentDeck =
     Array.isArray(setup.developmentDeck) &&
-    setup.developmentDeck.length > 0 &&
+    (setup.developmentDeck.length > 0 || !!setup.playerDecks) &&
     setup.developmentDeck.every((id) => typeof id === 'string' && id.trim());
   const hasValidFirstPlayerDrawSetting =
     typeof setup.firstPlayerDrawsOnFirstTurn === 'boolean';
   const hasValidShuffleSetting = typeof setup.shuffleDevelopmentDeck === 'boolean';
+  const hasValidPlayerDecks = !setup.playerDecks || Object.keys(setup.playerDecks).length > 0 && Object.values(setup.playerDecks).every(deck => Array.isArray(deck) && deck.length >= setup.openingHandSize && deck.every(id => typeof id === 'string' && !!id.trim()));
   const setupLandPlayLimit = landPlayLimit(setup);
   const hasValidLandPlayLimit =
     Number.isSafeInteger(setupLandPlayLimit) && setupLandPlayLimit >= 0;
@@ -69,9 +72,10 @@ export function snapshotSetupConfig(setup: SetupConfig = gameConfig.setup): Setu
     !hasValidStartingLife ||
     !hasValidOpeningHand ||
     !hasValidDevelopmentDeck ||
-    setup.openingHandSize > setup.developmentDeck.length ||
+    (!setup.playerDecks && setup.openingHandSize > setup.developmentDeck.length) ||
     !hasValidFirstPlayerDrawSetting ||
     !hasValidShuffleSetting ||
+    !hasValidPlayerDecks ||
     !hasValidLandPlayLimit
   ) {
     throw new Error('Invalid gameplay setup configuration');

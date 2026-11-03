@@ -13,6 +13,7 @@ const origin = z.string().refine(value => { try { const url = new URL(value); re
 const rules = z.object({ startingLife: positive(10000), openingHandSize: z.number().int().min(0).max(100), firstPlayerDrawsOnFirstTurn: z.boolean(), landPlaysPerTurn: z.number().int().min(0).max(100), scorch: z.boolean() }).partial().strict();
 export const ServerConfigSchema = z.object({
   profile: z.enum(['development', 'production', 'test']), auth: AuthConfigSchema,
+  lab: z.object({ enabled: z.boolean(), maxScenarios: positive(1000), maxRooms: positive(100) }).strict().default({enabled:false,maxScenarios:100,maxRooms:16}),
   navigation: NavigationConfigSchema,
   http: z.object({ port: z.number().int().min(0).max(65535), bodyLimitBytes: z.number().int().min(1024).max(65536), pageSize: positive(100), trustProxy: z.union([z.literal(false), z.literal('loopback')]).default(false) }).strict(),
   storage: z.object({ databasePath: z.string().min(1).max(4096), lockTimeoutMs: positive(5000), maxDecksPerAccount: positive(1000) }).strict(),

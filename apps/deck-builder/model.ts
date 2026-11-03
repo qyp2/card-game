@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CardIdSchema, DECK_RULES, DeckSchema, type CatalogCard, type DeckInput, type SavedDeck } from '@card-game/protocol';
+import { changeCardCounts, CardIdSchema, DECK_RULES, DeckSchema, type CatalogCard, type DeckInput, type SavedDeck } from '@card-game/protocol';
 import { builderConfig } from './config';
 
 // Drafts may be empty/unnamed while editing. Saving still uses validateDeck.
@@ -9,21 +9,10 @@ export const editableDeck = (deck: SavedDeck): DeckInput => ({ name: deck.name, 
 export const deckCount = (deck: DeckInput) => deck.cards.reduce((sum, entry) => sum + entry.quantity, 0);
 export function changeCopies(deck: DeckInput, cardId: string, delta: number): DeckInput {
   if (!CardIdSchema.safeParse(cardId).success || !Number.isSafeInteger(delta)) return deck;
-  const quantity = (deck.cards.find(entry => entry.cardId === cardId)?.quantity ?? 0) + delta;
-  if (quantity > DECK_RULES.maxCards) return deck;
-  const cards = deck.cards.filter(entry => entry.cardId !== cardId);
-  if (quantity > 0) cards.push({ cardId, quantity });
-  return { ...deck, cards: cards.sort((a, b) => a.cardId.localeCompare(b.cardId)) };
+  if((deck.cards.find(entry=>entry.cardId===cardId)?.quantity??0)+delta>DECK_RULES.maxCards)return deck;
+  return { ...deck, cards: changeCardCounts(deck.cards, cardId, delta, DECK_RULES.maxCards) };
 }
-export interface CatalogFilter { search: string; type: string; color: string; legalOnly: boolean }
-export function filterCatalog(cards: readonly CatalogCard[], filter: CatalogFilter): CatalogCard[] {
-  const query = filter.search.trim().toLowerCase();
-  return cards.filter(card => (!filter.legalOnly || card.deckLegal)
-    && (!filter.type || card.cardTypes.includes(filter.type))
-    && (!filter.color || (filter.color === 'colorless' ? card.colors.length === 0 : card.colors.includes(filter.color)))
-    && (!query || [card.id, card.name, card.rulesText, ...card.subTypes].join(' ').toLowerCase().includes(query)));
-}
-
+export { filterCatalog, type CatalogFilter } from '@card-game/protocol';
 /** Portable, unambiguous IDs; JSON-quoted name prevents header/line injection. */
 export function exportDeck(deck: DeckInput): string {
   return ['# name: ' + JSON.stringify(deck.name), '# format: ' + deck.format,

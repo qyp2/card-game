@@ -105,3 +105,7 @@ To restore, stop the server first, preserve the current database and any sidecar
 | P3-06 | Native backup API, offline restore and external log rotation | Keeps storage tooling small; operators still own scheduling, retention, file permissions and Linux verification. |
 
 See the [implementation ledger](milestone-3-implementation.md) and [completion report](phase-3-status-2026-10-27.md) for requirement-specific evidence and the focused-testing adjustment.
+
+## Scenario source migration 004
+
+Milestone 7 adds a dedicated revisioned `scenarios` table; decks/accounts/sessions retain their schemas. Scenario sources and audit outbox participate in rollback-aware writes. Runs/rooms/seats remain ephemeral. Take a pre-upgrade backup with the matching old release before opening this version; rollback restores the old database/build together. See [scenario operations](scenario-lab-architecture.md#storage-and-operations).

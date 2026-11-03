@@ -1,0 +1,272 @@
+{
+  "format": "card-game-scenario",
+  "version": 1,
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "Legacy small-mechanics",
+    "rulesProfile": "standard-v1",
+    "players": [
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 10
+          },
+          {
+            "cardId": "phantom-underworld",
+            "quantity": 8
+          },
+          {
+            "cardId": "beast-holy-land",
+            "quantity": 8
+          },
+          {
+            "cardId": "aurora-northland",
+            "quantity": 8
+          },
+          {
+            "cardId": "angel-holy-land",
+            "quantity": 8
+          },
+          {
+            "cardId": "sea-domain",
+            "quantity": 10
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "pursuit-of-purifying-fire",
+            "quantity": 1
+          },
+          {
+            "cardId": "abyss-illusionist",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea-lord",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-gotu",
+            "quantity": 1
+          },
+          {
+            "cardId": "raging-sea-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-patrol",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "sea-domain",
+          "sea-domain",
+          "land-red",
+          "land-red",
+          "sea-patrol",
+          "worlds-pyromancer",
+          "raging-sea-power",
+          "phantom-sea-gotu",
+          "worlds-sea-lord",
+          "abyss-illusionist",
+          "pursuit-of-purifying-fire",
+          "rise-of-power",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      },
+      {
+        "life": 20,
+        "library": [
+          {
+            "cardId": "land-red",
+            "quantity": 10
+          },
+          {
+            "cardId": "phantom-underworld",
+            "quantity": 8
+          },
+          {
+            "cardId": "beast-holy-land",
+            "quantity": 8
+          },
+          {
+            "cardId": "aurora-northland",
+            "quantity": 8
+          },
+          {
+            "cardId": "angel-holy-land",
+            "quantity": 8
+          },
+          {
+            "cardId": "sea-domain",
+            "quantity": 10
+          },
+          {
+            "cardId": "rise-of-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "pursuit-of-purifying-fire",
+            "quantity": 1
+          },
+          {
+            "cardId": "abyss-illusionist",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-sea-lord",
+            "quantity": 1
+          },
+          {
+            "cardId": "phantom-sea-gotu",
+            "quantity": 1
+          },
+          {
+            "cardId": "raging-sea-power",
+            "quantity": 1
+          },
+          {
+            "cardId": "worlds-pyromancer",
+            "quantity": 1
+          },
+          {
+            "cardId": "sea-patrol",
+            "quantity": 1
+          }
+        ],
+        "libraryOrder": [
+          "sea-domain",
+          "sea-domain",
+          "land-red",
+          "land-red",
+          "sea-patrol",
+          "worlds-pyromancer",
+          "raging-sea-power",
+          "phantom-sea-gotu",
+          "worlds-sea-lord",
+          "abyss-illusionist",
+          "pursuit-of-purifying-fire",
+          "rise-of-power",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red",
+          "sea-domain",
+          "angel-holy-land",
+          "aurora-northland",
+          "beast-holy-land",
+          "phantom-underworld",
+          "land-red"
+        ],
+        "hand": [],
+        "graveyard": [],
+        "battlefield": []
+      }
+    ],
+    "openingHandSize": 7,
+    "firstPlayer": 0,
+    "shuffle": "fixed",
+    "seed": 1
+  },
+  "provenance": {
+    "sourceId": null,
+    "revision": 0,
+    "instanceId": "legacy-fixtures"
+  }
+}

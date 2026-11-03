@@ -5,6 +5,7 @@ import http from './http.json';
 import storage from './storage.json';
 import rooms from './rooms.json';
 import logging from './logging.json';
+import lab from './lab.json';
 import navigation from './navigation.json';
 import viteNavigation from './navigation.vite.json';
 import development from './profiles/development.json';
@@ -41,7 +42,7 @@ function booleanSetting(name: string, value: string | undefined): boolean | unde
 export function loadServerConfig(environment: NodeJS.ProcessEnv = process.env, override?: unknown): ServerConfig {
   const profile = environment.NODE_ENV ?? 'development';
   if (!Object.prototype.hasOwnProperty.call(profiles, profile)) throw new ConfigurationError('Invalid configuration: NODE_ENV');
-  let value: unknown = { profile, auth, http, storage, rooms, logging, navigation: profile === 'production' ? { ...navigation, instanceId: 'live-game', purpose: 'live', label: 'Live game', home: '/home', play: '/play', decks: '/deck-builder/', admin: null } : navigation, ...profiles[profile as keyof typeof profiles] };
+  let value: unknown = { profile, auth, http, storage, rooms, logging, lab, navigation: profile === 'production' ? { ...navigation, instanceId: 'live-game', purpose: 'live', label: 'Live game', home: '/home', play: '/play', decks: '/deck-builder/', admin: null } : navigation, ...profiles[profile as keyof typeof profiles] };
   const frontendMode = environment.FRONTEND_MODE ?? 'built';
   if (!['built', 'vite'].includes(frontendMode) || profile === 'production' && frontendMode === 'vite') throw new ConfigurationError('Invalid configuration: FRONTEND_MODE');
   if (frontendMode === 'vite') value = mergeConfig(value, { navigation: viteNavigation });

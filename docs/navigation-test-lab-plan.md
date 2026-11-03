@@ -1,6 +1,6 @@
-# Navigation and admin Test Lab — planned extension
+# Navigation and admin Test Lab — roadmap and implementation
 
-**Date:** 29 October 2026. **Updated status:** Milestone 6 is implemented; [current architecture](navigation-session-architecture.md) and [evidence](phase-6-status-2026-10-29.md) supersede the earlier session proposal. Milestone 7 remains planned and the original UI revamp is Milestone 8. The lab portions below remain design work, not delivered scenario features.
+**Date:** 29 October 2026. **Updated:** 3 November 2026. Milestones 6 and 7 are implemented; [navigation architecture](navigation-session-architecture.md) and [Scenario Lab setup/contracts](scenario-lab-architecture.md) describe the current behavior. See [Milestone 7 evidence](phase-7-status-2026-11-03.md). The original UI revamp remains Milestone 8. Installed host/network isolation remains separate security-lab work.
 
 See the [milestone roadmap](platform-plan-2026-10-24.md#phase-6--navigation-and-session-integration), [current builder](deck-builder-architecture.md), [admin](admin-architecture.md) and [authentication](authentication-architecture.md) designs.
 
@@ -10,7 +10,7 @@ See the [milestone roadmap](platform-plan-2026-10-24.md#phase-6--navigation-and-
 |---|---|---|
 | 0–5, delivered | Workspace/protocol, accounts, persistence, admin and builder | Existing reports remain historical evidence |
 | 6, delivered | Navigation, browser-family public sign-in, compatible routes and trusted environment context | 2/4/5 and existing protocol boundaries |
-| 7 | Isolated admin Test Lab, Scenario Builder, launch/inspect loop, fixture export | 4/5/6 |
+| 7, delivered | Isolated admin Test Lab, Scenario Builder, launch/inspect loop, fixture export | 4/5/6 |
 | 8, original 6 | UI store split, transitions, animations, hand fan and battlefield presentation | 1/6; 7 is not a technical prerequisite |
 
 Default order is **6 → 7 → 8**. UI work can follow 6 directly if prioritized. Security-lab deployment/monitoring/IDS/pentest phases keep their own numbering and gates. Completed acceptance requirements are not reopened.
@@ -27,7 +27,7 @@ The shared header presents **Home · Play · Decks · Administration**, account 
 | Administration | Rooms, accounts, logs, configuration | Fresh admin scope, current selection and bounded log cursor |
 | Test Lab inside lab administration | Scenarios, scenario editor, test rooms, inspector/log links | Lab identity, scenario/revision, room and run provenance |
 
-Milestone 6 implements `/home`, `/play`, `/play/rooms/:roomId`; builder retains `/deck-builder/`, and legacy `/`, admin hashes and `deckId` links remain compatible. Production admin keeps its dedicated origin. URLs identify a request; membership and seat authority come from the server. See the current supplement for the actual transport/route implementation; lab routes remain Phase 7 work.
+Milestone 6 implements `/home`, `/play`, `/play/rooms/:roomId`; builder retains `/deck-builder/`, and legacy `/`, admin hashes and `deckId` links remain compatible. Production admin keeps its dedicated origin. URLs identify a request; membership and seat authority come from the server. See the current supplement for the actual transport/route implementation; lab routes are documented in the Scenario Lab supplement.
 
 An active match retains its dedicated game tab. Workspace links from a game open another tab so the editor/inspector can remain available with the match. Resume validates session/membership and handles stale rooms explicitly. Dirty drafts/scenarios retain recovery and replacement confirmation. Post-login returns use approved routes/application destinations, not arbitrary redirects.
 
@@ -50,7 +50,7 @@ Shared header/sidebar/breadcrumb components live in `packages/ui`. A small navig
 
 The original Milestone 5 flow used separate builder/game credentials with account-wide game-login rotation. Milestone 6 resolves the ordinary UI flow through an HttpOnly browser family and distinct per-tab child credentials; the historical legacy bearer API retains its rotation policy. See the current architecture/ADRs for the implemented transport.
 
-The implemented [M6 lifecycle ADR](milestone-6-implementation.md) settles ordinary sign-in reuse, bounded families/children, fixed expiry, local/family/account-wide public revocation, disabled-account behavior, guest/legacy seat linking and old-tab migration. The same journey works through built-origin hosting and explicit Vite navigation. Remaining scenario requirements below are Phase 7 work.
+The implemented [M6 lifecycle ADR](milestone-6-implementation.md) settles ordinary sign-in reuse, bounded families/children, fixed expiry, local/family/account-wide public revocation, disabled-account behavior, guest/legacy seat linking and old-tab migration. The same journey works through built-origin hosting and explicit Vite navigation. The scenario requirements below are implemented in Phase 7; see the current supplement for exact supported setup and operational limits.
 
 Milestone 6 extends the bearer design with a public HttpOnly cookie and Origin/custom-header/CSRF checks. Game/admin credentials remain explicit and separately scoped; neither URL credentials nor a storage-copy bridge is used. Independent instance data/credentials are enforced and tested as described in the current supplement; a lab badge alone still does not establish installed host/network isolation.
 
@@ -82,7 +82,7 @@ Local acceptance uses independent temporary live-like/lab instances and verifies
 
 ## Planned decision records
 
-N6 decisions are implemented through the current Milestone 6 ADRs/evidence. N7 decisions remain roadmap direction with runtime implementation/verification pending.
+N6 decisions are implemented through the current Milestone 6 ADRs/evidence. N7 decisions are implemented in [the Scenario Lab supplement](scenario-lab-architecture.md); installed host/network isolation remains separate work.
 
 | ADR | Decision | Alternative/trade-off |
 |---|---|---|
