@@ -1,5 +1,7 @@
 # Contracted rules and functional effect families
 
+**Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
+
 Status: implemented, 2026-11-03. Supplements [ARCHITECTURE.md](../ARCHITECTURE.md), [card authoring](../packages/engine/src/library/README.md) and the [cross-zone query design](card-query-architecture.md).
 
 Follow-up: [resolution-local card collections](resolution-results-architecture.md) add exact-mill recovery and filtered historical/current result queries. The validation figures below record the original rule-contract delivery; the follow-up records its own verification.

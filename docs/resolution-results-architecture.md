@@ -1,5 +1,7 @@
 # Resolution-local card collections
 
+**Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
+
 Status: implemented, 2026-11-03. Supplements the [rule contracts](rule-contract-architecture.md) and [shared card queries](card-query-architecture.md).
 
 ## Decision

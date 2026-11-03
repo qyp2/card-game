@@ -28,6 +28,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Security lab plan — Linux hosting, pentest, detection, observability](docs/security-lab-plan.md) (account phase implemented; infrastructure phases planned)
 - [Lab learning path, runbooks and evidence templates](lab/README.md) — isolated nginx assessment and a separate optional invited tunnel demo; implementation remains planned.
 - [Card JSON field reference and commented examples](packages/engine/src/library/README.md)
+- [Current card blockers, readiness definition and every missing workbook row](docs/card-blockers-current.md)
 - [Workbook card readiness and complete named-row inventory](docs/workbook-card-readiness-2026-11-03.md)
 - [Data-only card implementation and deferred-card audit](docs/workbook-data-only-batch-2026-11-03.md)
 - [Shared card-query architecture, newly unblocked cards and poison cleanup](docs/card-query-architecture.md)

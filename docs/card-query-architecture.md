@@ -1,5 +1,7 @@
 # Card-query architecture and workbook follow-up
 
+**Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
+
 Date: 3 November 2026. Status: accepted and implemented at the owner's request.
 
 Subsequent work: [contracted rule families](rule-contract-architecture.md) reuse these filters and add conditional stat/cost/event behavior. Its blocker table updates the mechanics assessment below without changing this batch's five-card count.

@@ -1,5 +1,7 @@
 # Workbook data-only card batch — 3 November 2026
 
+**Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
+
 **Historical batch:** the later [shared-query enhancement](card-query-architecture.md) adds five more cards and fixes the color/name/mandatory-selection blockers identified here. Current in-scope definition coverage is 68 of 142 rows, leaving 74 deferred; counts below preserve this earlier ten-card batch.
 
 This implementation follows the owner’s restriction to existing engine behavior and their later exclusion of **BP01, 虛界靈 and 雙色補充包**. Existing definitions from those sheets remain unchanged. Source: local ignored `tem/六界之峰.xlsx`, SHA-256 `27b91d995e22fb8540a04c78a73d41f64daa08b216b275aceb1f282723a64d7d`. No workbook file is needed at runtime.

@@ -1,5 +1,7 @@
 # Workbook card readiness — 3 November 2026
 
+**Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
+
 **Historical assessment:** the counts below describe commit 488195e. See the [subsequent data-only implementation and complete in-scope dispositions](workbook-data-only-batch-2026-11-03.md) for the ten added cards, clarified terms and explicit BP01/Void/dual-color exclusions.
 
 The [shared-query follow-up](card-query-architecture.md) subsequently removes the basic zone/filter blockers and adds another five cards.
