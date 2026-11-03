@@ -32,53 +32,133 @@ interface ChoiceHost {
 export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: ActionData): ActionResult {
   const choice = host.room.pendingChoice!;
   const reject = (reason: string): ActionResult => ({ success: false, phase: 'validate', reason });
+
+  // Guard: the choice must belong to this player and still be current.
   if (choice.playerId !== playerId) return reject('This choice belongs to another player');
   if (data.choiceId !== choice.id) return reject('Choice request is stale');
-  if (data.cancel === true && choice.continuation.type === 'action') return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }]) };
+
+  // Cancelling an action choice clears the pending state without resolving.
+  if (data.cancel === true && choice.continuation.type === 'action') {
+    return {
+      success: true,
+      mutations: host.applyMutations([
+        { type: 'SET_PENDING_CHOICE', choice: null },
+        { type: 'SET_PENDING_TRIGGERS', mutations: [] },
+      ]),
+    };
+  }
+
   const answer = validateChoiceAnswer(choice, data);
   if (!answer) return reject('Invalid choice answer');
+
   if (choice.continuation.type === 'state_based') {
     let plan: ReturnType<typeof answerStateBasedChoice>;
-    try { plan = answerStateBasedChoice(host.room, choice, answer); }
-    catch (error) { return reject(error instanceof Error ? error.message : 'Invalid state-based decision'); }
-    if (plan.pendingChoice) return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
-    const mutations = host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }, ...plan.mutations], undefined, { kind: 'state-based-action' });
-    if (!host.isGameOver && !host.hasPendingRulesWork && choice.continuation.batch.resumePriority) mutations.push(...host.givePriorityTo(choice.continuation.batch.resumePriority));
+
+    try {
+      plan = answerStateBasedChoice(host.room, choice, answer);
+    } catch (error) {
+      return reject(error instanceof Error ? error.message : 'Invalid state-based decision');
+    }
+
+    // Another decision is needed before the batch can commit.
+    if (plan.pendingChoice) {
+      return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
+    }
+
+    const mutations = host.applyMutations(
+      [{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }, ...plan.mutations],
+      undefined,
+      { kind: 'state-based-action' },
+    );
+
+    // Hand priority back once the rules work has settled.
+    if (!host.isGameOver && !host.hasPendingRulesWork && choice.continuation.batch.resumePriority) {
+      mutations.push(...host.givePriorityTo(choice.continuation.batch.resumePriority));
+    }
+
     return { success: true, mutations };
   }
+
   if (choice.continuation.type === 'replacement') {
     const saved = choice.continuation;
     const transaction = saved.parents?.slice(-1)[0] ?? saved.transaction;
+
     let plan: ReturnType<typeof resumeProposedChoice>;
-    try { plan = resumeProposedChoice(host.room, choice, answer); }
-    catch (error) { return reject(error instanceof Error ? error.message : 'Invalid replacement decision'); }
-    if (plan.pendingChoice) return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
-    const completed: GameMutation[] = [{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }, ...plan.mutations];
+
+    try {
+      plan = resumeProposedChoice(host.room, choice, answer);
+    } catch (error) {
+      return reject(error instanceof Error ? error.message : 'Invalid replacement decision');
+    }
+
+    if (plan.pendingChoice) {
+      return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
+    }
+
+    const completed: GameMutation[] = [
+      { type: 'SET_PENDING_CHOICE', choice: null },
+      { type: 'SET_PENDING_TRIGGERS', mutations: [] },
+      ...plan.mutations,
+    ];
+
+    // A replacement that interrupted a resolution resumes that resolution.
     if (saved.afterResolution) {
       const room = completed.reduce(gameReducer, host.room);
-      const continuation = { ...saved.afterResolution, stackObj: settleOutcome(host.room, saved.afterResolution.stackObj, saved.afterResolution.outcomeProbe, completed), outcomeProbe: undefined };
+      const continuation = {
+        ...saved.afterResolution,
+        stackObj: settleOutcome(host.room, saved.afterResolution.stackObj, saved.afterResolution.outcomeProbe, completed),
+        outcomeProbe: undefined,
+      };
       const next = planStackResolution(room, continuation.stackObj, continuation, host.effectContext);
+
       return host.commitResolution({ success: true, ...next, mutations: [...completed, ...next.mutations] });
     }
+
     const mutations = host.applyMutations(completed, transaction.resolution, transaction.cause);
-    if (!host.isGameOver && !host.hasPendingRulesWork) mutations.push(...(transaction.resumePriority
-      ? host.givePriorityTo(transaction.resumePriority) : host.applyMutations([{ type: 'SET_ENGINE_STATE', state: 'waiting_for_player' }])));
+
+    if (!host.isGameOver && !host.hasPendingRulesWork) {
+      mutations.push(...(transaction.resumePriority
+        ? host.givePriorityTo(transaction.resumePriority)
+        : host.applyMutations([{ type: 'SET_ENGINE_STATE', state: 'waiting_for_player' }])));
+    }
+
     return { success: true, mutations };
   }
+
   if (choice.continuation.type === 'combat') {
     const plan = answerCombatDamage(host.room, choice, answer);
     if (plan.kind === 'reject') return reject(plan.error);
+
     const mutations = host.applyMutations(host.combatPlanMutations(plan));
-    if (!host.isGameOver && !host.hasPendingRulesWork) mutations.push(...host.givePriorityTo(host.room.activeTurnPlayerId));
+
+    if (!host.isGameOver && !host.hasPendingRulesWork) {
+      mutations.push(...host.givePriorityTo(host.room.activeTurnPlayerId));
+    }
+
     return { success: true, mutations };
   }
+
   if (choice.continuation.type === 'trigger') {
     const queue = applyTriggerChoice(host.room, choice, answer);
-    return { success: true, mutations: host.applyMutations([{ type: 'SET_TRIGGER_QUEUE', queue }, { type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }]) };
+
+    return {
+      success: true,
+      mutations: host.applyMutations([
+        { type: 'SET_TRIGGER_QUEUE', queue },
+        { type: 'SET_PENDING_CHOICE', choice: null },
+        { type: 'SET_PENDING_TRIGGERS', mutations: [] },
+      ]),
+    };
   }
+
   if (choice.continuation.type === 'resolution') {
     const continuation = applyResolutionChoice(choice, answer);
-    return host.commitResolution({ success: true, ...planStackResolution(host.room, continuation.stackObj, continuation, host.effectContext) });
+
+    return host.commitResolution({
+      success: true,
+      ...planStackResolution(host.room, continuation.stackObj, continuation, host.effectContext),
+    });
   }
+
   return host.resumeActionChoice(playerId, choice.continuation, answer);
 }

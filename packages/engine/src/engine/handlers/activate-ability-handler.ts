@@ -20,43 +20,80 @@ import { abilityEffects } from '../ability-effects';
 /** Server definitions determine costs and effects; the packet selects only the ability. */
 function plan(room: GameRoom, playerId: PlayerId, action: ActionData): ActionResult {
   const reject = (reason: string): ActionResult => ({ success: false, phase: 'validate', reason });
+
   const card = findActivationSource(room, playerId, action.cardUuid);
+
+  // Guard: the ability source must be findable in an allowed zone.
   if (!card) return reject('Ability source not found');
-  const ability = CardCharacteristicService.resolveAbilities(room, card).find(a => a.id === action.abilityId);
+
+  const ability = CardCharacteristicService.resolveAbilities(room, card).find((a) => a.id === action.abilityId);
+
+  // Guard: only activated, non-mana abilities go through this handler.
   if (!ability || ability.type !== 'activated' || isManaAbility(ability)) return reject('Select a valid non-mana ability');
+
+  // Guard: per-turn use limits are checked before any cost is paid.
   if (abilityLimitReached(room, card, ability)) return reject('Ability use limit reached for this turn');
+
   const announcement = prepareAnnouncement(card, abilityAnnouncementDefinition(ability), action);
   if (!announcement.success) return reject(announcement.reason);
   if (announcement.missing) return reject('Choose all declared numbers');
   if (announcement.missingCostRoute) return reject('Choose a cost route');
+
   const cost = announcement.cost;
-  const valid = ActionValidator.canActivate(room, playerId, card, { allowedZones: ability.allowedZones ?? ['battlefield'], speed: ability.castSpeed }, 'activate', ability.id);
+
+  const valid = ActionValidator.canActivate(
+    room,
+    playerId,
+    card,
+    { allowedZones: ability.allowedZones ?? ['battlefield'], speed: ability.castSpeed },
+    'activate',
+    ability.id,
+  );
   if (!valid.valid) return reject(valid.reason);
+
   const effects = selectModeEffects(abilityEffects(ability), ability.modes, action.modes, ability.modeCount, { room, playerId });
   if (!effects) return reject('Select valid modes');
+
   const targets = planTargetGroups(room, playerId, card, buildStackEffects(effects, playerId, card), action);
   if (!targets.success) return reject(targets.reason);
+
   const distributions = planAnnouncedDistributions(targets.effects, action);
   if (!distributions.success) return reject(distributions.reason);
+
   const costs = planActionCosts(room, playerId, card, cost, action);
   if (!costs.success) return reject(costs.reason);
+
   const mutations: GameMutation[] = [...costs.mutations];
+
+  // Replay the cost mutations to learn the source's post-payment identity.
   let sourceInfo = captureSourceInformation(room, card);
   let paymentRoom = room;
+
   for (const mutation of costs.mutations) {
     if (mutation.type === 'MOVE_CARD' && mutation.cardUuid === card.uuid && mutation.from === card.state.zone) {
       const live = findActivationSource(paymentRoom, playerId, card.uuid);
       if (live) sourceInfo = captureSourceInformation(paymentRoom, live);
     }
+
     paymentRoom = gameReducer(paymentRoom, mutation);
   }
+
   const stackObject: ActivatedStackObject = {
-    uuid: typeof action.stackUuid === 'string' ? action.stackUuid : '', type: 'activated', controllerId: playerId,
-    source: structuredClone(card), sourceInfo, ability, effects: distributions.effects, targetGroups: targets.groups, countered: false,
+    uuid: typeof action.stackUuid === 'string' ? action.stackUuid : '',
+    type: 'activated',
+    controllerId: playerId,
+    source: structuredClone(card),
+    sourceInfo,
+    ability,
+    effects: distributions.effects,
+    targetGroups: targets.groups,
+    countered: false,
     ...(Object.keys(announcement.bindings).length ? { numericBindings: announcement.bindings } : {}),
   };
+
   mutations.push({ type: 'PUSH_STACK', stackObject });
   mutations.push({ type: 'RECORD_ABILITY_USE', key: abilityUseKey(card, ability.id ?? '') });
+
   return { success: true, stackObject, mutations };
 }
 

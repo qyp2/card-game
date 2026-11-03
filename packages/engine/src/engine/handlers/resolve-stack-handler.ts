@@ -12,9 +12,11 @@ import type { StackObject } from '../../types/effect.types';
  */
 export const resolveStackHandler: ActionHandler = {
   validate(room: GameRoom, _playerId: PlayerId, _action: ActionData): ActionResult {
+    // Guard: there is nothing to resolve on an empty stack.
     if (room.stack.length === 0) {
       return { success: false, phase: 'validate', reason: 'Stack is empty!' };
     }
+
     return { success: true };
   },
 

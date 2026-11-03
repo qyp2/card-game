@@ -16,8 +16,10 @@ import type { StackObject } from '../types/effect.types';
  */
 function nextInTurn(phase: Phase): Phase | null {
   const i = TURN_SEQUENCE.indexOf(phase);
+
   if (i === -1) return null;
   if (i === TURN_SEQUENCE.length - 1) return 'stateTurnStart';
+
   return TURN_SEQUENCE[i + 1];
 }
 
@@ -71,8 +73,10 @@ export class StateMachine {
     // The stack is a zone, not a phase (MTG 116). Only the linear turn
     // sequence is a legal phase transition.
     if (nextInTurn(room.phase) === to) return true;
+
     // A completed declaration with no attackers skips blockers and damage.
     if (room.phase === 'declareAttackersStep' && room.combatDeclarations?.attackers && !room.combat.length && to === 'endCombatStep') return true;
+
     return false;
   }
 
@@ -80,8 +84,10 @@ export class StateMachine {
    * Transition to a new phase. Returns mutations to apply.
    */
   transition(room: GameRoom, to: Phase): GameMutation[] {
+    // Guard: only the linear turn sequence (plus the empty-combat shortcut) is legal.
     if (!this.canTransition(room, to)) {
       engineLogger.error('transition:invalid', `Invalid transition from ${room.phase} to ${to}`, { from: room.phase, to });
+
       return [];
     }
 
@@ -91,6 +97,7 @@ export class StateMachine {
     // and reset their mana pool
     if (to === 'stateTurnStart') {
       const playerId = room.activeTurnPlayerId;
+
       for (const card of room.battlefield) {
         if (CardCharacteristicService.resolveController(room, card) === playerId) {
           mutations.push({ type: 'UNTAP_CARD', cardUuid: card.uuid });
@@ -98,7 +105,9 @@ export class StateMachine {
           mutations.push({ type: 'SET_ATTACKED_THIS_TURN', cardUuid: card.uuid, value: false });
         }
       }
+
       const player = room.players[playerId];
+
       if (player) {
         // Drain mana: set all colors to 0
         for (const color of Object.keys(player.mana) as Array<keyof typeof player.mana>) {
@@ -127,8 +136,10 @@ export class StateMachine {
     if (to === 'stateDrawPhase') {
       const playerId = room.activeTurnPlayerId;
       const player = room.players[playerId];
-      if (player && ((room.turnNumber ?? 1) !== 1 || (room.setup ?? gameConfig.setup).firstPlayerDrawsOnFirstTurn))
+
+      if (player && ((room.turnNumber ?? 1) !== 1 || (room.setup ?? gameConfig.setup).firstPlayerDrawsOnFirstTurn)) {
         mutations.push({ type: 'DRAW_CARDS', playerId, amount: 1 });
+      }
     }
 
     mutations.push({ type: 'SET_PHASE', phase: to });
@@ -138,22 +149,32 @@ export class StateMachine {
 
   /** Plan exactly one live step. The engine settles it before asking for another. */
   planNextStep(room: GameRoom, intent: 'complete' | 'skipToEnd' = 'complete'): PhaseStep | null {
-    const phase = intent === 'skipToEnd' && room.phase !== 'stateEndPhase' ? 'stateEndPhase'
-      : room.phase === 'declareAttackersStep' && room.combatDeclarations?.attackers && !room.combat.length ? 'endCombatStep' : nextInTurn(room.phase);
+    const phase = intent === 'skipToEnd' && room.phase !== 'stateEndPhase'
+      ? 'stateEndPhase'
+      : room.phase === 'declareAttackersStep' && room.combatDeclarations?.attackers && !room.combat.length
+        ? 'endCombatStep'
+        : nextInTurn(room.phase);
+
+    // Guard: the turn sequence has no successor.
     if (!phase) return null;
+
     const mutations: GameMutation[] = [];
     let working = room;
+
+    // Entering the turn start also switches the active player.
     if (phase === 'stateTurnStart') {
       const turn = this.switchTurn(room);
       mutations.push(...turn);
       working = turn.reduce(gameReducer, room);
     }
+
     if (intent === 'skipToEnd' && phase === 'stateEndPhase' && !this.canTransition(working, phase)) {
       mutations.push({ type: 'CLEAR_COMBAT' });
       mutations.push({ type: 'SET_PHASE', phase });
     } else {
       mutations.push(...this.transition(working, phase));
     }
+
     return { mutations, phase, needsInput: phaseNeedsInput(phase), priorityPlayerId: defaultPriorityFor(phase, working) };
   }
 
@@ -170,7 +191,6 @@ export class StateMachine {
   }
 
   givePriorityTo(playerId: PlayerId): GameMutation[] {
-
     return [
       { type: 'SET_PRIORITY', playerId },
       { type: 'SET_ENGINE_STATE', state: 'waiting_for_player' },
@@ -178,6 +198,7 @@ export class StateMachine {
   }
 
   passPriority(room: GameRoom, playerId: PlayerId): PriorityPass {
+    // Guard: only the player who currently holds priority may pass it.
     if (room.priorityPlayerId !== playerId) {
       return { success: false, mutations: [] };
     }
@@ -187,7 +208,8 @@ export class StateMachine {
     // Non-empty stack + both players passed → resolve the top object.
     if (room.stack.length > 0 && room.lastPassedPlayerId === opponent) {
       return {
-        success: true, continuation: 'resolve',
+        success: true,
+        continuation: 'resolve',
         mutations: [
           { type: 'SET_PRIORITY', playerId: null },
           { type: 'SET_LAST_PASSED', playerId: null },
@@ -199,7 +221,8 @@ export class StateMachine {
     // Empty stack + both players passed → advance the phase.
     if (room.stack.length === 0 && room.lastPassedPlayerId === opponent) {
       return {
-        success: true, continuation: 'advance',
+        success: true,
+        continuation: 'advance',
         mutations: [
           { type: 'SET_PRIORITY', playerId: null },
           { type: 'SET_LAST_PASSED', playerId: null },
@@ -209,7 +232,8 @@ export class StateMachine {
 
     // Otherwise, pass priority to the opponent.
     return {
-      success: true, continuation: 'none',
+      success: true,
+      continuation: 'none',
       mutations: [
         { type: 'SET_LAST_PASSED', playerId },
         ...this.givePriorityTo(opponent),
@@ -227,7 +251,6 @@ export class StateMachine {
    * cast/activated it gets priority first (not the opponent).
    */
   addToStack(_room: GameRoom, stackObj: StackObject): GameMutation[] {
-
     // MTG 116.3d: The player who put the spell/ability on the stack gets priority.
     return this.givePriorityTo(stackObj.controllerId);
   }

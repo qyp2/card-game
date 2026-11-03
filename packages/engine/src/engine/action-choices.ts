@@ -55,6 +55,7 @@ export function prepareActionChoice(
 ): ActionChoicePreparation {
   // Actions outside this list have no choice phase; their handlers validate them.
   const supportedActions = ['cast_spell', 'activate_ability', 'tapForMana'];
+
   if (!supportedActions.includes(actionId)) {
     return NO_CHOICE;
   }
@@ -63,14 +64,17 @@ export function prepareActionChoice(
     actionId === 'cast_spell'
       ? room.players[playerId].hand.find((candidate) => candidate.uuid === data.cardUuid)
       : findActivationSource(room, playerId, data.cardUuid);
+
+  // Guard: the handler owns the "card not found" message; it knows the zone rules.
   if (!card) {
-    // The handler owns the "card not found" message; it knows the zone rules.
     return NO_CHOICE;
   }
 
   const isLandSpell =
     actionId === 'cast_spell' &&
     CardCharacteristicService.resolveTypes(room, card).includes('Land');
+
+  // Guard: a land is played, never cast.
   if (isLandSpell) {
     return reject('Lands are played directly, not cast as spells');
   }
@@ -83,6 +87,7 @@ export function prepareActionChoice(
       (candidate) => candidate.id === data.abilityId,
     );
   } else if (actionId === 'tapForMana') {
+    // A mana ability is selected by id, then by index, then by being the only one.
     const selectedManaAbility =
       data.abilityId !== undefined
         ? candidates.find((candidate) => candidate.ability.id === data.abilityId)
@@ -91,13 +96,16 @@ export function prepareActionChoice(
           : candidates.length === 1
             ? candidates[0]
             : undefined;
+
     ability = selectedManaAbility?.ability;
   }
 
+  // Guard: not an activated ability, so no announcement, mode or target prompts apply.
   if (actionId !== 'cast_spell' && (!ability || ability.type !== 'activated')) {
-    // Not an activated ability: no announcement, mode or target prompts apply.
     return NO_CHOICE;
   }
+
+  // Guard: a per-turn ability limit blocks the action outright.
   if (ability?.type === 'activated' && abilityLimitReached(room, card, ability)) {
     return reject('Ability use limit reached for this turn');
   }
@@ -108,24 +116,32 @@ export function prepareActionChoice(
       ? abilityAnnouncementDefinition(ability)
       : spellAnnouncementDefinition(blueprint);
 
+  // Guard: mana abilities cannot declare numeric bindings.
   if (actionId === 'tapForMana' && definition.numericDeclarations?.length) {
     return reject('Mana abilities cannot declare numeric bindings');
   }
+
   const hasCostRoute =
     definition.alternativeCosts !== undefined ||
     definition.additionalCost !== undefined ||
     data.costRoute !== undefined;
+
+  // Guard: mana abilities do not support cost routes.
   if (actionId === 'tapForMana' && hasCostRoute) {
     return reject('Mana abilities do not support cost routes');
   }
 
   const announcement = prepareAnnouncement(card, definition, data);
+
   if (!announcement.success) {
     return reject(announcement.reason);
   }
+
   const cost = announcement.cost;
+
   if (cost) {
     const costError = actionCostError(cost);
+
     if (costError) {
       return reject(costError);
     }
@@ -161,6 +177,8 @@ export function prepareActionChoice(
     actionId === 'cast_spell' ? 'cast' : 'activate',
     ability?.id,
   );
+
+  // Guard: timing and zone permission are checked before any prompt is raised.
   if (!timing.valid) {
     return reject(timing.reason);
   }
@@ -170,6 +188,8 @@ export function prepareActionChoice(
   const count =
     (ability?.type === 'activated' ? ability.modeCount : blueprint.modeCount) ??
     { min: 1, max: 1 };
+
+  // Build the continuation that resumes this action after the answer.
   const continuation = (
     field: ActionContinuation['field'],
     groupId?: string,
@@ -180,10 +200,13 @@ export function prepareActionChoice(
     field,
     groupId,
   });
+
+  // Raise a prompt, or reject when no legal answer exists.
   const request = (choice: Omit<ListedChoice, 'id' | 'playerId'>): ActionChoicePreparation => {
     if (!choiceCanComplete(choice)) {
       return reject('No legal choices can complete this action');
     }
+
     return prompt({ ...choice, id: '', playerId });
   };
 
@@ -191,6 +214,7 @@ export function prepareActionChoice(
     const options = modes
       .filter((mode) => isActionTimingAllowed(room, playerId, mode.castSpeed))
       .map((mode) => ({ id: mode.id, label: mode.label, value: mode.id }));
+
     return request({
       kind: 'modes',
       prompt: 'Choose modes',
@@ -208,9 +232,12 @@ export function prepareActionChoice(
         ? abilityEffects(ability)
         : [];
   const effects = selectModeEffects(base, modes, data.modes, count, { room, playerId });
+
   if (!effects) {
     return reject('Select valid modes');
   }
+
+  // A numeric declaration that has not been answered yet needs its own prompt.
   if (announcement.missing) {
     return prompt({
       id: '',
@@ -227,6 +254,8 @@ export function prepareActionChoice(
       },
     });
   }
+
+  // An unanswered cost route needs a prompt listing the base and alternative costs.
   if (announcement.missingCostRoute) {
     const description = (selected: typeof definition.cost) => {
       try {
@@ -238,9 +267,11 @@ export function prepareActionChoice(
         // An unavailable route must not prevent another route from being used.
         // Selecting it still follows the ordinary announcement rejection path.
         const reason = error instanceof Error ? error.message : 'Invalid combined cost';
+
         return 'Unavailable: ' + reason;
       }
     };
+
     // The route is checked above; this assertion keeps the JSON definition narrowed here.
     const alternativeCosts = definition.alternativeCosts!;
     const options = [
@@ -255,6 +286,7 @@ export function prepareActionChoice(
         value: { kind: 'alternative', id: route.id },
       })),
     ];
+
     return request({
       kind: 'options',
       prompt: 'Choose how to pay',
@@ -267,6 +299,7 @@ export function prepareActionChoice(
 
   if (actionId !== 'tapForMana' && data.targets === undefined && (data.targetGroups === undefined || continuing)) {
     const groups = describeTargetGroups(effects);
+
     // Target groups come from action data and are narrowed after the array check.
     const selected = Array.isArray(data.targetGroups)
       ? (data.targetGroups as { id: string }[])
@@ -274,6 +307,7 @@ export function prepareActionChoice(
     const missing = groups.find(
       (group) => !selected.some((entry) => entry.id === group.id),
     );
+
     if (missing) {
       return request({
         kind: 'targets',
@@ -288,19 +322,25 @@ export function prepareActionChoice(
 
   if (actionId !== 'tapForMana') {
     const planned = planTargetGroups(room, playerId, card, buildStackEffects(effects, playerId, card), data);
+
     if (!planned.success) {
       return reject(planned.reason);
     }
+
+    // A distribution effect needs one prompt per effect that has no allocation yet.
     for (let index = 0; index < planned.effects.length; index++) {
       const effect = planned.effects[index];
+
       if (effect.choice?.kind !== 'distribution' || !isExplicitTargeting(effect.targeting)) {
         continue;
       }
+
       const id = `effect-${index}`;
       const hasDistribution =
         data.distributions &&
         typeof data.distributions === 'object' &&
         Object.prototype.hasOwnProperty.call(data.distributions, id);
+
       if (hasDistribution) {
         continue;
       }
@@ -310,6 +350,7 @@ export function prepareActionChoice(
         label: target.playerId ?? target.cardUuid ?? target.stackUuid ?? 'target',
         value: target,
       }));
+
       return request({
         kind: 'distribution',
         prompt: 'Divide the effect among targets',
@@ -323,13 +364,18 @@ export function prepareActionChoice(
     }
   }
 
+  // Mana activations are prepared one at a time against the evolving room.
   let working = room;
+
   if (data.manaActivations !== undefined) {
     if (!Array.isArray(data.manaActivations)) {
       return reject('manaActivations must be an array');
     }
+
     for (let index = 0; index < data.manaActivations.length; index++) {
       const selection = data.manaActivations[index];
+
+      // Guard: each selection must be a plain object without nested activations.
       if (
         !selection ||
         typeof selection !== 'object' ||
@@ -338,24 +384,32 @@ export function prepareActionChoice(
       ) {
         return reject('Invalid mana activation selection');
       }
+
       const prepared = prepareActionChoice(working, playerId, 'tapForMana', selection);
+
       if (prepared.kind === 'reject') {
         return prepared;
       }
+
       if (prepared.kind === 'prompt') {
         const nested = prepared.choice;
+
         if (nested.kind === 'number') {
           return reject('Mana abilities cannot declare numeric bindings');
         }
+
         if (nested.continuation.type !== 'action') {
           return reject('Invalid mana choice');
         }
+
+        // A spell cannot discard itself to pay for its own mana.
         const options = nested.options.filter(
           (option) =>
             actionId !== 'cast_spell' ||
             nested.kind !== 'discard' ||
             option.id !== card.uuid,
         );
+
         return request({
           ...nested,
           options,
@@ -365,14 +419,18 @@ export function prepareActionChoice(
           },
         });
       }
+
       const planned = planManaActivation(working, playerId, selection, actionId === 'cast_spell' ? card.uuid : undefined);
+
       if (!planned.success) {
         return reject(planned.reason);
       }
+
       working = planned.mutations.reduce(gameReducer, working);
     }
   }
 
+  // A discard cost needs the player to choose which cards to discard.
   if (cost?.discard && data.discardUuids === undefined) {
     const options = working.players[playerId].hand
       .filter((candidate) => candidate.uuid !== card.uuid)
@@ -381,6 +439,7 @@ export function prepareActionChoice(
         label: candidate.blueprint.name,
         value: candidate.uuid,
       }));
+
     return request({
       kind: 'discard',
       prompt: 'Choose cards to discard',
@@ -391,6 +450,7 @@ export function prepareActionChoice(
     });
   }
 
+  // A payment choice needs the player to allocate mana by colour.
   if (data.choosePayment && data.payment === undefined) {
     const options = MANA_COLORS
       .filter((color) => working.players[playerId].mana[color] > 0)
@@ -404,6 +464,7 @@ export function prepareActionChoice(
       (sum, value) => sum + (value ?? 0),
       0,
     );
+
     return request({
       kind: 'payment',
       prompt: 'Allocate mana payment — ' + describeActionCost({ mana: cost?.mana }),
@@ -419,6 +480,7 @@ export function prepareActionChoice(
   return NO_CHOICE;
 }
 
+/** Fold a player's answer back into the action data that will be re-validated. */
 export function applyActionChoice(continuation: ActionContinuation, answer: ChoiceAnswer): ActionData {
   if (continuation.field === 'costRoute') {
     return { ...continuation.data, costRoute: answer.values[0] };
@@ -429,6 +491,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
     const bindingName = continuation.bindingName!;
     const numericBindings =
       continuation.data.numericBindings as Record<string, number>;
+
     return {
       ...continuation.data,
       numericBindings: {
@@ -438,10 +501,11 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
     };
   }
 
+  // Nested mana choices are stored as action data at the selected index.
   if (continuation.manaActivationIndex !== undefined) {
-    // Nested mana choices are stored as action data at the selected index.
     const manaActivations =
       continuation.data.manaActivations as ActionData[];
+
     return {
       ...continuation.data,
       manaActivations: manaActivations.map((selection, index) =>
@@ -463,6 +527,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
     const groupId = continuation.groupId!;
     const distributions =
       continuation.data.distributions as Record<string, unknown>;
+
     return {
       ...continuation.data,
       distributions: {
@@ -474,6 +539,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
 
   if (continuation.field === 'targetGroups') {
     const targetGroups = (continuation.data.targetGroups as unknown[] | undefined) ?? [];
+
     return {
       ...continuation.data,
       targetGroups: [

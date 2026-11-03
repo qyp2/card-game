@@ -12,10 +12,15 @@ import { actionPermission } from '../shared/action-permissions';
 export class ModifierRegistry {
   private static targetRules = new Set<(room: GameRoom, playerId: PlayerId, source: CardInstance, target: TargetPointer) => boolean>();
 
+  /** Register an extra target restriction; the returned function unregisters it. */
   static registerTargetRule(rule: (room: GameRoom, playerId: PlayerId, source: CardInstance, target: TargetPointer) => boolean): () => void {
     this.targetRules.add(rule);
-    return () => { this.targetRules.delete(rule); };
+
+    return () => {
+      this.targetRules.delete(rule);
+    };
   }
+
   /**
    * Check if a card can be played. Stub — always returns true.
    * Future: checks for "can't cast spells", "can't play creatures", etc.
@@ -33,7 +38,10 @@ export class ModifierRegistry {
     card: CardInstance,
     targets: TargetPointer[]
   ): boolean {
-    return targets.every(target => targetPermissionsAllow(room, playerId, card, target) &&
-      [...this.targetRules].every(rule => rule(room, playerId, card, target)));
+    // Every target must pass both the built-in keyword rules and every
+    // registered restriction.
+    return targets.every((target) =>
+      targetPermissionsAllow(room, playerId, card, target) &&
+      [...this.targetRules].every((rule) => rule(room, playerId, card, target)));
   }
 }

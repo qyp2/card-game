@@ -22,6 +22,7 @@ import { buildDynamicParams, revalidateTargets } from './resolution-planning';
 
 export { buildStackEffects, buildDynamicParams, revalidateTargets } from './resolution-planning';
 
+/** True when the card's types make it a permanent (it enters the battlefield). */
 function isPermanent(room: GameRoom, card: CardInstance): boolean {
   return CardCharacteristicService.resolveTypes(room, card).some(type =>
     ['Creature', 'Artifact', 'Enchantment', 'Land'].includes(type)
@@ -49,6 +50,8 @@ export function applyStructuralZoneChange(room: GameRoom, stackObj: StackObject)
       const ownerId = card.state.ownerId;
       const origin = stackObj.immediate ? card.state.zone : 'stack';
       const cast = stackObj.immediate ? { reason: 'cast' as const, stackObject: stackObj } : {};
+
+      // A countered or fizzled spell always goes to the graveyard.
       if (stackObj.countered || stackObj.fizzled) {
         mutations.push({ type: 'MOVE_CARD', cardUuid: card.uuid, playerId: ownerId, from: origin, to: 'graveyard', ...cast });
       } else if (isPermanent(room, card)) {
@@ -56,6 +59,7 @@ export function applyStructuralZoneChange(room: GameRoom, stackObj: StackObject)
       } else {
         mutations.push({ type: 'MOVE_CARD', cardUuid: card.uuid, playerId: ownerId, from: origin, to: 'graveyard', ...cast });
       }
+
       return { card, mutations };
     }
     case 'activated':
@@ -82,6 +86,7 @@ export function applyStructuralZoneChange(room: GameRoom, stackObj: StackObject)
  * the reducer so each effect sees the state after previous effects.
  */
 export function resolveEffects(room: GameRoom, stackObj: StackObject, results: ResolutionEffectResult[] = [], targetsLocked = false, context: EffectContext = defaultEffectContext): GameMutation[] {
+  // Guard: a countered or fizzled object resolves nothing.
   if (stackObj.countered || stackObj.fizzled) return [];
 
   const mutations: GameMutation[] = [];
@@ -98,19 +103,25 @@ export function resolveEffects(room: GameRoom, stackObj: StackObject, results: R
     const dynamicParams = buildDynamicParams(workingRoom, stackObj, validatedEffect);
     const unresolved = Object.entries(validatedEffect.params).some(([key, value]) => (hasNumericExpression(value) || typeof value === 'string' && value.startsWith('DYNAMIC:')) &&
       (dynamicParams[key] === undefined || (typeof dynamicParams[key] === 'number' && !Number.isFinite(dynamicParams[key]))));
+
+    // Guard: a parameter that cannot be computed skips the effect.
     if (unresolved) {
       results.push({ effectId: validatedEffect.action, fizzled: false, skipped: 'unresolved_parameter' });
+
       continue;
     }
+
     if (Object.keys(dynamicParams).length > 0) {
       validatedEffect.dynamicParams = dynamicParams;
     }
 
     // 3. Dispatch to EffectRegistry (handler does nothing if targets is empty)
     const handler = EffectRegistry[validatedEffect.action];
+
     if (handler && (!isExplicitTargeting(validatedEffect.targeting) || validatedEffect.targets.length > 0)) {
       const effectMutations = handler(workingRoom, stackObj, { ...validatedEffect, params: { ...validatedEffect.params, ...dynamicParams } }, context);
       mutations.push(...effectMutations);
+
       // Apply each effect's mutations so the next effect sees the updated state
       for (const m of effectMutations) {
         workingRoom = gameReducer(workingRoom, m);
@@ -118,8 +129,11 @@ export function resolveEffects(room: GameRoom, stackObj: StackObject, results: R
     }
 
     // Keep the input stack object immutable; completion metadata carries fizzle status.
-    results.push({ effectId: validatedEffect.action, fizzled: targetsLocked ? stackObj.fizzled ?? false : validatedEffect.fizzled ?? false,
-      ...(isExplicitTargeting(validatedEffect.targeting) && validatedEffect.targets.length === 0 && (effect.fizzled || effect.targets.length > 0) ? { skipped: 'illegal_targets' as const } : {}) });
+    results.push({
+      effectId: validatedEffect.action,
+      fizzled: targetsLocked ? stackObj.fizzled ?? false : validatedEffect.fizzled ?? false,
+      ...(isExplicitTargeting(validatedEffect.targeting) && validatedEffect.targets.length === 0 && (effect.fizzled || effect.targets.length > 0) ? { skipped: 'illegal_targets' as const } : {}),
+    });
   }
 
   return mutations;
@@ -139,81 +153,129 @@ export function resolveStackObject(room: GameRoom, stackObj: StackObject, result
 
 /** Targets are checked once for the object; sequential instructions retain that decision. */
 export function planStackResolution(room: GameRoom, stackObj: StackObject, continuation?: ResolutionContinuation, context: EffectContext = defaultEffectContext): { mutations: GameMutation[]; resolution?: ResolutionReport; pendingChoice?: PendingChoice } {
+  // A resumed resolution picks up where the pending choice left off.
   if (continuation) return continueResolution(room, continuation.stackObj, continuation.effectIndex, continuation.results, context);
+
+  // An intervening-if that no longer holds skips every effect of the ability.
   if (stackObj.type === 'triggered' && stackObj.ability?.interveningIf) {
     const info = resolveSourceInformation(room, stackObj);
+
     if (!conditionMatches(stackObj.ability.interveningIf, createRuleContext(room, info.card, stackObj.controllerId, stackObj.triggeringEvent, info))) {
-      return { mutations: applyStructuralZoneChange(room, stackObj).mutations, resolution: { stackObj, effects: stackObj.effects.map(effect => ({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' })) } };
+      return {
+        mutations: applyStructuralZoneChange(room, stackObj).mutations,
+        resolution: { stackObj, effects: stackObj.effects.map(effect => ({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' })) },
+      };
     }
   }
+
   const source = stackObj.effects.some(effect => isExplicitTargeting(effect.targeting)) ? resolveSourceInformation(room, stackObj).card : stackObj.source;
   const effects = stackObj.effects.map(effect => isExplicitTargeting(effect.targeting)
     ? revalidateTargets(room, effect, stackObj.controllerId, source) : effect);
+
+  // CR 114.5: the object fizzles when every chosen target has become illegal.
   const chosen = stackObj.effects.filter(effect => isExplicitTargeting(effect.targeting)).flatMap(effect => effect.targets);
   const legal = effects.filter(effect => isExplicitTargeting(effect.targeting)).flatMap(effect => effect.targets);
   const fizzled = !stackObj.countered && chosen.length > 0 && legal.length === 0;
+
   const resolving: StackObject = { ...stackObj, effects, fizzled };
+
   return continueResolution(room, resolving, 0, [], context);
 }
 
+/** Walk the remaining effects, pausing whenever a player choice is required. */
 function continueResolution(room: GameRoom, resolving: StackObject, startIndex: number, previousResults: ResolutionEffectResult[], context: EffectContext): { mutations: GameMutation[]; resolution?: ResolutionReport; pendingChoice?: PendingChoice } {
   const results = [...previousResults];
   const mutations: GameMutation[] = [];
   let workingRoom = room;
+
   if (!resolving.fizzled && !resolving.countered) {
     for (let index = startIndex; index < resolving.effects.length; index++) {
       const effect = resolving.effects[index];
+
+      // Guard: a recorded outcome that did not happen skips the dependent effect.
       if (effect.requiresOutcome && resolving.resolutionOutcomes?.[effect.requiresOutcome] !== true) {
         results.push({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' });
+
         continue;
       }
+
+      // A bounded reveal expands into one effect per revealed card.
       const expanded = !effect.choice ? expandBoundedReveal(workingRoom, resolving, effect, index) : undefined;
+
       if (expanded) {
         resolving = expanded;
         index--;
+
         continue;
       }
+
       const available = !isExplicitTargeting(effect.targeting) || effect.targets.some(target => targetIdentityPresent(workingRoom, target));
+
+      // A choice effect suspends resolution until the player answers.
       if (effect.choice && available) {
         const selected = effect.choice.kind === 'distribution' ? revalidateTargets(workingRoom, effect, resolving.controllerId, resolving.source) : effect;
         const request = resolutionChoice(workingRoom, resolving, selected, index, results);
+
+        // A discard of zero cards needs no answer.
         if (effect.choice.kind === 'discard' && request.kind === 'discard' && request.max === 0) {
           results.push({ effectId: effect.action, fizzled: false });
+
           continue;
         }
+
+        // Guard: a choice that cannot be completed skips the effect.
         if (!choiceCanComplete(request)) {
           results.push({ effectId: effect.action, fizzled: false, skipped: 'illegal_targets' });
+
           continue;
         }
+
         return { mutations, pendingChoice: request };
       }
+
       const produced = resolveEffects(workingRoom, { ...resolving, effects: [effect] }, results, true, context);
       const outcomeProbe = probeOutcome(workingRoom, effect.recordOutcome, produced);
       const planned = planProposedMutations(workingRoom, produced);
+
+      // A replacement decision suspends resolution and resumes after this effect.
       if (planned.pendingChoice) {
         if (planned.pendingChoice.continuation.type === 'replacement') planned.pendingChoice.continuation.afterResolution = {
           type: 'resolution', stackObj: resolving, effectIndex: index + 1, results, outcomeProbe,
         };
+
         return { mutations, pendingChoice: planned.pendingChoice };
       }
+
       mutations.push(...planned.mutations);
       resolving = settleOutcome(workingRoom, resolving, outcomeProbe, planned.mutations);
+
       for (const mutation of planned.mutations) workingRoom = gameReducer(workingRoom, mutation);
     }
   }
+
   mutations.push(...applyStructuralZoneChange(workingRoom, resolving).mutations);
-  if (resolving.fizzled || resolving.countered) results.push(...resolving.effects.map(effect => ({ effectId: effect.action, fizzled: resolving.fizzled ?? false,
-    skipped: resolving.countered ? 'countered' as const : 'object_failed' as const })));
+
+  // A fizzled or countered object reports every effect as skipped.
+  if (resolving.fizzled || resolving.countered) results.push(...resolving.effects.map(effect => ({
+    effectId: effect.action,
+    fizzled: resolving.fizzled ?? false,
+    skipped: resolving.countered ? 'countered' as const : 'object_failed' as const,
+  })));
+
   return { mutations, resolution: { stackObj: resolving, effects: results } };
 }
 
+/** True when the target still refers to the same object it was chosen against. */
 function targetIdentityPresent(room: GameRoom, target: TargetPointer): boolean {
   if (target.targetType === 'card' || target.targetType === 'permanent') {
     const card = findTargetCard(room, target);
+
     return !!card && card.state.zone === (target.zone ?? 'battlefield') &&
       (target.zoneRevision === undefined || target.zoneRevision === (card.state.zoneRevision ?? 0));
   }
+
   if (target.targetType === 'player') return !!target.playerId && !!room.players[target.playerId];
   if (target.targetType === 'spell' || target.targetType === 'stack') return room.stack.some(object => object.uuid === target.stackUuid);
+
   return false;
 }

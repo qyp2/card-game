@@ -52,7 +52,9 @@ export class ActionService {
    * room state (the engine reassigns `room` after each mutation).
    */
   initRoom(getRoom: () => GameRoom): void {
+    // Guard: already initialized, or the room was disposed.
     if (this.triggerManager || this.destroyed) return;
+
     this.triggerManager = new TriggerManager(this.eventBus, this.mutationCollector, this.generateUuid, getRoom);
   }
 
@@ -62,13 +64,16 @@ export class ActionService {
    */
   destroyRoom(): void {
     this.destroyed = true;
+
     if (this.triggerManager) {
       this.triggerManager.dispose(this.eventBus);
       this.triggerManager = null;
     }
+
     this.mutationCollector.length = 0;
   }
 
+  /** Route one client action through validate, then propose. */
   handleAction(
     room: GameRoom,
     playerId: PlayerId,
@@ -76,6 +81,8 @@ export class ActionService {
     actionData: ActionData
   ): ActionResult {
     const handler = this.actionRegistry.get(actionType);
+
+    // Guard: unknown action type.
     if (!handler) {
       // Defense-in-depth: the type system catches unknown IDs at compile time,
       // but a stale client or malformed packet can still send one at play time.
@@ -84,6 +91,7 @@ export class ActionService {
         actionType,
         playerId,
       });
+
       return { success: false, phase: 'validate', reason: `No handler registered for action: ${actionType}` };
     }
 
@@ -96,6 +104,7 @@ export class ActionService {
     return proposeResult;
   }
 
+  /** Validate and propose in one step; the caller commits the mutations. */
   proposeAndStack(
     room: GameRoom,
     playerId: PlayerId,
@@ -110,7 +119,9 @@ export class ActionService {
     return result;
   }
 
+  /** Plan the full resolution of the top stack object. */
   resolveTopOfStack(room: GameRoom): ActionResult {
+    // Guard: nothing to resolve.
     if (room.stack.length === 0) {
       return { success: false, phase: 'resolve', reason: 'Stack is empty' };
     }

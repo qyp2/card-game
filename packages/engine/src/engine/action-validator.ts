@@ -33,6 +33,7 @@ export class ActionValidator {
      * * @returns `true` if all specified conditions pass or if no condition parameters are provided; otherwise, `false`.
      */
     public static canMeetCondition(room: GameRoom, playerId: PlayerId, condition?: ActionCondition): boolean {
+        // Guard: no condition means the check trivially passes.
         if (!condition) return true; // No conditions required
 
         const player = room.players[playerId];
@@ -49,8 +50,10 @@ export class ActionValidator {
                 if (check.zone.includes('graveyard')) targetCards.push(...player.graveyard);
                 if (check.zone.includes('hand')) targetCards.push(...player.hand);
             }
+
             if ((check.ownedBy === 'opponent' || check.ownedBy === 'any') && opponentId) {
                 const opponent = room.players[opponentId];
+
                 if (check.zone.includes('battlefield')) targetCards.push(...room.battlefield.filter(c => CardCharacteristicService.resolveController(room, c) === opponentId));
                 if (check.zone.includes('graveyard')) targetCards.push(...opponent.graveyard);
                 if (check.zone.includes('hand')) targetCards.push(...opponent.hand);
@@ -67,6 +70,8 @@ export class ActionValidator {
             }
 
             const requiredCount = check.minCount ?? 1;
+
+            // Guard: not enough matching cards in the scanned zones.
             if (targetCards.length < requiredCount) return false;
         }
 
@@ -93,7 +98,9 @@ export class ActionValidator {
      * * @returns `true` if the player's capital fully matches or exceeds all fields inside the cost profile; otherwise, `false`.
      */
     public static canPayCost(room: GameRoom, playerId: PlayerId, card: CardInstance, cost?: ActionCost): boolean {
+        // Guard: no cost means the check trivially passes.
         if (!cost) return true;
+
         const player = room.players[playerId];
 
         // Mana cost check
@@ -152,8 +159,12 @@ export class ActionValidator {
         // 1. Count bounds
         const min = def.minTargets ?? (def.required ? 1 : 0);
         const max = def.maxTargets ?? targets.length;
+
+        // Guard: the target count must sit inside the allowed range.
         if (targets.length < min) return false;
         if (targets.length > max) return false;
+
+        // Guard: the same target may not be chosen twice.
         if (new Set(targets.map(targetKey)).size !== targets.length) return false;
 
         // 2. If no targets required and none provided, nothing more to check.
@@ -186,10 +197,14 @@ export class ActionValidator {
         action: 'cast' | 'activate' = card.state.zone === 'hand' ? 'cast' : 'activate',
         abilityId?: string,
     ): ActivationCheck {
+        // Guard: a pending combat declaration blocks every other action.
         if (declarationPlayer(room) && !room.stack.length) return { valid: false, reason: 'Combat declaration is required' };
+
         const permission = actionPermission(room, playerId, card, action, abilityId);
+
+        // Guard: an effect may prohibit the action outright.
         if (!permission.allowed) return { valid: false, reason: `An effect prohibits this ${action} action` };
-        
+
         // 1. Zone permission check
         if (!req.allowedZones.includes(card.state.zone)) {
             return { valid: false, reason: `Action cannot be initiated from ${card.state.zone}` };
@@ -207,8 +222,13 @@ export class ActionValidator {
 
         // 4. Resource Cost verification
         let cost: ActionCost;
-        try { cost = materializeAnnouncementCost(req.cost); }
-        catch { return { valid: false, reason: 'Choose numbers before checking cost affordability' }; }
+
+        try {
+            cost = materializeAnnouncementCost(req.cost);
+        } catch {
+            return { valid: false, reason: 'Choose numbers before checking cost affordability' };
+        }
+
         if (!this.canPayCost(room, playerId, card, cost)) {
             return { valid: false, reason: "Cannot afford the resource costs for this action." };
         }

@@ -17,8 +17,9 @@ export function hasKeyword(card: CardInstance, keyword: string): boolean {
  * to the shared damage proposal pipeline, after damage assignment.
  */
 export function lethalDamageFor(room: GameRoom, card: CardInstance): number {
-  return Math.max(0,
-    CardCharacteristicService.resolveToughness(room, card)
-    - (card.state.damageTaken || 0)
+  // Never report a negative threshold; a card already past lethal still needs 0.
+  return Math.max(
+    0,
+    CardCharacteristicService.resolveToughness(room, card) - (card.state.damageTaken || 0),
   );
 }

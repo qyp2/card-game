@@ -12,6 +12,10 @@ import { resolveStackHandler } from './handlers/resolve-stack-handler';
 import { rpsPlayHandler } from './handlers/rps-play-handler';
 import { tapForManaHandler } from './handlers/tap-for-mana-handler';
 
+/**
+ * The handler bound to each action id. `choose` is excluded because it is
+ * resolved by the choice service rather than an action handler.
+ */
 const DEFAULT_ACTION_HANDLERS: Record<Exclude<ActionId, typeof ACTION_IDS.choose>, ActionHandler> = {
   [ACTION_IDS.castSpell]: playCardHandler,
   [ACTION_IDS.playLand]: playLandHandler,
@@ -26,5 +30,6 @@ const DEFAULT_ACTION_HANDLERS: Record<Exclude<ActionId, typeof ACTION_IDS.choose
   [ACTION_IDS.rpsPlay]: rpsPlayHandler,
 };
 
+/** Build a registry pre-populated with every built-in action handler. */
 export const createDefaultActionRegistry = (): ActionRegistry =>
   new ActionRegistry(DEFAULT_ACTION_HANDLERS);

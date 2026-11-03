@@ -14,18 +14,26 @@ import type { StackObject } from '../../types/effect.types';
  */
 export const enterBattleHandler: ActionHandler = {
   validate(room: GameRoom, playerId: PlayerId, _action: ActionData): ActionResult {
+    // Guard: the game must be past the opening RPS phase.
     if (room.status === 'RPS') {
       return { success: false, phase: 'validate', reason: 'Cannot enter battle during Rock Paper Scissors phase!' };
     }
+
+    // Guard: combat cannot start while anything is still waiting to resolve.
     if (room.stack.length > 0) {
       return { success: false, phase: 'validate', reason: 'Cannot enter battle while the stack is not empty!' };
     }
+
+    // Guard: only the active player may move the game forward.
     if (room.activeTurnPlayerId !== playerId) {
       return { success: false, phase: 'validate', reason: 'Not your turn!' };
     }
+
+    // Guard: combat is entered from the main phase only.
     if (room.phase !== 'stateMainPhase') {
       return { success: false, phase: 'validate', reason: 'Can only enter battle from the main phase!' };
     }
+
     return { success: true };
   },
 

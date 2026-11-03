@@ -18,23 +18,57 @@ export interface BoardNumericContextOptions {
 
 /** The caller supplies either an intermediate board or the normal rules view. */
 export function createBoardNumericContext(options: BoardNumericContextOptions): NumericContext {
+  /** Present a card as its resolved characteristics, or undefined when absent. */
   const cardView = (card: CardInstance | undefined) => card ? { ...card, ...options.characteristics(card) } : undefined;
+
   return {
-    readField: path => {
+    readField: (path) => {
       const root = path.split('.')[0];
       const fields = options.fields ?? {};
-      return readRulePath(root === 'source' && !Object.prototype.hasOwnProperty.call(fields, root) ? { source: cardView(options.source) }
-        : root === 'target' && !Object.prototype.hasOwnProperty.call(fields, root) ? { target: cardView(options.target) } : fields, path);
+
+      // `source` and `target` are synthesized from the card views unless the
+      // caller explicitly supplied them.
+      return readRulePath(
+        root === 'source' && !Object.prototype.hasOwnProperty.call(fields, root)
+          ? { source: cardView(options.source) }
+          : root === 'target' && !Object.prototype.hasOwnProperty.call(fields, root)
+            ? { target: cardView(options.target) }
+            : fields,
+        path,
+      );
     },
-    count: scope => options.cards.filter(card => scopeMatches({ ...(options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
-      card, options.characteristics(card), options.source, options.controllerId)).length,
-    counterTotal: (scope, counterType) => options.cards.filter(card => scopeMatches({ ...(options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
-      card, options.characteristics(card), options.source, options.controllerId)).reduce((total, card) => total + (card.state.counters[counterType] ?? 0), 0),
+
+    // The default count zones sit underneath any scope the caller supplied.
+    count: (scope) =>
+      options.cards.filter((card) =>
+        scopeMatches(
+          { ...(options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
+          card,
+          options.characteristics(card),
+          options.source,
+          options.controllerId,
+        )).length,
+
+    counterTotal: (scope, counterType) =>
+      options.cards
+        .filter((card) =>
+          scopeMatches(
+            { ...(options.defaultCountZones ? { zones: options.defaultCountZones } : {}), ...scope },
+            card,
+            options.characteristics(card),
+            options.source,
+            options.controllerId,
+          ))
+        .reduce((total, card) => total + (card.state.counters[counterType] ?? 0), 0),
   };
 }
 
+/** Evaluate a characteristic number, throwing when it cannot be resolved. */
 export function requireCharacteristicNumber(value: CharacteristicNumber, context: NumericContext): number {
   const result = evaluateNumericValue(characteristicNumericValue(value), context);
+
+  // Guard: an unresolved value is a rules bug, not a recoverable condition.
   if (!result.ok) throw new Error('Unresolved numeric characteristic: ' + result.reason);
+
   return result.value;
 }

@@ -13,19 +13,43 @@ let resolutionScope: ResolutionScope | undefined;
 export function withCharacteristicCache<T>(room: GameRoom, evaluate: () => T): T {
   const previous = resolutionScope;
   resolutionScope = { room, values: new Map(), boards: new Map() };
-  try { return evaluate(); } finally { resolutionScope = previous; }
+
+  try {
+    return evaluate();
+  } finally {
+    // Always restore, even if the evaluation throws.
+    resolutionScope = previous;
+  }
 }
 
+/** Resolve a card's characteristics, memoizing per room and layer when a scope is active. */
 function resolve(room: GameRoom, card: CardInstance, throughLayer = 80) {
+  // No active scope (or a different room): resolve directly, uncached.
   if (resolutionScope?.room !== room) return resolveCharacteristics(room, card, throughLayer);
+
+  // The whole board for this layer is computed once and shared.
   let board = resolutionScope.boards.get(throughLayer);
-  if (!board) { board = resolveRoomCharacteristics(room, throughLayer); resolutionScope.boards.set(throughLayer, board); }
+  if (!board) {
+    board = resolveRoomCharacteristics(room, throughLayer);
+    resolutionScope.boards.set(throughLayer, board);
+  }
+
   const current = board.get(card);
   if (current) return current;
+
+  // Fall back to a per-card cache keyed by layer.
   let values = resolutionScope.values.get(card);
-  if (!values) { values = new Map(); resolutionScope.values.set(card, values); }
+  if (!values) {
+    values = new Map();
+    resolutionScope.values.set(card, values);
+  }
+
   let value = values.get(throughLayer);
-  if (!value) { value = resolveCharacteristics(room, card, throughLayer); values.set(throughLayer, value); }
+  if (!value) {
+    value = resolveCharacteristics(room, card, throughLayer);
+    values.set(throughLayer, value);
+  }
+
   return value;
 }
 
