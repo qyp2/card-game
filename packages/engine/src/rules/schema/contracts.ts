@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ActionConditionSchema, ConditionSchema, CostRouteFields, CostSchema, Count, FilterFields, Identifier,
-  NumericDeclarationSchema, PlayerRelation, ScopeSchema, TargetSchema, UsageSchema, Zone, CardTypeSchema, assertDefinitionTree } from './shared';
+  NumericDeclarationSchema, PlayerRelation, ScopeSchema, TargetSchema, UsageSchema, Zone, CardTypeSchema, CardResultSourceSchema, CardResultDefinitionSchema, assertDefinitionTree } from './shared';
 import { PermissionOperationSchema } from './permissions';
 import { characteristicOperationSchema } from './characteristics';
 import { CostOperationSchema } from './costs';
@@ -28,6 +28,7 @@ export type EventModifierDefinition = Extract<ModifierDefinition, { family: 'eve
 
 const parameters = instructionParameterSchemas(ContinuousOperationSchema, () => NormalizedAbilitySchema);
 const effectFields = { tags: z.array(Identifier).optional(), targeting: TargetSchema.optional(), choice: z.lazy(() => ChoiceSchema).optional(),
+  recordResult: CardResultDefinitionSchema.optional(), condition: ConditionSchema.optional(),
   targetGroup: Identifier.optional(), recordOutcome: z.strictObject({ name: Identifier, kind: z.enum(['destroyed', 'discarded']) }).optional(), requiresOutcome: Identifier.optional() };
 const engineInstruction = z.strictObject({ action: Identifier, params: z.record(z.string(), z.unknown()).optional(), ...effectFields });
 export const AuthoredEffectSchema: z.ZodType = z.lazy(() => z.union([
@@ -36,6 +37,7 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() => z.union([
 ]).superRefine((value, ctx) => {
   const action = 'action' in value ? value.action : Object.entries(InstructionNames).find(([, pair]) => pair[0] === value.family && pair[1] === value.operation)?.[0];
   if (!action || !Object.prototype.hasOwnProperty.call(parameters, action)) { ctx.addIssue({ code: 'custom', path: ['action' in value ? 'action' : 'operation'], message: 'Unknown or unsupported instruction operation' }); return; }
+  if (value.recordResult && action !== 'DISCARD_FROM_LIBRARY') ctx.addIssue({ code: 'custom', path: ['recordResult'], message: 'Milled results require a mill instruction' });
   const parsed = parameters[action as InstructionAction].safeParse(value.params ?? {});
   if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ code: 'custom', path: ['params', ...issue.path], message: issue.message });
 }));
@@ -44,6 +46,7 @@ export const ChoiceSchema: z.ZodType = z.lazy(() => z.discriminatedUnion('kind',
   z.strictObject({ kind: z.literal('optional'), prompt: z.string().optional() }), z.strictObject({ kind: z.literal('discard'), prompt: z.string().optional() }),
   z.strictObject({ kind: z.enum(['options', 'ordering']), options: z.array(ModeSchema), min: Count.optional(), max: Count.optional(), prompt: z.string().optional() }),
   z.strictObject({ ...FilterFields, kind: z.literal('search'), zone: Zone, zonePlayer: PlayerRelation.optional(), cardRefs: z.array(z.strictObject({ cardUuid: Identifier, zoneRevision: Count })).optional(),
+    from: CardResultSourceSchema.extend({ view: z.literal('current').optional() }).optional(),
     allAvailable: z.boolean().optional(), min: Count.optional(), max: Count.optional(), prompt: z.string().optional(), ordered: z.boolean().optional() }),
   z.strictObject({ kind: z.literal('selection'), criteria: TargetSchema, prompt: z.string().optional() }),
   z.strictObject({ kind: z.literal('distribution'), total: Count, field: Identifier.optional(), prompt: z.string().optional() }),
@@ -108,10 +111,12 @@ export function assertModifierContext(rule: ModifierDefinition, path: string): v
   const visit = (v: unknown, at: string) => {
     if (!v || typeof v !== 'object') return;
     if ('kind' in v && v.kind === 'binding') throw new RuleContractError(at, 'Modifier has no announced binding owner');
+    if ('kind' in v && v.kind === 'result') throw new RuleContractError(at, 'Modifier cannot retain a resolution-local result');
     if ('path' in v && typeof v.path === 'string' && !allowed.has(v.path.split('.')[0])) throw new RuleContractError(at + '.path', 'Field is unavailable in this rule context');
     for (const [key, child] of Object.entries(v)) visit(child, at + '.' + key);
   };
   visit(rule.condition, path + '.condition');
+  visit(rule.scope, path + '.scope');
   if (rule.family === 'costs' && 'amount' in rule.operation) visit(rule.operation.amount, path + '.operation.amount');
   if (rule.family === 'characteristics' && (rule.operation.type === 'STAT_DELTA' || rule.operation.type === 'SET_STATS')) {
     visit(rule.operation.power, path + '.operation.power'); visit(rule.operation.toughness, path + '.operation.toughness');

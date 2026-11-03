@@ -13,6 +13,7 @@ import type { GameRoom, PlayerId } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { BatchCause, ResolutionReport } from '../types/game-event.types';
 import { settleOutcome } from './resolution-outcomes';
+import { settleCardResult } from './resolution-results';
 
 /** Existing rule planners own each decision; these callbacks only commit/resume their results. */
 interface ChoiceHost {
@@ -56,7 +57,9 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
     const completed: GameMutation[] = [{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }, ...plan.mutations];
     if (saved.afterResolution) {
       const room = completed.reduce(gameReducer, host.room);
-      const continuation = { ...saved.afterResolution, stackObj: settleOutcome(host.room, saved.afterResolution.stackObj, saved.afterResolution.outcomeProbe, completed), outcomeProbe: undefined };
+      const object = settleOutcome(host.room, saved.afterResolution.stackObj, saved.afterResolution.outcomeProbe, completed);
+      const continuation = { ...saved.afterResolution, stackObj: settleCardResult(host.room, object, saved.afterResolution.cardResultProbe, completed),
+        outcomeProbe: undefined, cardResultProbe: undefined };
       const next = planStackResolution(room, continuation.stackObj, continuation, host.effectContext);
       return host.commitResolution({ success: true, ...next, mutations: [...completed, ...next.mutations] });
     }

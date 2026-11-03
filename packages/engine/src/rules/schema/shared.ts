@@ -19,6 +19,9 @@ export const CountExpression = Numeric.refine(v => typeof v !== 'number' || Numb
 export const EffectCount = z.union([CountExpression, z.string().regex(/^DYNAMIC:(?:(?:source|target)\.(?:power|toughness)|event\.[A-Za-z0-9_.]+)$/)]);
 export const Bounds = z.strictObject({ min: Finite.optional(), max: Finite.optional() }).refine(b => b.min === undefined || b.max === undefined || b.min <= b.max, 'Minimum exceeds maximum');
 export const ObjectReference = z.strictObject({ cardUuid: Identifier, zoneRevision: Count });
+export const CardResultSourceSchema = z.strictObject({ kind: z.literal('result'), name: Identifier.refine(name => !!name.trim(), 'Empty result name'),
+  view: z.enum(['current', 'recorded']).optional() });
+export const CardResultDefinitionSchema = z.strictObject({ name: Identifier.refine(name => !!name.trim(), 'Empty result name'), kind: z.literal('milled') });
 
 export const FilterFields = {
   ids: z.array(Identifier).optional(), cardTypes: z.array(CardTypeSchema).optional(), subTypes: z.array(Identifier).optional(),
@@ -28,7 +31,7 @@ export const FilterFields = {
   allOf: z.array(z.lazy(() => CardFilterSchema)).optional(), anyOf: z.array(z.lazy(() => CardFilterSchema)).optional(), not: z.lazy(() => CardFilterSchema).optional(),
 };
 export const CardFilterSchema: z.ZodType<CardFilter> = z.lazy(() => z.strictObject(FilterFields));
-export const ScopeSchema = z.strictObject({ ...FilterFields, attachedToSource: z.boolean().optional(), self: z.boolean().optional(), cardUuid: Identifier.optional(),
+export const ScopeSchema = z.strictObject({ ...FilterFields, from: CardResultSourceSchema.optional(), attachedToSource: z.boolean().optional(), self: z.boolean().optional(), cardUuid: Identifier.optional(),
   zoneRevision: Count.optional(), objects: z.array(ObjectReference).optional(), zones: z.array(Zone).optional() });
 export const TargetSchema = z.strictObject({ ...FilterFields, type: z.enum(['player', 'permanent', 'spell', 'stack', 'card', 'self', 'any']),
   zones: z.array(Zone).optional(), required: z.boolean(), minTargets: Count.optional(), maxTargets: Count.optional(), all: z.boolean().optional(),

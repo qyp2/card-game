@@ -7,6 +7,7 @@ import { targetOptions } from './choices';
 import { targetKey, findTargetCard } from '../shared/target-legality';
 import { collectCards, matchesCardFilter } from '../shared/card-query';
 import type { CardInstance } from '../types/card.types';
+import { collectCardSource } from '../shared/card-collections';
 
 export function resolutionChoice(room: GameRoom, stackObj: StackObject, effect: StackEffect, index: number, results: ResolutionContinuation['results']): PendingChoice {
   const def = effect.choice!;
@@ -34,8 +35,9 @@ export function resolutionChoice(room: GameRoom, stackObj: StackObject, effect: 
         if (!value) { value = CardCharacteristicService.resolve(room, card); values.set(card.uuid, value); }
         return value;
       };
-      const cards = collectCards(room, { zones: [def.zone], zonePlayer: def.zonePlayer ?? 'self' }, stackObj.controllerId,
+      const zoneCards = collectCards(room, { zones: [def.zone], zonePlayer: def.zonePlayer ?? 'self' }, stackObj.controllerId,
         card => view(card).controllerId);
+      const cards = collectCardSource(zoneCards, def.from, stackObj.resolutionResults)?.map(entry => entry.card) ?? [];
       const admitted = cards.filter(card => (!def.cardRefs || def.cardRefs.some(ref => ref.cardUuid === card.uuid && ref.zoneRevision === (card.state.zoneRevision ?? 0))) &&
         matchesCardFilter(card, view(card), def, stackObj.controllerId));
       const ordered = def.cardRefs ? [...admitted].sort((a,b) => def.cardRefs!.findIndex(ref => ref.cardUuid === a.uuid) - def.cardRefs!.findIndex(ref => ref.cardUuid === b.uuid)) : admitted;

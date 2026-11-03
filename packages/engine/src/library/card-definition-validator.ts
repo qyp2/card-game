@@ -35,7 +35,7 @@ export function assertNumericDeclarations(declarations: NumericDeclaration[] = [
   }
 }
 
-function assertNumericDefinition(value: unknown, declarations: NumericDeclaration[] = [], bindingOnly = false): void {
+function assertNumericDefinition(value: unknown, declarations: NumericDeclaration[] = [], bindingOnly = false, allowResults = false): void {
   const error = validateNumericValue(value);
   if (error) throw new Error('Invalid numeric definition: ' + error.reason);
   const bindings = (input: unknown): void => {
@@ -43,9 +43,16 @@ function assertNumericDefinition(value: unknown, declarations: NumericDeclaratio
     const expression = input.numeric;
     if (expression.kind === 'binding' && !declarations.some(declaration => declaration.name === expression.name)) throw new Error('Numeric binding has no retained owner in this definition');
     if (expression.kind === 'query' && bindingOnly) throw new Error('Numeric queries are unsupported in announcement costs');
+    if (expression.kind === 'query' && !allowResults) assertNoResultSources(expression.args);
     if (expression.kind === 'add' || expression.kind === 'multiply') { bindings(expression.left); bindings(expression.right); }
   };
   bindings(value);
+}
+
+function assertNoResultSources(value: unknown): void {
+  if (!value || typeof value !== 'object') return;
+  if ('kind' in value && value.kind === 'result') throw new Error('Resolution-local result has no retained owner in this context');
+  Object.values(value).forEach(assertNoResultSources);
 }
 
 export function assertAnnouncementCost(cost: AuthoredActionCost | undefined, declarations: NumericDeclaration[] = []): void {
@@ -65,24 +72,24 @@ export function assertCostRoutes(routes: CostRoutes, declarations: NumericDeclar
   routes.alternativeCosts?.forEach(route => assertAnnouncementCost(route.cost, declarations));
 }
 
-export function assertConditionNumericDefinition(condition: RuleCondition | undefined): void {
+export function assertConditionNumericDefinition(condition: RuleCondition | undefined, declarations: NumericDeclaration[] = [], allowResults = false): void {
   if (!condition) return;
   if ('all' in condition) {
     const { all, ...rest } = condition; assertNoNumericExpressions(rest);
-    all.forEach(assertConditionNumericDefinition); return;
+    all.forEach(child => assertConditionNumericDefinition(child, declarations, allowResults)); return;
   }
   if ('any' in condition) {
     const { any, ...rest } = condition; assertNoNumericExpressions(rest);
-    any.forEach(assertConditionNumericDefinition); return;
+    any.forEach(child => assertConditionNumericDefinition(child, declarations, allowResults)); return;
   }
   if ('not' in condition) {
     const { not, ...rest } = condition; assertNoNumericExpressions(rest);
-    assertConditionNumericDefinition(not); return;
+    assertConditionNumericDefinition(not, declarations, allowResults); return;
   }
   const { left: _left, right: _right, ...rest } = condition;
   assertNoNumericExpressions(rest);
   for (const value of [condition.left, condition.right]) {
-    if (hasNumericExpression(value)) assertNumericDefinition(value);
+    if (hasNumericExpression(value)) assertNumericDefinition(value, declarations, false, allowResults);
     else assertNoNumericExpressions(value);
   }
 }
@@ -96,12 +103,13 @@ function assertModes(modes: ModeDefinition[] | undefined, declarations: NumericD
 }
 
 export function assertEffectNumericDefinition(definition: EffectDefinition, declarations: NumericDeclaration[] = []): void {
-  const { params, choice, ...rest } = definition;
+  const { params, choice, condition, ...rest } = definition;
+  assertConditionNumericDefinition(condition, declarations, true);
   assertNoNumericExpressions(rest);
   for (const [key, value] of Object.entries(params)) {
     if (definition.action === 'CREATE_CONTINUOUS_EFFECT' && key === 'effect' && value && typeof value === 'object') {
       assertContinuousNumericDefinition(value as ContinuousEffect);
-    } else if (hasNumericExpression(value)) assertNumericDefinition(value, declarations);
+    } else if (hasNumericExpression(value)) assertNumericDefinition(value, declarations, false, true);
     else assertNoNumericExpressions(value);
   }
   if (choice?.kind === 'options' || choice?.kind === 'ordering') {

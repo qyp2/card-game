@@ -113,6 +113,8 @@ export interface TargetPointer {
  * A single effect within a stack item. Carries its own targets locked at cast time.
  */
 export interface StackEffect {
+  recordResult?: import('./resolution-result.types').CardResultDefinition;
+  condition?: import('./rule.types').RuleCondition;
   recordOutcome?: OutcomeDefinition;
   requiresOutcome?: string;
   choice?: EffectChoice;
@@ -151,6 +153,8 @@ export interface TargetingDefinition extends CardFilter {
 }
 
 export interface EffectDefinition {
+  recordResult?: import('./resolution-result.types').CardResultDefinition;
+  condition?: import('./rule.types').RuleCondition;
   /** Resolution-local boolean; only actual committed destruction/discard counts. */
   recordOutcome?: OutcomeDefinition;
   requiresOutcome?: string;
@@ -248,6 +252,7 @@ export interface ResolutionReveal { cards: CardInstance[]; sourceInfo: CardSnaps
 export interface OutcomeDefinition { name: string; kind: 'destroyed' | 'discarded' }
 export interface OutcomeProbe extends OutcomeDefinition { cards: { cardUuid: string; zoneRevision: number }[] }
 export type StackObject = (SpellStackObject | ActivatedStackObject | TriggeredStackObject) & {
+  resolutionResults?: import('./resolution-result.types').ResolutionCardResults;
   resolutionReveals?: ResolutionReveal[];
   resolutionOutcomes?: Record<string, boolean>;
 };
@@ -260,7 +265,7 @@ export type EffectChoice =
   | { kind: 'optional'; prompt?: string }
   | { kind: 'discard'; prompt?: string }
   | { kind: 'options' | 'ordering'; options: ModeDefinition[]; min?: number; max?: number; prompt?: string }
-  | (CardFilter & { kind: 'search'; zone: CardZone; zonePlayer?: RelativePlayer; cardRefs?: { cardUuid: string; zoneRevision: number }[]; allAvailable?: boolean; min?: number; max?: number; prompt?: string; ordered?: boolean })
+  | (CardFilter & { kind: 'search'; zone: CardZone; zonePlayer?: RelativePlayer; from?: import('./resolution-result.types').CardResultSource & { view?: 'current' }; cardRefs?: { cardUuid: string; zoneRevision: number }[]; allAvailable?: boolean; min?: number; max?: number; prompt?: string; ordered?: boolean })
   | { kind: 'selection'; criteria: TargetingDefinition; prompt?: string }
   | { kind: 'distribution'; total: number; field?: string; prompt?: string };
 

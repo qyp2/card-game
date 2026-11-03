@@ -2,6 +2,8 @@ import type { CardAbility, CardBlueprint, CardZone, ManaColor } from './card.typ
 import type { CardFilter } from './card-query.types';
 
 export interface EffectScope extends CardFilter {
+  /** Resolution numeric queries may read a named set; persistent modifiers cannot retain one. */
+  from?: import('./resolution-result.types').CardResultSource;
   attachedToSource?: boolean;
   self?: boolean;
   cardUuid?: string;

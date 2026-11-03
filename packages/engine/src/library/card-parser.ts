@@ -67,6 +67,8 @@ export function normalizeActionCost(cost: Record<string, unknown> | undefined, d
 export function parseInstructionDefinition(raw: Record<string, unknown>, declarations: NumericDeclaration[] = []): EffectDefinition {
   raw = compileInstruction(raw);
   const effect: EffectDefinition = {
+    ...(raw.recordResult ? { recordResult: structuredClone(raw.recordResult) as EffectDefinition['recordResult'] } : {}),
+    ...(raw.condition ? { condition: structuredClone(raw.condition) as EffectDefinition['condition'] } : {}),
     ...(raw.recordOutcome ? { recordOutcome: structuredClone(raw.recordOutcome) as EffectDefinition['recordOutcome'] } : {}),
     ...(typeof raw.requiresOutcome === 'string' ? { requiresOutcome: raw.requiresOutcome } : {}),
     ...(raw.choice ? { choice: raw.choice as EffectDefinition['choice'] } : {}),

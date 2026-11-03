@@ -1,7 +1,30 @@
 // Version 1 authoring examples. All entries are validated by authoring-examples.test.ts.
-// Full explanations and fields: README.md and docs/rule-contract-architecture.md.
+// Full explanations: README.md, docs/rule-contract-architecture.md and docs/resolution-results-architecture.md.
 // This catalog is instructional and is not loaded into matches.
 {
+  "example-mill-result": {
+    "schemaVersion": 1,
+    "id": "example-mill-result",
+    "name": "Mill, count and recover from this mill",
+    "cardTypes": ["Spell"],
+    "onCastEffects": [
+      {
+        "family": "cards", "operation": "mill", "params": { "amount": 3 },
+        "recordResult": { "name": "milled", "kind": "milled" }
+      },
+      {
+        "family": "resources", "operation": "adjust_life",
+        "params": { "amount": { "numeric": { "kind": "query", "id": "count", "args": {
+          "scope": { "from": { "kind": "result", "name": "milled", "view": "recorded" }, "zones": ["graveyard"], "cardTypes": ["Creature"] }
+        } } } }
+      },
+      {
+        "family": "cards", "operation": "move", "params": { "origin": "graveyard", "destination": "hand" },
+        "choice": { "kind": "search", "zone": "graveyard", "from": { "kind": "result", "name": "milled" },
+          "cardTypes": ["Creature"], "colors": ["black"], "min": 1, "max": 1 }
+      }
+    ]
+  },
   "example-equipment": {
     "schemaVersion": 1,
     "id": "example-equipment",

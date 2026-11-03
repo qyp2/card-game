@@ -2,7 +2,7 @@
 
 Each `cards/<group>/<id>.json` contains one strict JSON card object. Add it to the explicit manifest in `cards/index.ts`. The manifest key and `id` must agree. Stable IDs identify cards in decks; names and rules text are display data. Current catalog: 94 definitions.
 
-Start with [the 32 validated examples](card_data.example.jsonc). That reference uses a map of example IDs; save only the inner card object in an active card file. It is documentation, not a playable catalog.
+Start with [the validated examples](card_data.example.jsonc). That reference uses a map of example IDs; save only the inner card object in an active card file. It is documentation, not a playable catalog.
 
 ## Loading and validation
 
@@ -136,5 +136,7 @@ Numeric values accept literals or `{ "numeric": { ... } }` expressions. Shared e
 Static counts read the intermediate board at their layer, avoiding recursive final-characteristic lookup. Existing `{ "count": scope, "multiply": 2, "add": 1 }` characteristic values and `DYNAMIC:source.power` / `DYNAMIC:event.…` markers remain supported live vocabulary. Prefer shared numeric expressions for new definitions.
 
 Choices support optional, discard, options, ordering, search, selection and distribution. `targetGroup` shares a target; `recordOutcome` / `requiresOutcome` condition later instructions on actual destruction/discard. The reference includes choices, copies, grants, lifetimes, attachments, Scorch, delayed triggers and compound effects.
+
+Mill instructions can capture `recordResult: { "name": "milled", "kind": "milled" }`. Later search choices and numeric scopes can use `from: { "kind": "result", "name": "milled" }` with the same filters. Default `current` view selects exact arrival incarnations still present; numeric `view: "recorded"` uses historical arrival characteristics. Cards move into their real zones before the next instruction. Sets survive paused choices and expire after the whole spell/ability resolves. Instruction `condition` supports conditional follow-ups using these queries. See [the full result-set contract](../../../../docs/resolution-results-architecture.md) and `example-mill-result` for syntax and replacement/identity details.
 
 See [rule-contract architecture and blocker assessment](../../../../docs/rule-contract-architecture.md) for ownership, migration evidence, legacy review and remaining mechanics.

@@ -18,7 +18,8 @@ import { defaultEffectContext, type EffectContext } from './effect-context';
 import { hasNumericExpression } from './numeric-values';
 import { expandBoundedReveal } from './bounded-reveal';
 import { probeOutcome, settleOutcome } from './resolution-outcomes';
-import { buildDynamicParams, revalidateTargets } from './resolution-planning';
+import { buildDynamicParams, revalidateTargets, instructionConditionMatches } from './resolution-planning';
+import { probeCardResult, settleCardResult, clearCardResults } from './resolution-results';
 
 export { buildStackEffects, buildDynamicParams, revalidateTargets } from './resolution-planning';
 
@@ -88,6 +89,10 @@ export function resolveEffects(room: GameRoom, stackObj: StackObject, results: R
   let workingRoom = room;
 
   for (const effect of stackObj.effects) {
+    if (!instructionConditionMatches(workingRoom, stackObj, effect)) {
+      results.push({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' });
+      continue;
+    }
     // 1. Resolve targets at resolve time: expand "all" targets (anthem/AOE)
     //    into concrete targets, then re-validate concrete targets
     const validatedEffect = targetsLocked && isExplicitTargeting(effect.targeting)
@@ -163,6 +168,10 @@ function continueResolution(room: GameRoom, resolving: StackObject, startIndex: 
   if (!resolving.fizzled && !resolving.countered) {
     for (let index = startIndex; index < resolving.effects.length; index++) {
       const effect = resolving.effects[index];
+      if (!instructionConditionMatches(workingRoom, resolving, effect)) {
+        results.push({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' });
+        continue;
+      }
       if (effect.requiresOutcome && resolving.resolutionOutcomes?.[effect.requiresOutcome] !== true) {
         results.push({ effectId: effect.action, fizzled: false, skipped: 'condition_failed' });
         continue;
@@ -189,18 +198,21 @@ function continueResolution(room: GameRoom, resolving: StackObject, startIndex: 
       }
       const produced = resolveEffects(workingRoom, { ...resolving, effects: [effect] }, results, true, context);
       const outcomeProbe = probeOutcome(workingRoom, effect.recordOutcome, produced);
+      const cardResultProbe = probeCardResult(workingRoom, resolving, effect.recordResult, produced);
       const planned = planProposedMutations(workingRoom, produced);
       if (planned.pendingChoice) {
         if (planned.pendingChoice.continuation.type === 'replacement') planned.pendingChoice.continuation.afterResolution = {
-          type: 'resolution', stackObj: resolving, effectIndex: index + 1, results, outcomeProbe,
+          type: 'resolution', stackObj: resolving, effectIndex: index + 1, results, outcomeProbe, cardResultProbe,
         };
         return { mutations, pendingChoice: planned.pendingChoice };
       }
       mutations.push(...planned.mutations);
       resolving = settleOutcome(workingRoom, resolving, outcomeProbe, planned.mutations);
+      resolving = settleCardResult(workingRoom, resolving, cardResultProbe, planned.mutations);
       for (const mutation of planned.mutations) workingRoom = gameReducer(workingRoom, mutation);
     }
   }
+  resolving = clearCardResults(resolving);
   mutations.push(...applyStructuralZoneChange(workingRoom, resolving).mutations);
   if (resolving.fizzled || resolving.countered) results.push(...resolving.effects.map(effect => ({ effectId: effect.action, fizzled: resolving.fizzled ?? false,
     skipped: resolving.countered ? 'countered' as const : 'object_failed' as const })));

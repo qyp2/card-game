@@ -2,6 +2,8 @@
 
 Status: implemented, 2026-11-03. Supplements [ARCHITECTURE.md](../ARCHITECTURE.md), [card authoring](../packages/engine/src/library/README.md) and the [cross-zone query design](card-query-architecture.md).
 
+Follow-up: [resolution-local card collections](resolution-results-architecture.md) add exact-mill recovery and filtered historical/current result queries. The validation figures below record the original rule-contract delivery; the follow-up records its own verification.
+
 ## Context and decision
 
 Modifiers affect different decisions: what a card is, whether an action/target is legal, what it costs, and what happens to a proposed event. A generic arithmetic pipeline cannot correctly own all four. The previous `ModifierPipeline` had no consumers and returned its input unchanged. `ModifierRegistry`, despite old documentation calling it a stub, performed live permission checks.

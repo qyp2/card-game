@@ -6,7 +6,7 @@ import { structuralTargetLegal, isExplicitTargeting, findTargetCard } from '../s
 import { matchesTargetFilter } from '../shared/target-utils';
 import { PermissionRegistry } from './permission-registry';
 import { resolveSourceInformation } from './source-information';
-import { readRulePath } from './rule-conditions';
+import { readRulePath, conditionMatches } from './rule-conditions';
 import { evaluateNumericValue, hasNumericExpression } from './numeric-values';
 import { createBoardNumericContext } from './numeric-characteristics';
 import { roomCards } from './continuous-effect-state';
@@ -40,6 +40,8 @@ export function buildStackEffects(
     }
     // For effects requiring explicit targets, targets are filled by server-prompted targeting (future)
     return {
+      ...(def.recordResult ? { recordResult: def.recordResult } : {}),
+      ...(def.condition ? { condition: def.condition } : {}),
       targetGroup: def.targetGroup,
       recordOutcome: def.recordOutcome,
       requiresOutcome: def.requiresOutcome,
@@ -163,22 +165,7 @@ export function buildDynamicParams(
   effect: StackEffect
 ): Record<string, unknown> {
   const dynamic: Record<string, unknown> = {};
-  let sourceInfo: CardSnapshot | undefined;
-  const firstTarget = effect.targets[0];
-  const target = firstTarget?.cardUuid ? findTargetCard(room, firstTarget) : undefined;
-  const exactTarget = target && (firstTarget.zoneRevision === undefined || firstTarget.zoneRevision === (target.state.zoneRevision ?? 0)) ? target : undefined;
-  const numeric = createBoardNumericContext({ cards: roomCards(room), characteristics: card => CardCharacteristicService.resolve(room, card),
-    controllerId: stackObj.controllerId, source: stackObj.source, target: exactTarget, defaultCountZones: ['battlefield'] });
-  numeric.bindings = stackObj.type === 'triggered' ? undefined : stackObj.numericBindings;
-  numeric.readField = path => {
-    if (path.startsWith('source.')) {
-      sourceInfo ??= resolveSourceInformation(room, stackObj);
-      return readRulePath({ source: { ...sourceInfo.card, power: sourceInfo.power, toughness: sourceInfo.toughness } }, path);
-    }
-    if (path.startsWith('target.')) return exactTarget ? readRulePath({ target: { ...exactTarget, ...CardCharacteristicService.resolve(room, exactTarget) } }, path) : undefined;
-    return readRulePath({ controller: room.players[stackObj.controllerId], event: stackObj.type === 'triggered' ? stackObj.triggeringEvent : undefined,
-      history: { ...room.turnHistory, own: room.turnHistory?.playerCounts[stackObj.controllerId] } }, path);
-  };
+  const { numeric, exactTarget } = resolutionNumericContext(room, stackObj, effect);
 
   for (const [key, value] of Object.entries(effect.params)) {
     if (hasNumericExpression(value)) {
@@ -187,7 +174,6 @@ export function buildDynamicParams(
       continue;
     }
     if (typeof value !== 'string' || !value.startsWith('DYNAMIC:')) continue;
-
     const path = value.slice('DYNAMIC:'.length);
     if (path.startsWith('event.') && stackObj.type === 'triggered') {
       const eventValue = readRulePath({ event: stackObj.triggeringEvent }, path);
@@ -195,13 +181,40 @@ export function buildDynamicParams(
       dynamic[key] = result ? result.ok ? result.value : undefined : eventValue;
       continue;
     }
-
     if (['source.power', 'source.toughness', 'target.power', 'target.toughness'].includes(path)) {
       const result = path.startsWith('target.') && exactTarget?.state.zone !== 'battlefield' ? undefined
         : evaluateNumericValue({ numeric: { kind: 'query', id: 'field', args: { path } } }, numeric);
       dynamic[key] = result?.ok ? result.value : undefined;
     }
   }
-
   return dynamic;
+}
+
+/** Conditions and parameter expressions see the same resolution-local query sources. */
+export function resolutionNumericContext(room: GameRoom, stackObj: StackObject, effect: StackEffect) {
+  let sourceInfo: CardSnapshot | undefined;
+  const firstTarget = effect.targets[0];
+  const target = firstTarget?.cardUuid ? findTargetCard(room, firstTarget) : undefined;
+  const exactTarget = target && (firstTarget.zoneRevision === undefined || firstTarget.zoneRevision === (target.state.zoneRevision ?? 0)) ? target : undefined;
+  const numeric = createBoardNumericContext({ cards: roomCards(room), characteristics: card => CardCharacteristicService.resolve(room, card),
+    controllerId: stackObj.controllerId, source: stackObj.source, target: exactTarget, defaultCountZones: ['battlefield'], results: stackObj.resolutionResults });
+  numeric.bindings = stackObj.type === 'triggered' ? undefined : stackObj.numericBindings;
+  const fields = {
+    get source() {
+      sourceInfo ??= resolveSourceInformation(room, stackObj);
+      return { ...sourceInfo.card, ...sourceInfo.card.lastKnownCharacteristics, power: sourceInfo.power, toughness: sourceInfo.toughness };
+    },
+    get target() { return exactTarget ? { ...exactTarget, ...CardCharacteristicService.resolve(room, exactTarget) } : undefined; },
+    controller: room.players[stackObj.controllerId], event: stackObj.type === 'triggered' ? stackObj.triggeringEvent : undefined,
+    room: { phase: room.phase, turnNumber: room.turnNumber ?? 1, activeTurnPlayerId: room.activeTurnPlayerId },
+    history: { ...room.turnHistory, own: room.turnHistory?.playerCounts[stackObj.controllerId] },
+  };
+  numeric.readField = path => readRulePath(fields, path);
+  return { numeric, exactTarget, fields };
+}
+
+export function instructionConditionMatches(room: GameRoom, object: StackObject, effect: StackEffect): boolean {
+  if (!effect.condition) return true;
+  const { numeric, fields } = resolutionNumericContext(room, object, effect);
+  return conditionMatches(effect.condition, fields, numeric);
 }

@@ -3,7 +3,8 @@ import type { StackObject } from './effect.types';
 import type { ResolutionEffectResult } from './game-event.types';
 
 export interface ChoiceOption { id: string; label: string; value: unknown; limit?: number }
-export interface ResolutionContinuation { type: 'resolution'; stackObj: StackObject; effectIndex: number; results: ResolutionEffectResult[]; outcomeProbe?: import('./effect.types').OutcomeProbe }
+export interface ResolutionContinuation { type: 'resolution'; stackObj: StackObject; effectIndex: number; results: ResolutionEffectResult[]; outcomeProbe?: import('./effect.types').OutcomeProbe;
+  cardResultProbe?: import('./resolution-result.types').ResolutionCardResult }
 export interface ActionContinuation {
   type: 'action'; actionId: string; data: ActionData;
   field: 'modes' | 'targetGroups' | 'discardUuids' | 'payment' | 'distributions' | 'numericBindings' | 'costRoute'; groupId?: string; manaActivationIndex?: number;

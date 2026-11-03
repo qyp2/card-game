@@ -1,5 +1,6 @@
 import { validCardFilter } from './card-filter-validation';
 import type { EffectScope } from '../types/continuous-effect.types';
+import { validCardResultSource } from './card-collections';
 
 /** Query arguments use the same scope contract as continuous effects. */
 export function validEffectScope(value: unknown): value is EffectScope {
@@ -8,6 +9,7 @@ export function validEffectScope(value: unknown): value is EffectScope {
   const revision = (n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
   return Object.entries(value).every(([key, item]) => {
     switch (key) {
+      case 'from': return validCardResultSource(item);
       case 'self': case 'attachedToSource': return typeof item === 'boolean';
       case 'cardUuid': return typeof item === 'string' && !!item;
       case 'zoneRevision': return revision(item);

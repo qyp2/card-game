@@ -257,6 +257,9 @@ focused server modules own all process resources.
   `rules/runtime` (live cast-cost/event evaluation). Characteristic/permission rules reuse layers;
   `permission-registry.ts` keeps live permission checks. The unused modifier pipeline is removed.
   See [the rule-contract supplement](rule-contract-architecture.md).
+- **Temporary card results** use `engine/resolution-results.ts` for capture/lifecycle and
+  `shared/card-collections.ts` for query sources. Exact result searches and historical/current numeric
+  queries reuse existing filters; see [the result-set supplement](resolution-results-architecture.md).
 - **Player clients import protocol only.** Server projection resolves card displays and target candidates. The five temporary engine exceptions are empty; see [`architecture-import-policy.md`](architecture-import-policy.md).
 
 ## Protocol and player projection

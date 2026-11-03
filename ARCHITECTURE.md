@@ -571,6 +571,10 @@ evaluates cost and static event-replacement rules. Characteristic and permission
 into the existing layer system. See [the rule-contract supplement](docs/rule-contract-architecture.md)
 for family ownership, lifetimes, usage identities, migration and remaining card blockers.
 
+Resolution-local card sets are documented in [the result-set supplement](docs/resolution-results-architecture.md).
+Milling can capture exact arrival references/snapshots; subsequent searches and numeric queries reuse
+the shared filters. Cards remain in real zones, and temporary sets expire with the resolving object.
+
 ---
 
 ## 6. Layer 4: Server (`apps/server/src/rooms/`)

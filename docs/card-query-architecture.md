@@ -4,6 +4,8 @@ Date: 3 November 2026. Status: accepted and implemented at the owner's request.
 
 Subsequent work: [contracted rule families](rule-contract-architecture.md) reuse these filters and add conditional stat/cost/event behavior. Its blocker table updates the mechanics assessment below without changing this batch's five-card count.
 
+[Resolution-local result sets](resolution-results-architecture.md) subsequently allow searches/counts restricted to cards from a particular mill, including recorded arrival state. They add no physical zone or workbook card.
+
 ## Context and decision
 
 Deck, hand, graveyard, exile, battlefield and spell cards on the stack contain the same CardInstance model. Search choices, structural targeting, continuous/count scopes and action prerequisites previously duplicated card-property tests. That left color filtering available to scopes but unavailable to graveyard search, and restricted action-zone checks to three zones.
