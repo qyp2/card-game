@@ -15,6 +15,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Current architecture and verification](ARCHITECTURE.md)
 - [Workspace architecture supplement](docs/workspace-architecture.md)
 - [Enforced dependency rules](docs/architecture-import-policy.md)
+- [Readability and coverage gates](docs/readability-gate.md)
 - [Software design principles and where they live](docs/design-principles.md)
 - [Accounts, sessions and admin access](docs/authentication-architecture.md)
 - [Persistence, saved decks and database operations](docs/persistence-deck-architecture.md)

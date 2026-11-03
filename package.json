@@ -23,6 +23,7 @@
     "dev": "npm run build:server && node apps/server/dist/index.js --vite",
     "dev:client": "npm run dev -w @card-game/client",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --project engine",
     "test:architecture": "vitest run --pool=threads --maxWorkers=1 tests/architecture/import-boundaries.test.ts",
     "test:watch": "vitest",
     "verify": "npm run typecheck && npm run test && npm run build",
@@ -48,6 +49,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.12",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^4.1.10"
