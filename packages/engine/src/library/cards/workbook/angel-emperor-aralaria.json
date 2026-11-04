@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "manaCost": "",
+  "cardTypes": [
+    "Land"
+  ],
+  "subTypes": [
+    "地界"
+  ],
+  "id": "angel-emperor-aralaria",
+  "name": "天使皇 亞拉里亞",
+  "colors": [
+    "yellow"
+  ],
+  "rulesText": "① 橫置：生產一點雷屬性能量。② 我方玩家生命值恢復時，放置一點充能指數在此地界上。③ 天威號令：充能指數被放置在此地界時，且充能指數為5以上時，可以移除此卡5個充能指數，從手牌特殊召喚一張「上使」僕從。",
+  "abilities": [
+    {
+      "id": "mana",
+      "type": "activated",
+      "castSpeed": "instant",
+      "cost": {
+        "tap": true
+      },
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "yellow",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "healing-charge",
+      "type": "triggered",
+      "triggerCondition": "ON_LIFE_GAIN",
+      "trigger": {
+        "controller": "self"
+      },
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "charge",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "required": false,
+          "subject": "source"
+        }
+      }
+    },
+    {
+      "id": "heavenly-command",
+      "type": "triggered",
+      "triggerCondition": "ON_COUNTER_CHANGED",
+      "trigger": {
+        "subject": "self",
+        "condition": {
+          "all": [
+            {
+              "op": "eq",
+              "left": {
+                "path": "event.payload.counterType"
+              },
+              "right": "charge"
+            },
+            {
+              "op": "gt",
+              "left": {
+                "path": "event.payload.amount"
+              },
+              "right": 0
+            },
+            {
+              "op": "gte",
+              "left": {
+                "path": "event.payload.newCount"
+              },
+              "right": 5
+            }
+          ]
+        }
+      },
+      "effect": {
+        "family": "resources",
+        "operation": "pay_cost",
+        "condition": {
+          "op": "gt",
+          "left": {
+            "numeric": {
+              "kind": "query",
+              "id": "count",
+              "args": {
+                "scope": {
+                  "zones": [
+                    "hand"
+                  ],
+                  "controller": "self",
+                  "cardTypes": [
+                    "Creature"
+                  ],
+                  "subTypes": [
+                    "上使"
+                  ]
+                }
+              }
+            }
+          },
+          "right": 0
+        },
+        "params": {
+          "prompt": "移除5個充能指數，從手牌特殊召喚一張「上使」僕從？",
+          "cost": {
+            "removeCounters": [
+              {
+                "from": "source",
+                "counterType": "charge",
+                "amount": 5
+              }
+            ]
+          },
+          "then": [
+            {
+              "family": "cards",
+              "operation": "move",
+              "params": {
+                "origin": "hand",
+                "destination": "battlefield"
+              },
+              "targeting": {
+                "type": "self",
+                "required": false
+              },
+              "choice": {
+                "kind": "search",
+                "zone": "hand",
+                "cardTypes": [
+                  "Creature"
+                ],
+                "subTypes": [
+                  "上使"
+                ],
+                "min": 1,
+                "max": 1
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

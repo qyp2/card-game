@@ -1,6 +1,6 @@
 # Current workbook card blockers
 
-Updated after the [shared card infrastructure implementation](shared-card-infrastructure.md), following `92891d60`. The original audit used engine snapshot `105dce59`; this ledger now reflects effective-cost characteristics, deck-policy mapping, ordinary game usage, causal outcomes and two new registered phantom cards.
+Updated after the [shared card infrastructure implementation](shared-card-infrastructure.md) and [counter/optional payment delivery](counter-payment-architecture.md), following `708dd3ad`. The original audit used engine snapshot `105dce59`; this ledger reflects effective-cost characteristics, deck policy, ordinary game usage, causal outcomes and atomic counter payments.
 
 Source: local ignored `tem/六界之峰.xlsx`, SHA-256 `27b91d995e22fb8540a04c78a73d41f64daa08b216b275aceb1f282723a64d7d`. Include 炎獸, 幻影木偶, 風獸, 冰龍, 上使 and 蒼巨人. BP01, 虛界靈 and 雙色補充包 remain excluded from new implementation. Existing excluded definitions are retained.
 
@@ -37,17 +37,17 @@ These shared consumers now have focused proofs. A dependent card still needs a c
 
 ## Current coverage
 
-The explicit manifest contains **96 definitions**. The six included sheets have **142 named rows**, **70 with registered name matches** and **72 without a definition**. Of those 72, **2 are confirmed U and 70 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
+The explicit manifest contains **98 definitions**. The six included sheets have **142 named rows**, **72 with registered name matches** and **70 without a definition**. Of those 70, **2 are confirmed U and 68 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
 
 | Sheet | Named rows | Registered matches | No definition | Confirmed U | Deferred |
 |---|---:|---:|---:|---:|---:|
 | 炎獸 | 24 | 24 | 0 | 0 | 0 |
-| 幻影木偶 | 23 | 9 | 14 | 2 | 12 |
+| 幻影木偶 | 23 | 10 | 13 | 2 | 11 |
 | 風獸 | 23 | 12 | 11 | 0 | 11 |
 | 冰龍 | 25 | 4 | 21 | 0 | 21 |
-| 上使 | 23 | 11 | 12 | 0 | 12 |
+| 上使 | 23 | 12 | 11 | 0 | 11 |
 | 蒼巨人 | 24 | 10 | 14 | 0 | 14 |
-| **Total** | **142** | **70** | **72** | **2** | **70** |
+| **Total** | **142** | **72** | **70** | **2** | **68** |
 
 Matching uses NFKC normalization and ignores whitespace and asterisks; source row numbers remain workbook row numbers. Only JSON imports explicitly listed in `cards/index.ts` count. Untracked duplicate files and excluded-sheet rows do not inflate coverage.
 
@@ -62,6 +62,7 @@ Matching uses NFKC normalization and ignores whitespace and asterisks; source ro
 | Resolution-local mill result sets | Exact-card recovery; count actual milled arrivals; current versus recorded state after replacements | A new physical zone, under-host storage, reveal-result capture, iteration, mill-quantity modifiers or arbitrary selected-card fields |
 | Bounded reveal improvements | Filtered mandatory/optional selection in the existing one-to-three-card take-to-hand/order-bottom consumer | Five/six/eight-card windows, top-selected/take-all/deploy/exile/mill-remainder workflows, reveal provenance or conditional repetition |
 | Shared ordinary ability usage | Turn/game limits, physical/incarnation/controller identities, shared groups, immediate mana and trigger reservations | Dynamic numeric limits or changing another ability's declared limit |
+| Shared counter and optional costs | Atomic source/controlled-battlefield counter costs; optional `resources / pay_cost` branches with existing mana/life/discard/orientation/sacrifice costs | Selected exile, rituals, binding/storage and dynamic counter amounts |
 | Causal events and killed outcomes | Actual source/ability/root/parent data, contributor receipts, lethal-making causes, gated kill outcomes and source-scoped direct exile | Optional zero-life rescue; an owner ruling on every broad multi-source credit case |
 | Config-driven copy exceptions | Twenty copies of 幻影木偶, singleton 幻影魔城/諸界海 and all six repeatable basic lands | Workbook-wide format/profile migration |
 | Recent legal-action query, auto-pass and room lifecycle work | Better play/session behavior and action inspection | No card mechanic blockers are removed by those features alone |
@@ -84,7 +85,7 @@ Generic counter storage and prevention are available. That does not certify the 
 | REVEAL | Captured windows, larger bounds, destination/selection/order workflows and repetition |
 | USAGE | Dynamic limits, modifying other ability limits or nonstacking composition proof |
 | EVENT | Off-zone source discovery and tap/draw-step/life-change/reveal provenance events |
-| PAY | Atomic counter/material/exile payments and optional payment within triggered resolution |
+| PAY | Selected exile, ritual materials and binding/storage payments; ordinary counter and optional resolution payments are delivered |
 | ENTRY | Atomic tapped entry or summon-method provenance |
 | TOKEN | Token creation with authored characteristics/abilities |
 | EXPIRY | Battle/attack lifetime and skip-next-untap scheduling |
@@ -112,7 +113,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 10 | 幻影木偶工廠 | B | REVEAL | Five-card window, move every matching creature to graveyard, order the remainder on top, and the alternative-choice workflow. Once-per-game usage is now supported. Existing reveal-to-hand/bottom and ability turn limits do not cover this. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
 | 11 | 赫拉的營寨 | W/P | — | Life-loss, actual damage and effective maximum-life change events plus a shared turn budget now exist. Settle which creature life changes qualify and prove the complete combined draw recipe. |
 | 12 | 幻像祭壇 | B | ENTRY | Exact milled-card recovery and black/type filters are now supported. Only atomic tapped entry remains; an entry trigger that later taps is observably different. |
-| 13 | 幻影夢人 | B | EVENT, PAY | Need draw-step trigger and optional pay-two-life-then-draw branch. Life as an announced ability cost alone does not implement this triggered payment decision. |
+| 13 | 幻影夢人 | B | EVENT | Need the draw-step trigger. Optional pay-two-life-then-draw now uses `resources / pay_cost`; ordinary life payment is no longer a blocker. |
 | 14 | 幻影木偶 鬼斧 | P | — | The shared killed-outcome gate now supports a stat reduction followed by a success-only bonus. Still deliver the exact attack/target/buff composition proof for this card. |
 | 15 | 幻影木偶 鬼火 | U | — | Existing optional mill result capture, black noncreature-type filter and exact-card recovery compose on entry and attack. Seven focused recipe tests cover this card and the scythe; definition/registration still to deliver. |
 | 17 | 死亡組裝 | B/W | TOKEN | Multi-target friendly destruction is supported. Token creation, including the token's attack ability, is missing. Clarify whether successful destruction of all three is a prerequisite rather than only an instruction sequence. |
@@ -120,8 +121,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 19 | 幻影木偶智者* | B/P | USAGE | The graveyard effective-cost setter is now supported. Nonstacking stat anthems across multiple copies still need their consumer/composition; ability usage groups do not deduplicate continuously applied stat deltas. |
 | 20 | 赫拉幻影術 | W | VALUE | Effective mana-value filtering now sees graveyard setters. Clarify whether ignore all graveyard effects means explicitly selecting by printed cost or suppressing effects more broadly; those are distinct selection/permission policies. |
 | 21 | 幻影魔鐮 鬼火 | U | — | Restricted attachment, +2 attack and granted attack-triggered exact-mill recovery compose with existing consumers; the grant stops when the weapon leaves. Live definition/registration still to deliver. |
-| 22 | 幻影魔神 赫拉尼亞* | B/W | EVENT, PAY, VALUE | Discover the discarded card itself from hand/library, offer return versus optional paid deployment, and read that exact discarded card's mana value for the temporary reduction. Mill result membership alone supplies no selected-result-card mana-value accessor. Clarify trigger origin/timing when authored. |
-| 23 | 幻影女王 赫拉 | B | PAY | Named-creature entry, charge counters, turn-limited activation and tapped-opponent destruction exist. Removing five charge counters must be an atomic activation payment, not a resolving REMOVE_COUNTER instruction. |
+| 22 | 幻影魔神 赫拉尼亞* | B/W | EVENT, VALUE | Discover the discarded card itself from hand/library and read that exact card's mana value for the temporary reduction. Mill result membership alone supplies no selected-result-card mana-value accessor. Optional paid deployment is now supported; clarify trigger origin/timing when authored. |
 
 ### 風獸
 
@@ -131,7 +131,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 10 | 風靈再生 | B | EVENT, EXPIRY | Need revealed-card discovery with the revealing source's name/provenance. Hand exchange exists. Alternate +1 attack requires battle expiry. |
 | 14 | 風靈號角手 | W | — | Hand activation, self-discard payment, turn limit and name-substring selection exist. Owner explicitly deferred the unspecified special-summon origin. Choose the origin before deciding whether another engine change is needed; this is not a remaining filter blocker. |
 | 15 | 風靈獸之子 | B | EXPIRY | Name-substring conditional +2/+2 is expressible. Tapping exists; skipping the target's next untap does not. |
-| 17 | 獸帝的號令 | B | EVENT, REVEAL, PAY | Need reveal-self provenance and pay-one-green deployment from the same revealed window. The name filter and ordinary mana payment exist separately. |
+| 17 | 獸帝的號令 | B | EVENT, REVEAL | Need reveal-self provenance and deployment from the same revealed window. The optional pay-one-green branch is now supported; retaining the exact revealed card remains the blocker. |
 | 18 | 風靈獸 號角手姆拉德* | B | REVEAL | Five-card reveal, optional free Land/Artifact deployment from that exact window, ordered bottom remainder. Filtering is no longer the blocker. |
 | 19 | 風靈獸 旗手納馬蘭 | B/W | EVENT | Conditional removal of abilities from tapped opposing creatures is expressible. Need a tap event; clarify 回復 (untap or life recovery) and scope before implementing the response. |
 | 20 | 風靈獸之怒 | B | EVENT | Tapping two opposing creatures is supported. Revealed-self recovery still needs discovery and source-name provenance. |
@@ -148,7 +148,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 5 | 極光冰龍 | P | COUNTER | A self-only intrinsic, counter-conditioned prevention rule is expressible. Before full-card readiness, prove the parenthetical Aurora counter contract: recipient-owned once-per-turn shield, persistence, removal/reapplication and repeated placement. Generic prevention tests alone do not certify counter semantics. |
 | 6 | 冰風守護者 | B/P | COUNTER, STACK | Aurora proof requirements plus retargeting a pending effect to this creature. Protection keywords do not redirect a selected stack object. |
 | 7 | 霜月門衛 | B/P | COUNTER | 兵 is accepted as generic. Need a persistent counter-owned grant on the selected equipment, then its attack grant on the equipped host, with defined multiplicity/removal/reapplication. A static aura owned by the gatekeeper stops too early when it leaves. |
-| 9 | 冰龍魔杖 | B/W | PAY | Restricted attachment, attack counters and bounce exist. Need counter removal as activation payment; clarify whether 此卡 means the staff or equipped host for placement/payment. |
+| 9 | 冰龍魔杖 | W | — | Restricted attachment, attack counters, bounce and atomic counter payment now exist. Clarify whether 此卡 means the staff or equipped host for placement/payment before authoring the complete recipe. |
 | 10 | 冰龍呼喚 | B/W | REVEAL | Mandatory filtered take-one exists. Need conditional repetition of the whole reveal/choose/order workflow; clarify once-again versus recursive repetition before choosing a bounded recipe or repeat consumer. |
 | 11 | 極光之盾 | B/W | DAMAGE | Need life-total floor across qualifying decreases, including direct life loss. Prevention alone is insufficient. Clarify behavior when life already starts below five. |
 | 12 | 巨龍的祝福 | P | COUNTER | Multi-recipient counter placement exists. Prove each recipient gets one shared Aurora shield per turn, including giver leaving, repeated placements and counter removal/reapplication; no evidence yet certifies the full package. |
@@ -158,11 +158,11 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 17 | 極光之壁 | B/P | COUNTER, COMBAT | Aurora contract needs proof. Spell countering exists; ending the attack phase after the current battle needs a scheduled combat transition. |
 | 18 | 極北之指引者 萊莘德雅 | B/W | EVENT, REVEAL | Need off-battlefield source discovery for the departure-triggered self summon, plus two independent reveal categories. Clarify the source zone for the response. |
 | 19 | 極光封 | B/W | STACK | Creature-ability countering exists. Need resolving the selected stack ability's source for bottom movement and clarify whether 其 refers to that creature. Countering alone cannot select its associated source. |
-| 20 | 極光龍宮 | B/W/P | COUNTER, PAY | Aurora contract, selected-counter removal payment and an explicitly deferred special-summon origin. A resolving counter-removal effect must not stand in for payment. |
+| 20 | 極光龍宮 | B/W/P | COUNTER | Aurora contract and an explicitly deferred special-summon origin remain. Shared selected-counter payment is delivered. |
 | 21 | 極光龍后 亞雅隆 | B/W/P | COUNTER | Need full per-recipient prevention grant semantics. Clarify the first ability's activation condition/timing; the workbook labels this apparent 4/8 creature as Land. Turn-long untargetability is already expressible. |
 | 22 | 極北龍帝 亞瑟 | B/W | DAMAGE, VALUE | Count and multiply exist. Need defined per-dragon damage assignment and half-damage arithmetic/rounding; clarify repeated five-damage packets versus one summed packet and odd damage. |
 | 23 | 巨龍之墓 | B/W/P | COUNTER, CAUSE | Aurora contract plus replacing a zero-life state-based departure with optional artifact destruction and healing. Ordinary damage regeneration is not this replacement; clarify what life recovery means after max-life reduction. |
-| 24 | 寒巢之主 亞蕾雅 | B | PAY, EXPIRY | Charge and creature-entry behavior exist. Need atomic four-counter payment and battle-lifetime protection for both players, rather than a turn-long approximation. |
+| 24 | 寒巢之主 亞蕾雅 | B | EXPIRY | Charge, creature entry and atomic four-counter payment now exist. Need battle-lifetime protection for both players, rather than a turn-long approximation. |
 | 25 | 諸界六皇 冬機之卡斯拿斯 | B/W | IMMUNITY, EVENT | Need immunity against opposing spell/creature effects, not just targeting. Also tap-triggered recovery during opponent attack phase; clarify 回復 and qualifying source effects. |
 
 ### 上使
@@ -180,7 +180,6 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 20 | 天使的皇座 | B/W | HOST, USAGE, PAY | Need under-host storage/release, 縛鎖3 and reversible changes to ability 1's use limit. Shared groups can enforce the common 2/3 budget; changing ability 1's limit still lacks a consumer. |
 | 21 | 天使女帝 蝶后 | B | EVENT, HEAL | Need hand-zone life-loss response with self-discard and a global healing-amount modifier. Existing battlefield triggers and damage modifiers do not implement these consumers. |
 | 22 | 大天使 費蘭尼 | B | VALUE, EXPIRY | Setting life to 30 is expressible through current life arithmetic. Still need integer floor(life/5), and bonus expiring after this attack. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
-| 23 | 天使皇 亞拉里亞 | B | PAY | Mana, healing, charge events and hand-to-battlefield deployment exist. Need optional five-counter payment inside the charge-triggered summon, with affordability checked before removal/deployment. |
 
 ### 蒼巨人
 
@@ -198,30 +197,30 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 20 | 幻變神殿 | B | MILL | Granted attack-mill exists. Need shared modification of other giants' mill quantity; do not rewrite one known card's printed amount. |
 | 21 | 海神之怒 耶夢加得 | B | RANDOM | Name-substring conditions and whole effective-cost setters are supported. Authoritative random opposing-hand discard remains missing. |
 | 22 | 幻變之海 洛基尼亞 | B/W | REVEAL, VIEW | Need six-card opponent-library reveal, selected opponent-owned creature into your hand and milling remainder. Current moves use the owner's destination; define holder versus ownership and hidden-information projection without changing ownership silently. Opponent-creature-count mill amount exists. |
-| 23 | 蒼海帝 洛基 | B | PAY, VIEW, COST | Need four-counter activation payment, opponent-library draw into your hand with reveal, and card-specific blue-as-any-color payment. Generic reductions/setters are not color-conversion permission. |
+| 23 | 蒼海帝 洛基 | B | VIEW, COST | Atomic four-counter payment is delivered. Need opponent-library draw into your hand with reveal and card-specific blue-as-any-color payment. Generic reductions/setters are not color-conversion permission. |
 | 24 | 諸界六皇 萬智之德步尼* | B | VALUE | Ten-card mill, count of creatures actually milled and proportional stat bonus are now supported by result queries. Still need floor(power/2) for attack mill; multiplication alone cannot divide/floor. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
 
 ## Gaps in registered cards and format policy
 
-The 70 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
+The 72 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
 
 - **Copy policy resolved:** all six basic lands are repeatable. 血炎山 already used the unlimited `land-red` definition; the five other missing unlimited mappings are now configured. 幻影魔城/諸界海 are singleton and the newly registered 幻影木偶 allows twenty copies, through the shared config/validator.
 - **Scorch on artifacts:** nine registered definitions explicitly retain `【暫緩：遺跡的灼熱破壞門檻】`. The accepted creature threshold uses current attack plus maximum life; the relic threshold still needs its own ruling. Their registration does not clear that caveat.
 - **Excluded dual lands:** six registered dual lands use an entry-tap trigger rather than atomic tapped entry. They belong to the excluded supplement, so the audit records the fidelity gap without silently widening implementation scope.
 - **Workbook format:** the workbook describes default three copies, at least sixty cards without an upper limit, and opening-seven/mulligan behavior. The current standard profile uses four copies and 60–250 cards; opening/setup rules are configured separately. Profile/setup alignment is separate work, not solved by registering definitions. U above is relative to the supported profile, not a claim that global workbook rules have been migrated.
 
-A complete fidelity certification of the 70 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
+A complete fidelity certification of the 72 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
 
 ## Next largest blocker and delivery order
 
-The largest remaining family is **atomic additional payments: 14 missing cards**, compared with **13** referencing captured reveal workflows. Six payment rows specifically require counter payment: 幻影女王 赫拉, 冰龍魔杖, 極光龍宮, 寒巢之主 亞蕾雅, 天使皇 亞拉里亞 and 蒼海帝 洛基.
+The largest remaining family is **captured reveal workflows: 13 missing cards**. For example, 海神呼喚者 海耶 needs one six-card library window, independent giant/artifact selections from that exact window, and milling its exact remainder. Raising the existing reveal bound alone cannot express the selection provenance, destinations or ordering.
 
-For 赫拉, five charge counters must be paid before committing the destroy ability. The existing resolving REMOVE_COUNTER instruction cannot validate/commit that payment atomically with targets, other costs and usage. Other payment gaps include selected exile, rituals, optional payment during resolution and binding/storage costs. [Implementation and history details](shared-card-infrastructure.md#next-largest-blocker) give the concrete boundary for the owner's next design suggestion.
+Counter payments and optional ordinary payments during resolution are delivered. They clear all six former counter-cost dependencies and the optional payment clauses of 幻影夢人, 幻影魔神 赫拉尼亞 and 獸帝的號令. Other clauses still block those cards. **Five PAY rows remain**: 亞拉里亞的終末 (selected exile), 天域三侯 坡加 / 天使的皇座 (binding/storage), and 蒼海王子 / 深淵巨人 (ritual materials). Counts overlap other families.
 
-1. Define/deliver counter payments as the next bounded payment slice. Counts overlap; this alone will not finish all fourteen cards.
-2. Deliver captured reveal windows and their pick/deploy/remainder workflows, affecting thirteen rows.
-3. Prove complete recipes for cards whose cost/usage/causal dependencies are now resolved. The two Ghostfire mill recipes remain confirmed U; delivering those would reach **72/142** registered definitions, leaving **70** missing.
-4. Complete/prove counter-owned Aurora/霜器 behavior using the new shared budget groups, then combat lifetimes, host storage, ritual/random/cross-owner and immunity behavior.
+1. Deliver retained reveal windows with shared filters, independent selections, deployment and explicit remainder destinations/order. Extend the existing resolution-result ownership model; do not invent a second physical card zone.
+2. Author/prove complete recipes whose dependencies are cleared. 幻影女王 赫拉 and 天使皇 亞拉里亞 are now registered and tested. The two Ghostfire mill recipes remain confirmed U; delivering those would reach **74/142** registered rows, leaving **68** missing.
+3. Resolve 冰龍魔杖's staff/host wording before implementing it. Clearing a payment dependency does not settle its intended source.
+4. Complete/prove counter-owned Aurora/霜器 behavior, then combat lifetimes, host storage, ritual/random/cross-owner and immunity behavior.
 
 Deferred wording stays for the corresponding card implementation. These are the remaining delivery dependencies, not mechanics silently approximated by this batch.
 
@@ -241,6 +240,6 @@ Use the existing owners when delivering a missing slice:
 
 ## Verification
 
-The explicit manifest now has **96** definitions and matches **70/142** included workbook rows; **72** lack definitions. Reconciled every missing row identity and retained the two confirmed U mill recipes. This delivery adds 幻影木偶/幻影巨人 and changes shared engine contracts and deck policy; presets remain unchanged.
+The explicit manifest now has **98** definitions and matches **72/142** included workbook rows; **70** lack definitions. This delivery registers 幻影女王 赫拉 and 天使皇 亞拉里亞 and adds the shared cost contract/planner, payment choices and optional resolution branches. Existing definitions and presets are preserved.
 
-**231 focused logic checks passed across 18 files**, covering new infrastructure and related cost, replacement, trigger, result, deck, projection, builder and import boundaries. All workspace typechecks pass. The separate original-catalog/preset preservation check passed; its unrelated configuration checks were not run. No browser smoke test, full-game socket test or full suite was run. The original audit's 73-check delivery remains historical.
+Payment verification covers atomic combinations, overlapping inventory, stale/foreign selections, cancellation, source revisions, mana generation, continuation reconstruction, exact debits, production cards and opaque player projections. The final focused validation count is recorded in [the payment delivery guide](counter-payment-architecture.md#verification). All workspace typechecks pass. No browser smoke test, full-game socket test or full suite was run. The prior infrastructure delivery's 231 checks and original audit's 73 checks remain historical.

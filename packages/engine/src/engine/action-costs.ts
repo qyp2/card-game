@@ -1,3 +1,6 @@
+import { planCounterCosts } from './counter-costs';
+import { attributeMutations } from './change-cause';
+import { captureSourceInformation } from './source-information';
 import { CardCharacteristicService } from './card-characteristic-service';
 import type { ActionData } from './action-registry';
 import type { ActionCost } from '../types/effect.types';
@@ -110,7 +113,8 @@ function planDirectCost(
   const live = room.battlefield.find(
     (card) =>
       card.uuid === source.uuid &&
-      CardCharacteristicService.resolveController(room, card) === playerId,
+      CardCharacteristicService.resolveController(room, card) === playerId &&
+      (card.state.zoneRevision ?? 0) === (source.state.zoneRevision ?? 0),
   );
 
   // Orientation and sacrifice costs need the source on the battlefield.
@@ -121,9 +125,7 @@ function planDirectCost(
     }
 
     // Guard: the permanent must be in the orientation the cost expects.
-    const hasInvalidOrientation =
-      (cost.tap && live.state.isTapped) ||
-      (cost.untap && !live.state.isTapped);
+    const hasInvalidOrientation = (cost.tap && live.state.isTapped) || (cost.untap && !live.state.isTapped);
 
     if (hasInvalidOrientation) {
       return reject('Cannot pay orientation cost');
@@ -154,12 +156,7 @@ function planDirectCost(
   }
 
   const discarded = selected.map((uuid) =>
-    player.hand.find(
-      (card) =>
-        card.uuid === uuid &&
-        card.uuid !== source.uuid &&
-        card.uuid !== reservedCardUuid,
-    ),
+    player.hand.find((card) => card.uuid === uuid && card.uuid !== source.uuid && card.uuid !== reservedCardUuid),
   );
 
   // Guard: every selected card must still be in hand.
@@ -174,7 +171,9 @@ function planDirectCost(
     return reject('Invalid mana payment');
   }
 
-  const mutations: GameMutation[] = [];
+  const counters = planCounterCosts(room, playerId, source, cost.removeCounters, selections.counterPayments);
+  if (!counters.success) return counters;
+  const mutations: GameMutation[] = [...counters.mutations];
 
   if (Object.keys(payment).length) {
     mutations.push({ type: 'SPEND_MANA', playerId, cost: payment });
@@ -235,8 +234,7 @@ export function planManaActivation(
 ): CostPlan {
   const card = room.battlefield.find(
     (candidate) =>
-      candidate.uuid === action.cardUuid &&
-      CardCharacteristicService.resolveController(room, candidate) === playerId,
+      candidate.uuid === action.cardUuid && CardCharacteristicService.resolveController(room, candidate) === playerId,
   );
 
   // Guard: the source must be a permanent you control.
@@ -249,15 +247,11 @@ export function planManaActivation(
 
   // Prefer an explicit ability id, then a lone ability, then an index.
   if (action.abilityId !== undefined) {
-    selected = candidates.find(
-      (entry) => entry.ability.id === action.abilityId,
-    );
+    selected = candidates.find((entry) => entry.ability.id === action.abilityId);
   } else if (action.abilityIndex === undefined && candidates.length === 1) {
     selected = candidates[0];
   } else {
-    selected = candidates.find(
-      (entry) => entry.abilityIndex === action.abilityIndex,
-    );
+    selected = candidates.find((entry) => entry.abilityIndex === action.abilityIndex);
   }
 
   // Guard: the selection must resolve to a real mana ability.
@@ -280,9 +274,7 @@ export function planManaActivation(
   }
 
   // A single-colour ability needs no explicit colour choice.
-  const color =
-    action.manaColor ??
-    (output.colors.length === 1 ? output.colors[0] : undefined);
+  const color = action.manaColor ?? (output.colors.length === 1 ? output.colors[0] : undefined);
 
   // Guard: the chosen colour must be one the ability can produce.
   if (!output.colors.includes(color as (typeof output.colors)[number])) {
@@ -310,9 +302,7 @@ export function planManaActivation(
 
   // Guard: mana abilities cannot use alternative or additional cost routes.
   const hasCostRoute =
-    ability.alternativeCosts !== undefined ||
-    ability.additionalCost !== undefined ||
-    action.costRoute !== undefined;
+    ability.alternativeCosts !== undefined || ability.additionalCost !== undefined || action.costRoute !== undefined;
 
   if (hasCostRoute) {
     return reject('Mana abilities do not support cost routes');
@@ -334,29 +324,41 @@ export function planManaActivation(
 
   const after = preview(room, costs.mutations);
   const manaColor = color as (typeof output.colors)[number];
-  const resultingMana =
-    after.players[playerId].mana[manaColor] + output.amount;
+  const resultingMana = after.players[playerId].mana[manaColor] + output.amount;
 
   // Guard: the pool must stay within safe integer range.
   if (!Number.isSafeInteger(resultingMana)) {
     return reject('Mana output exceeds the pool limit');
   }
 
+  const useKey = abilityUseKey(card, ability.id ?? '');
+  const causeId = `mana:${useKey}:${room.turnNumber ?? 0}:${room.turnHistory?.uses[useKey] ?? 0}`;
   return {
     success: true,
-    mutations: [
-      ...costs.mutations,
+    mutations: attributeMutations(
+      [
+        ...costs.mutations,
+        {
+          type: 'ADD_MANA',
+          playerId,
+          color: manaColor,
+          amount: output.amount,
+        },
+        {
+          type: 'RECORD_ABILITY_USE',
+          key: abilityUseKey(card, ability.id ?? ''),
+        },
+        ...recordAbilityUsage(room, card, ability, playerId),
+      ],
       {
-        type: 'ADD_MANA',
-        playerId,
-        color: manaColor,
-        amount: output.amount,
+        id: causeId,
+        rootId: causeId,
+        kind: 'effect',
+        controllerId: playerId,
+        source: captureSourceInformation(room, card),
+        abilityId: ability.id,
       },
-      {
-        type: 'RECORD_ABILITY_USE',
-        key: abilityUseKey(card, ability.id ?? ''),
-      },
-      ...recordAbilityUsage(room, card, ability, playerId),
-    ],
+      room,
+    ),
   };
 }

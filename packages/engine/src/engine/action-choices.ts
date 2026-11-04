@@ -1,3 +1,4 @@
+import { planCounterCosts, counterPaymentOptions, counterPaymentAnswer } from './counter-costs';
 import { CardCharacteristicService } from './card-characteristic-service';
 import { abilityEffects } from './ability-effects';
 import { findActivationSource } from './activation-source';
@@ -14,9 +15,14 @@ import { manaAbilities } from './mana-abilities';
 import { actionCostError, planManaActivation } from './action-costs';
 import { gameReducer } from './game-reducer';
 import { planTargetGroups } from './target-groups';
-import { buildStackEffects } from './effect-resolver';
+import { buildStackEffects } from './resolution-planning';
 import { abilityLimitReached } from './turn-history';
-import { prepareAnnouncement, spellAnnouncementDefinition, abilityAnnouncementDefinition, materializeAnnouncementCost } from './announcement-values';
+import {
+  prepareAnnouncement,
+  spellAnnouncementDefinition,
+  abilityAnnouncementDefinition,
+  materializeAnnouncementCost,
+} from './announcement-values';
 import { composeActionCosts } from './cost-composition';
 import { describeActionCost } from '../shared/action-cost-description';
 
@@ -70,9 +76,7 @@ export function prepareActionChoice(
     return NO_CHOICE;
   }
 
-  const isLandSpell =
-    actionId === 'cast_spell' &&
-    CardCharacteristicService.resolveTypes(room, card).includes('Land');
+  const isLandSpell = actionId === 'cast_spell' && CardCharacteristicService.resolveTypes(room, card).includes('Land');
 
   // Guard: a land is played, never cast.
   if (isLandSpell) {
@@ -88,14 +92,14 @@ export function prepareActionChoice(
     );
   } else if (actionId === 'tapForMana') {
     // A mana ability is selected by id, then by index, then by being the only one.
-    const selectedManaAbility =
-      data.abilityId !== undefined
-        ? candidates.find((candidate) => candidate.ability.id === data.abilityId)
-        : data.abilityIndex !== undefined
-          ? candidates.find((candidate) => candidate.abilityIndex === data.abilityIndex)
-          : candidates.length === 1
-            ? candidates[0]
-            : undefined;
+    let selectedManaAbility;
+    if (data.abilityId !== undefined) {
+      selectedManaAbility = candidates.find((candidate) => candidate.ability.id === data.abilityId);
+    } else if (data.abilityIndex !== undefined) {
+      selectedManaAbility = candidates.find((candidate) => candidate.abilityIndex === data.abilityIndex);
+    } else if (candidates.length === 1) {
+      selectedManaAbility = candidates[0];
+    }
 
     ability = selectedManaAbility?.ability;
   }
@@ -112,9 +116,7 @@ export function prepareActionChoice(
 
   const blueprint = CardCharacteristicService.resolveBlueprint(room, card);
   const definition =
-    ability?.type === 'activated'
-      ? abilityAnnouncementDefinition(ability)
-      : spellAnnouncementDefinition(blueprint);
+    ability?.type === 'activated' ? abilityAnnouncementDefinition(ability) : spellAnnouncementDefinition(blueprint);
 
   // Guard: mana abilities cannot declare numeric bindings.
   if (actionId === 'tapForMana' && definition.numericDeclarations?.length) {
@@ -131,7 +133,17 @@ export function prepareActionChoice(
     return reject('Mana abilities do not support cost routes');
   }
 
-  const announcement = prepareAnnouncement(card, definition, data, actionId === 'cast_spell' ? { room, playerId } : undefined);
+  const announcement = prepareAnnouncement(
+    card,
+    definition,
+    data,
+    actionId === 'cast_spell'
+      ? {
+          room,
+          playerId,
+        }
+      : undefined,
+  );
   if (!announcement.success) {
     return reject(announcement.reason);
   }
@@ -146,8 +158,12 @@ export function prepareActionChoice(
     }
   }
 
+  const counterAvailability = planCounterCosts(room, playerId, card, cost?.removeCounters, data.counterPayments, true);
+  if (!counterAvailability.success) return reject(counterAvailability.reason);
+
   const needsAnnouncementData =
     Boolean(definition.numericDeclarations?.length) ||
+    Boolean(definition.cost?.removeCounters?.length) ||
     definition.alternativeCosts !== undefined ||
     definition.additionalCost !== undefined;
   const savedData = needsAnnouncementData
@@ -164,7 +180,7 @@ export function prepareActionChoice(
       : {
           allowedZones:
             ability?.type === 'activated'
-              ? ability.allowedZones ?? (['battlefield'] as const)
+              ? (ability.allowedZones ?? (['battlefield'] as const))
               : (['battlefield'] as const),
           speed: ability?.type === 'activated' ? ability.castSpeed : ('sorcery' as const),
         };
@@ -182,17 +198,11 @@ export function prepareActionChoice(
     return reject(timing.reason);
   }
 
-  const modes =
-    ability?.type === 'activated' ? ability.modes : blueprint.modes;
-  const count =
-    (ability?.type === 'activated' ? ability.modeCount : blueprint.modeCount) ??
-    { min: 1, max: 1 };
+  const modes = ability?.type === 'activated' ? ability.modes : blueprint.modes;
+  const count = (ability?.type === 'activated' ? ability.modeCount : blueprint.modeCount) ?? { min: 1, max: 1 };
 
   // Build the continuation that resumes this action after the answer.
-  const continuation = (
-    field: ActionContinuation['field'],
-    groupId?: string,
-  ): ActionContinuation => ({
+  const continuation = (field: ActionContinuation['field'], groupId?: string): ActionContinuation => ({
     type: 'action',
     actionId,
     data: savedData,
@@ -224,12 +234,11 @@ export function prepareActionChoice(
     });
   }
 
-  const base =
-    actionId === 'cast_spell'
-      ? blueprint.onCastEffects ?? []
-      : ability?.type === 'activated'
-        ? abilityEffects(ability)
-        : [];
+  let base = blueprint.onCastEffects ?? [];
+  if (actionId !== 'cast_spell') {
+    base = [];
+    if (ability?.type === 'activated') base = abilityEffects(ability);
+  }
   const effects = selectModeEffects(base, modes, data.modes, count, { room, playerId });
 
   if (!effects) {
@@ -258,10 +267,12 @@ export function prepareActionChoice(
   if (announcement.missingCostRoute) {
     const description = (selected: typeof definition.cost) => {
       try {
-        return describeActionCost(composeActionCosts([
-          materializeAnnouncementCost(selected, announcement.bindings),
-          materializeAnnouncementCost(definition.additionalCost, announcement.bindings),
-        ]));
+        return describeActionCost(
+          composeActionCosts([
+            materializeAnnouncementCost(selected, announcement.bindings),
+            materializeAnnouncementCost(definition.additionalCost, announcement.bindings),
+          ]),
+        );
       } catch (error) {
         // An unavailable route must not prevent another route from being used.
         // Selecting it still follows the ordinary announcement rejection path.
@@ -300,12 +311,8 @@ export function prepareActionChoice(
     const groups = describeTargetGroups(effects);
 
     // Target groups come from action data and are narrowed after the array check.
-    const selected = Array.isArray(data.targetGroups)
-      ? (data.targetGroups as { id: string }[])
-      : [];
-    const missing = groups.find(
-      (group) => !selected.some((entry) => entry.id === group.id),
-    );
+    const selected = Array.isArray(data.targetGroups) ? (data.targetGroups as { id: string }[]) : [];
+    const missing = groups.find((group) => !selected.some((entry) => entry.id === group.id));
 
     if (missing) {
       return request({
@@ -403,10 +410,7 @@ export function prepareActionChoice(
 
         // A spell cannot discard itself to pay for its own mana.
         const options = nested.options.filter(
-          (option) =>
-            actionId !== 'cast_spell' ||
-            nested.kind !== 'discard' ||
-            option.id !== card.uuid,
+          (option) => actionId !== 'cast_spell' || nested.kind !== 'discard' || option.id !== card.uuid,
         );
 
         return request({
@@ -415,11 +419,17 @@ export function prepareActionChoice(
           continuation: {
             ...continuation(nested.continuation.field),
             manaActivationIndex: index,
+            counterCostIndex: nested.continuation.counterCostIndex,
           },
         });
       }
 
-      const planned = planManaActivation(working, playerId, selection, actionId === 'cast_spell' ? card.uuid : undefined);
+      const planned = planManaActivation(
+        working,
+        playerId,
+        selection,
+        actionId === 'cast_spell' ? card.uuid : undefined,
+      );
 
       if (!planned.success) {
         return reject(planned.reason);
@@ -427,6 +437,30 @@ export function prepareActionChoice(
 
       working = planned.mutations.reduce(gameReducer, working);
     }
+  }
+
+  const counterPlan = planCounterCosts(working, playerId, card, cost?.removeCounters, data.counterPayments, true);
+  if (!counterPlan.success) return reject(counterPlan.reason);
+  const suppliedCounters = (data.counterPayments ?? {}) as Record<string, unknown>;
+  const counterCostIndex = cost?.removeCounters?.findIndex(
+    (entry, index) => entry.from === 'battlefield' && !Object.prototype.hasOwnProperty.call(suppliedCounters, index),
+  );
+  if (counterCostIndex !== undefined && counterCostIndex >= 0) {
+    const entry = cost!.removeCounters![counterCostIndex];
+    return request({
+      kind: 'distribution',
+      prompt: `Remove ${entry.amount} ${entry.counterType} counters to pay the cost`,
+      options: counterPaymentOptions(working, playerId, card, entry, {
+        costs: cost!.removeCounters!,
+        payments: data.counterPayments,
+        index: counterCostIndex,
+      }),
+      total: entry.amount,
+      min: 0,
+      max: working.battlefield.length,
+      minimumPerOption: 0,
+      continuation: { ...continuation('counterPayments'), counterCostIndex },
+    });
   }
 
   // A discard cost needs the player to choose which cards to discard.
@@ -451,18 +485,13 @@ export function prepareActionChoice(
 
   // A payment choice needs the player to allocate mana by colour.
   if (data.choosePayment && data.payment === undefined) {
-    const options = MANA_COLORS
-      .filter((color) => working.players[playerId].mana[color] > 0)
-      .map((color) => ({
-        id: color,
-        label: color,
-        value: color,
-        limit: working.players[playerId].mana[color],
-      }));
-    const total = Object.values(cost?.mana ?? {}).reduce(
-      (sum, value) => sum + (value ?? 0),
-      0,
-    );
+    const options = MANA_COLORS.filter((color) => working.players[playerId].mana[color] > 0).map((color) => ({
+      id: color,
+      label: color,
+      value: color,
+      limit: working.players[playerId].mana[color],
+    }));
+    const total = Object.values(cost?.mana ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
 
     return request({
       kind: 'payment',
@@ -481,6 +510,26 @@ export function prepareActionChoice(
 
 /** Fold a player's answer back into the action data that will be re-validated. */
 export function applyActionChoice(continuation: ActionContinuation, answer: ChoiceAnswer): ActionData {
+  if (continuation.field === 'counterPayments') {
+    const update = (data: ActionData): ActionData => ({
+      ...data,
+      counterPayments: {
+        ...(data.counterPayments as Record<string, unknown> | undefined),
+        [continuation.counterCostIndex!]: counterPaymentAnswer(answer),
+      },
+    });
+    if (continuation.manaActivationIndex !== undefined) {
+      const activations = continuation.data.manaActivations as ActionData[];
+      return {
+        ...continuation.data,
+        manaActivations: activations.map((entry, index) =>
+          index === continuation.manaActivationIndex ? update(entry) : entry,
+        ),
+      };
+    }
+    return update(continuation.data);
+  }
+
   if (continuation.field === 'costRoute') {
     return { ...continuation.data, costRoute: answer.values[0] };
   }
@@ -488,8 +537,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
   if (continuation.field === 'numericBindings') {
     // The continuation guarantees a binding name for numeric declarations.
     const bindingName = continuation.bindingName!;
-    const numericBindings =
-      continuation.data.numericBindings as Record<string, number>;
+    const numericBindings = continuation.data.numericBindings as Record<string, number>;
 
     return {
       ...continuation.data,
@@ -502,8 +550,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
 
   // Nested mana choices are stored as action data at the selected index.
   if (continuation.manaActivationIndex !== undefined) {
-    const manaActivations =
-      continuation.data.manaActivations as ActionData[];
+    const manaActivations = continuation.data.manaActivations as ActionData[];
 
     return {
       ...continuation.data,
@@ -511,10 +558,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
         index === continuation.manaActivationIndex
           ? {
               ...selection,
-              [continuation.field]:
-                continuation.field === 'payment'
-                  ? answer.allocations
-                  : answer.values,
+              [continuation.field]: continuation.field === 'payment' ? answer.allocations : answer.values,
             }
           : selection,
       ),
@@ -524,8 +568,7 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
   if (continuation.field === 'distributions') {
     // A distribution continuation always identifies its effect group.
     const groupId = continuation.groupId!;
-    const distributions =
-      continuation.data.distributions as Record<string, unknown>;
+    const distributions = continuation.data.distributions as Record<string, unknown>;
 
     return {
       ...continuation.data,
@@ -541,16 +584,12 @@ export function applyActionChoice(continuation: ActionContinuation, answer: Choi
 
     return {
       ...continuation.data,
-      targetGroups: [
-        ...targetGroups,
-        { id: continuation.groupId, targets: answer.values },
-      ],
+      targetGroups: [...targetGroups, { id: continuation.groupId, targets: answer.values }],
     };
   }
 
   return {
     ...continuation.data,
-    [continuation.field]:
-      continuation.field === 'payment' ? answer.allocations : answer.values,
+    [continuation.field]: continuation.field === 'payment' ? answer.allocations : answer.values,
   };
 }

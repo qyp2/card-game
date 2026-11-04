@@ -1,3 +1,4 @@
+import { planCounterCosts } from './counter-costs';
 import { CardCharacteristicService } from './card-characteristic-service';
 // src/engine/option-service.ts
 import { ActionValidator } from './action-validator';
@@ -10,10 +11,21 @@ import { ACTION_IDS, type ActionIdOrAbility } from '../types/action.ids';
 import type { GameRoom, PlayerId } from '../types/game.room.types';
 import type { CardInstance } from '../types/card.types';
 import type { AuthoredActionCost } from '../types/effect.types';
-import { prepareAnnouncement, spellAnnouncementDefinition, abilityAnnouncementDefinition, type AnnouncementDefinition } from './announcement-values';
+import {
+  prepareAnnouncement,
+  spellAnnouncementDefinition,
+  abilityAnnouncementDefinition,
+  type AnnouncementDefinition,
+} from './announcement-values';
 
 /** Only unresolved alternatives/numbers defer affordability; fixed extras have a known total. */
-function optionPaymentCost(card: CardInstance, definition: AnnouncementDefinition, room: GameRoom, playerId: string, cast = false): { cost?: AuthoredActionCost; error?: string } {
+function optionPaymentCost(
+  card: CardInstance,
+  definition: AnnouncementDefinition,
+  room: GameRoom,
+  playerId: string,
+  cast = false,
+): { cost?: AuthoredActionCost; error?: string } {
   // Guard: unresolved choices mean the total is not yet knowable.
   if (definition.numericDeclarations?.length || definition.alternativeCosts?.length) return {};
 
@@ -67,12 +79,19 @@ export class OptionService {
     return this.getBattlefieldOptions(room, playerId, card);
   }
 
-  private findCard(room: GameRoom, playerId: PlayerId, cardUuid: string, zone: 'hand' | 'battlefield'): CardInstance | undefined {
+  private findCard(
+    room: GameRoom,
+    playerId: PlayerId,
+    cardUuid: string,
+    zone: 'hand' | 'battlefield',
+  ): CardInstance | undefined {
     if (zone === 'hand') {
       return room.players[playerId].hand.find((c) => c.uuid === cardUuid);
     }
 
-    return room.battlefield.find((c) => c.uuid === cardUuid && CardCharacteristicService.resolveController(room, c) === playerId);
+    return room.battlefield.find(
+      (c) => c.uuid === cardUuid && CardCharacteristicService.resolveController(room, c) === playerId,
+    );
   }
 
   private getHandOptions(room: GameRoom, playerId: PlayerId, card: CardInstance): ActionOption[] {
@@ -86,14 +105,19 @@ export class OptionService {
       const validation = validateLandPlay(room, playerId, data);
       const limit = landPlayLimit(room.setup);
 
-      return [{
-        actionId: ACTION_IDS.playLand,
-        label: 'Play land',
-        data: { zoneRevision: data.zoneRevision },
-        description: `${Math.max(0, limit - (room.turnHistory?.landPlays?.[playerId] ?? 0))} of ${limit} land plays remaining this turn`,
-        disabled: !validation.success,
-        disabledReason: validation.success ? undefined : validation.reason,
-      }];
+      return [
+        {
+          actionId: ACTION_IDS.playLand,
+          label: 'Play land',
+          data: { zoneRevision: data.zoneRevision },
+          description: `${Math.max(
+            0,
+            limit - (room.turnHistory?.landPlays?.[playerId] ?? 0),
+          )} of ${limit} land plays remaining this turn`,
+          disabled: !validation.success,
+          disabledReason: validation.success ? undefined : validation.reason,
+        },
+      ];
     }
 
     const announced = !!blueprint.numericDeclarations?.length || !!blueprint.castRequirements.alternativeCosts?.length;
@@ -109,7 +133,9 @@ export class OptionService {
         ? blueprint.castRequirements.alternativeCosts?.length
           ? 'Choose how to pay'
           : 'Announce and pay the complete cost'
-        : [payment.cost ? describeCost(payment.cost) : 'No additional cost', blueprint.rulesText].filter(Boolean).join(' · '),
+        : [payment.cost ? describeCost(payment.cost) : 'No additional cost', blueprint.rulesText]
+            .filter(Boolean)
+            .join(' · '),
       disabled: !canPlay.valid,
       disabledReason: canPlay.valid ? undefined : canPlay.reason,
     });
@@ -133,12 +159,25 @@ export class OptionService {
           .slice(0, ability.cost.discard ?? 0)
           .map((candidate) => candidate.uuid);
 
-        const validation = tapForManaHandler.validate(room, playerId, { cardUuid: card.uuid, ...data, discardUuids });
+        const counters = planCounterCosts(room, playerId, card, ability.cost.removeCounters, undefined, true);
+        const counterPayments = counters.success ? counters.payments : undefined;
+        const validation = tapForManaHandler.validate(room, playerId, {
+          cardUuid: card.uuid,
+          ...data,
+          discardUuids,
+          counterPayments,
+        });
 
         options.push({
           actionId: ACTION_IDS.tapForMana,
           data,
-          label: (ability.cost.tap ? 'Tap' : ability.cost.untap ? 'Untap' : 'Activate') + ': add ' + output!.amount + ' ' + manaColor + ' mana',
+          label:
+            (ability.cost.tap ? 'Tap' : ability.cost.untap ? 'Untap' : 'Activate') +
+            ': add ' +
+            output!.amount +
+            ' ' +
+            manaColor +
+            ' mana',
           description: describeCost(ability.cost),
           disabled: !validation.success,
           disabledReason: validation.success ? undefined : validation.reason,
@@ -168,11 +207,18 @@ export class OptionService {
         const payment = optionPaymentCost(card, abilityAnnouncementDefinition(ability), room, playerId);
         const canActivate = payment.error
           ? { valid: false, reason: payment.error }
-          : ActionValidator.canActivate(room, playerId, card, {
-            allowedZones: ability.allowedZones ?? ['battlefield'],
-            speed: ability.castSpeed,
-            cost: payment.cost,
-          }, 'activate', ability.id);
+          : ActionValidator.canActivate(
+              room,
+              playerId,
+              card,
+              {
+                allowedZones: ability.allowedZones ?? ['battlefield'],
+                speed: ability.castSpeed,
+                cost: payment.cost,
+              },
+              'activate',
+              ability.id,
+            );
 
         options.push({
           actionId: ACTION_IDS.activateAbility,
@@ -180,7 +226,10 @@ export class OptionService {
           label: `Activate: ${ability.id}`,
           description: ability.alternativeCosts?.length
             ? 'Choose how to pay'
-            : [describeCost(ability.cost), ...(ability.additionalCost ? [describeCost(ability.additionalCost)] : [])].join(', '),
+            : [
+                describeCost(ability.cost),
+                ...(ability.additionalCost ? [describeCost(ability.additionalCost)] : []),
+              ].join(', '),
           disabled: !canActivate.valid,
           disabledReason: canActivate.valid ? undefined : canActivate.reason,
         });

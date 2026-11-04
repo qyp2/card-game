@@ -12,6 +12,8 @@ import type { ActionContinuation, ChoiceAnswer, PendingChoice } from '../types/c
 import type { GameRoom, PlayerId } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { BatchCause, ResolutionReport } from '../types/game-event.types';
+import { answerResolutionPayment } from './resolution-payments';
+import type { PaymentContinuation } from '../types/choice.types';
 import { settleOutcome } from './resolution-outcomes';
 import { settleCardResult } from './resolution-results';
 
@@ -38,6 +40,24 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
   if (choice.playerId !== playerId) return reject('This choice belongs to another player');
   if (data.choiceId !== choice.id) return reject('Choice request is stale');
 
+  if (choice.continuation.type === 'resolution' && 'paymentStage' in choice.continuation) {
+    const answer = data.cancel === true ? undefined : validateChoiceAnswer(choice, data);
+    if (!answer && data.cancel !== true) return reject('Invalid payment choice');
+    const payment = answerResolutionPayment(
+      host.room,
+      choice.continuation as PaymentContinuation,
+      answer,
+      data.cancel === true,
+    );
+    if (!payment.success) return reject(payment.reason);
+    if ('pendingChoice' in payment) {
+      return host.commitResolution({ success: true, mutations: [], pendingChoice: payment.pendingChoice });
+    }
+    const room = payment.mutations.reduce(gameReducer, host.room);
+    const next = planStackResolution(room, payment.continuation.stackObj, payment.continuation, host.effectContext);
+    return host.commitResolution({ success: true, ...next, mutations: [...payment.mutations, ...next.mutations] });
+  }
+
   // Cancelling an action choice clears the pending state without resolving.
   if (data.cancel === true && choice.continuation.type === 'action') {
     return {
@@ -63,11 +83,23 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
 
     // Another decision is needed before the batch can commit.
     if (plan.pendingChoice) {
-      return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
+      return {
+        success: true,
+        mutations: host.applyMutations([
+          {
+            type: 'SET_PENDING_CHOICE',
+            choice: host.identifyChoice(plan.pendingChoice),
+          },
+        ]),
+      };
     }
 
     const mutations = host.applyMutations(
-      [{ type: 'SET_PENDING_CHOICE', choice: null }, { type: 'SET_PENDING_TRIGGERS', mutations: [] }, ...plan.mutations],
+      [
+        { type: 'SET_PENDING_CHOICE', choice: null },
+        { type: 'SET_PENDING_TRIGGERS', mutations: [] },
+        ...plan.mutations,
+      ],
       undefined,
       { kind: 'state-based-action' },
     );
@@ -93,7 +125,15 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
     }
 
     if (plan.pendingChoice) {
-      return { success: true, mutations: host.applyMutations([{ type: 'SET_PENDING_CHOICE', choice: host.identifyChoice(plan.pendingChoice) }]) };
+      return {
+        success: true,
+        mutations: host.applyMutations([
+          {
+            type: 'SET_PENDING_CHOICE',
+            choice: host.identifyChoice(plan.pendingChoice),
+          },
+        ]),
+      };
     }
 
     const completed: GameMutation[] = [
@@ -105,7 +145,12 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
     // A replacement that interrupted a resolution resumes that resolution.
     if (saved.afterResolution) {
       const room = completed.reduce(gameReducer, host.room);
-      const object = settleOutcome(host.room, saved.afterResolution.stackObj, saved.afterResolution.outcomeProbe, completed);
+      const object = settleOutcome(
+        host.room,
+        saved.afterResolution.stackObj,
+        saved.afterResolution.outcomeProbe,
+        completed,
+      );
       const continuation = {
         ...saved.afterResolution,
         stackObj: settleCardResult(host.room, object, saved.afterResolution.cardResultProbe, completed),
@@ -120,9 +165,11 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
     const mutations = host.applyMutations(completed, transaction.resolution, transaction.cause);
 
     if (!host.isGameOver && !host.hasPendingRulesWork) {
-      mutations.push(...(transaction.resumePriority
-        ? host.givePriorityTo(transaction.resumePriority)
-        : host.applyMutations([{ type: 'SET_ENGINE_STATE', state: 'waiting_for_player' }])));
+      mutations.push(
+        ...(transaction.resumePriority
+          ? host.givePriorityTo(transaction.resumePriority)
+          : host.applyMutations([{ type: 'SET_ENGINE_STATE', state: 'waiting_for_player' }])),
+      );
     }
 
     return { success: true, mutations };

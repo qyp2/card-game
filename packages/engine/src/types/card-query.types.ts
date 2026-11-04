@@ -1,7 +1,10 @@
 import type { CardZone, ManaColor } from './card.types';
 
 export type RelativePlayer = 'self' | 'opponent' | 'any';
-export interface NumberBounds { min?: number; max?: number }
+export interface NumberBounds {
+  min?: number;
+  max?: number;
+}
 
 /** Structural card tests, independent of zone access, choices and targeting permissions. */
 export interface CardFilter {
@@ -17,6 +20,7 @@ export interface CardFilter {
   power?: NumberBounds;
   toughness?: NumberBounds;
   manaValue?: NumberBounds;
+  tapped?: boolean;
   summonKind?: 'cast' | 'effect';
   /** An absent named counter has total zero. */
   counter?: { type: string; min?: number; max?: number };

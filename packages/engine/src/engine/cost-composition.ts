@@ -28,6 +28,10 @@ export function composeActionCosts(costs: ActionCost[]): ActionCost {
       }
     }
 
+    if (cost.removeCounters) {
+      result.removeCounters = [...(result.removeCounters ?? []), ...structuredClone(cost.removeCounters)];
+    }
+
     // Numeric costs accumulate.
     for (const field of ['life', 'discard'] as const) {
       if (cost[field] !== undefined) result[field] = add(result[field], cost[field]);

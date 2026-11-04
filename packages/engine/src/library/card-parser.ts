@@ -1,9 +1,30 @@
 // src/library/card-parser.ts
-import type { CardBlueprint, CardAbility, ActivatedAbility, TriggeredAbility, CardType, CardZone, ManaColor } from '../types/card.types';
+import type {
+  CardBlueprint,
+  CardAbility,
+  ActivatedAbility,
+  TriggeredAbility,
+  CardType,
+  CardZone,
+  ManaColor,
+} from '../types/card.types';
 import type { AuthoredActionCost, EffectDefinition, CostRoutes } from '../types/effect.types';
 import type { NumericDeclaration, NumericValue } from '../types/numeric-value.types';
-import { assertAnnouncementCost, assertCostRoutes, assertNumericDeclarations, assertEffectNumericDefinition, assertAbilityNumericDefinition, assertBlueprintNumericDefinition } from './card-definition-validator';
-import { parseContract, parseModifierDefinition, RawAbilitySchema, RawCardSchema, type ModifierDefinition } from '../rules/schema/contracts';
+import {
+  assertAnnouncementCost,
+  assertCostRoutes,
+  assertNumericDeclarations,
+  assertEffectNumericDefinition,
+  assertAbilityNumericDefinition,
+  assertBlueprintNumericDefinition,
+} from './card-definition-validator';
+import {
+  parseContract,
+  parseModifierDefinition,
+  RawAbilitySchema,
+  RawCardSchema,
+  type ModifierDefinition,
+} from '../rules/schema/contracts';
 import { compileInstruction, compileStaticRules } from '../rules/schema/compile';
 
 /**
@@ -30,13 +51,21 @@ export function parseManaCost(raw: string): NonNullable<AuthoredActionCost['mana
     if (symbol === 'X' || /^\d+$/.test(symbol)) {
       // Numeric requirements can be paid by any mana color.
       const value: NumericValue = symbol === 'X' ? { numeric: { kind: 'binding', name: 'X' } } : parseInt(symbol, 10);
-      cost.generic = cost.generic === undefined ? value : typeof cost.generic === 'number' && typeof value === 'number'
-        ? cost.generic + value : { numeric: { kind: 'add', left: cost.generic, right: value } };
+      cost.generic =
+        cost.generic === undefined
+          ? value
+          : typeof cost.generic === 'number' && typeof value === 'number'
+            ? cost.generic + value
+            : { numeric: { kind: 'add', left: cost.generic, right: value } };
     } else if (symbol === 'Y') {
       cost.yellow = (cost.yellow ?? 0) + 1;
     } else {
       const colorMap: Record<string, ManaColor> = {
-        W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green',
+        W: 'white',
+        U: 'blue',
+        B: 'black',
+        R: 'red',
+        G: 'green',
       };
       const color = colorMap[symbol];
       if (color) {
@@ -48,7 +77,11 @@ export function parseManaCost(raw: string): NonNullable<AuthoredActionCost['mana
   return cost;
 }
 
-export function normalizeActionCost(cost: Record<string, unknown> | undefined, declarations: NumericDeclaration[] = []): AuthoredActionCost {
+/** Normalize authored cost fields without spending resources. */
+export function normalizeActionCost(
+  cost: Record<string, unknown> | undefined,
+  declarations: NumericDeclaration[] = [],
+): AuthoredActionCost {
   assertAnnouncementCost(cost as AuthoredActionCost | undefined, declarations);
   if (!cost) return { mana: {}, tap: false, life: 0, discard: 0, sacrifice: false };
 
@@ -60,17 +93,34 @@ export function normalizeActionCost(cost: Record<string, unknown> | undefined, d
     discard: typeof cost.discard === 'number' ? cost.discard : 0,
     ...(cost.discardSelf !== undefined ? { discardSelf: cost.discardSelf as boolean } : {}),
     sacrifice: !!cost.sacrifice,
+    ...(cost.removeCounters
+      ? {
+          removeCounters: structuredClone(cost.removeCounters) as AuthoredActionCost['removeCounters'],
+        }
+      : {}),
     ...(typeof cost.loyalty === 'number' ? { loyalty: cost.loyalty } : {}),
   };
 }
 
-export function parseInstructionDefinition(raw: Record<string, unknown>, declarations: NumericDeclaration[] = []): EffectDefinition {
+/** Validate and compile one instruction and its nested payment branch. */
+export function parseInstructionDefinition(
+  raw: Record<string, unknown>,
+  declarations: NumericDeclaration[] = [],
+): EffectDefinition {
   raw = compileInstruction(raw);
   const effect: EffectDefinition = {
     ...(raw.onKill ? { onKill: structuredClone(raw.onKill) as EffectDefinition['onKill'] } : {}),
-    ...(raw.recordResult ? { recordResult: structuredClone(raw.recordResult) as EffectDefinition['recordResult'] } : {}),
+    ...(raw.recordResult
+      ? {
+          recordResult: structuredClone(raw.recordResult) as EffectDefinition['recordResult'],
+        }
+      : {}),
     ...(raw.condition ? { condition: structuredClone(raw.condition) as EffectDefinition['condition'] } : {}),
-    ...(raw.recordOutcome ? { recordOutcome: structuredClone(raw.recordOutcome) as EffectDefinition['recordOutcome'] } : {}),
+    ...(raw.recordOutcome
+      ? {
+          recordOutcome: structuredClone(raw.recordOutcome) as EffectDefinition['recordOutcome'],
+        }
+      : {}),
     ...(typeof raw.requiresOutcome === 'string' ? { requiresOutcome: raw.requiresOutcome } : {}),
     ...(raw.choice ? { choice: raw.choice as EffectDefinition['choice'] } : {}),
     ...(typeof raw.targetGroup === 'string' ? { targetGroup: raw.targetGroup } : {}),
@@ -79,6 +129,18 @@ export function parseInstructionDefinition(raw: Record<string, unknown>, declara
     tags: (raw.tags as string[]) || [],
     targeting: (raw.targeting as EffectDefinition['targeting']) || { type: 'self', required: false },
   };
+  if (effect.action === 'PAY_COST') {
+    effect.params.cost = normalizeActionCost(effect.params.cost as Record<string, unknown>, declarations);
+    effect.params.then = (effect.params.then as Record<string, unknown>[]).map((child) => {
+      const parsed = parseInstructionDefinition(child, declarations);
+      const target = parsed.targeting;
+      const choosesAtResolution = parsed.choice?.kind === 'selection' || parsed.choice?.kind === 'search';
+      if (target.type !== 'self' && !target.all && !choosesAtResolution) {
+        throw new Error('Paid branch targets require a resolution selection or search choice');
+      }
+      return parsed;
+    });
+  }
   assertEffectNumericDefinition(effect, declarations);
   return effect;
 }
@@ -87,40 +149,74 @@ function normalizeCostRoutes(raw: Record<string, unknown>, declarations: Numeric
   const routes = { alternativeCosts: raw.alternativeCosts, additionalCost: raw.additionalCost } as CostRoutes;
   assertCostRoutes(routes, declarations);
   return {
-    ...(routes.alternativeCosts !== undefined ? { alternativeCosts: routes.alternativeCosts.map(route => ({ id: route.id, label: route.label, cost: normalizeActionCost(route.cost as Record<string, unknown>, declarations) })) } : {}),
-    ...(routes.additionalCost !== undefined ? { additionalCost: normalizeActionCost(routes.additionalCost as Record<string, unknown>, declarations) } : {}),
+    ...(routes.alternativeCosts !== undefined
+      ? {
+          alternativeCosts: routes.alternativeCosts.map((route) => ({
+            id: route.id,
+            label: route.label,
+            cost: normalizeActionCost(route.cost as Record<string, unknown>, declarations),
+          })),
+        }
+      : {}),
+    ...(routes.additionalCost !== undefined
+      ? {
+          additionalCost: normalizeActionCost(routes.additionalCost as Record<string, unknown>, declarations),
+        }
+      : {}),
   };
 }
 
+/** Parse an authored ability through the shared strict contracts. */
 export function parseAbilityDefinition(ability: Record<string, unknown>): CardAbility | null {
   ability = parseContract(RawAbilitySchema, ability, 'ability') as Record<string, unknown>;
 
   const type = (ability.type as string) || 'activated';
-  if (type !== 'activated' && (ability.alternativeCosts !== undefined || ability.additionalCost !== undefined)) throw new Error('Only ordinary activated abilities support cost routes');
-  if (type !== 'activated' && ability.numericDeclarations !== undefined) throw new Error('Only ordinary activated abilities declare numeric bindings');
-  const declarations = ability.numericDeclarations === undefined ? [] : ability.numericDeclarations as NumericDeclaration[];
+  if (type !== 'activated' && (ability.alternativeCosts !== undefined || ability.additionalCost !== undefined))
+    throw new Error('Only ordinary activated abilities support cost routes');
+  if (type !== 'activated' && ability.numericDeclarations !== undefined)
+    throw new Error('Only ordinary activated abilities declare numeric bindings');
+  const declarations =
+    ability.numericDeclarations === undefined ? [] : (ability.numericDeclarations as NumericDeclaration[]);
   assertNumericDeclarations(declarations);
   if (type === 'static') {
-    const rules = (ability.rules as ModifierDefinition[] | undefined)?.map((rule, i) => parseModifierDefinition(rule, `ability.${ability.id}.rules.${i}`));
+    const rules = (ability.rules as ModifierDefinition[] | undefined)?.map((rule, i) =>
+      parseModifierDefinition(rule, `ability.${ability.id}.rules.${i}`),
+    );
     const effects = compileStaticRules(rules ?? []);
-    const normalized: CardAbility = { id: typeof ability.id === 'string' ? ability.id : '', type: 'static',
+    const normalized: CardAbility = {
+      id: typeof ability.id === 'string' ? ability.id : '',
+      type: 'static',
       ...(ability.activeZones ? { activeZones: structuredClone(ability.activeZones) as CardZone[] } : {}),
       ...(ability.characteristicDefining ? { characteristicDefining: true } : {}),
-      ...(rules ? { rules: structuredClone(rules) } : {}), effects };
+      ...(rules ? { rules: structuredClone(rules) } : {}),
+      effects,
+    };
     assertAbilityNumericDefinition(normalized);
     return normalized;
   }
-  if (ability.effects !== undefined && (!Array.isArray(ability.effects) || !ability.effects.length)) throw new Error('Ability effects must be a nonempty list');
-  const ordered = Array.isArray(ability.effects) ? ability.effects.map(raw => parseInstructionDefinition(raw as Record<string, unknown>, declarations)) : undefined;
+  if (ability.effects !== undefined && (!Array.isArray(ability.effects) || !ability.effects.length))
+    throw new Error('Ability effects must be a nonempty list');
+  const ordered = Array.isArray(ability.effects)
+    ? ability.effects.map((raw) => parseInstructionDefinition(raw as Record<string, unknown>, declarations))
+    : undefined;
   // Single and ordered instructions share the same strict contract and compiler.
-  const effect: EffectDefinition = ability.effect ? parseInstructionDefinition(ability.effect as Record<string, unknown>, declarations)
+  const effect: EffectDefinition = ability.effect
+    ? parseInstructionDefinition(ability.effect as Record<string, unknown>, declarations)
     : { action: '', params: {}, tags: [], targeting: { type: 'self', required: false } };
 
   const base = {
     ...(ability.immediate === true ? { immediate: true } : {}),
-    ...(ability.usage ? { usage: structuredClone(ability.usage) as import('../rules/schema/contracts').AbilityUsage } : {}),
+    ...(ability.usage
+      ? {
+          usage: structuredClone(ability.usage) as import('../rules/schema/contracts').AbilityUsage,
+        }
+      : {}),
     ...(ability.limitPerTurn !== undefined ? { limitPerTurn: ability.limitPerTurn as number } : {}),
-    ...(Array.isArray(ability.modes) ? { modes: normalizeModes(ability.modes as Record<string, unknown>[], declarations) } : {}),
+    ...(Array.isArray(ability.modes)
+      ? {
+          modes: normalizeModes(ability.modes as Record<string, unknown>[], declarations),
+        }
+      : {}),
     ...(ability.modeCount ? { modeCount: ability.modeCount as { min: number; max: number } } : {}),
     id: typeof ability.id === 'string' && ability.id.trim() ? ability.id : '',
     ...(ordered ? { effects: ordered } : { effect }),
@@ -132,7 +228,11 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
       type: 'triggered',
       ...(ability.sharedPerEvent === true ? { sharedPerEvent: true } : {}),
       ...(ability.trigger ? { trigger: structuredClone(ability.trigger) as TriggeredAbility['trigger'] } : {}),
-      ...(ability.interveningIf ? { interveningIf: structuredClone(ability.interveningIf) as TriggeredAbility['interveningIf'] } : {}),
+      ...(ability.interveningIf
+        ? {
+            interveningIf: structuredClone(ability.interveningIf) as TriggeredAbility['interveningIf'],
+          }
+        : {}),
       triggerCondition: (ability.triggerCondition as TriggeredAbility['triggerCondition']) || 'ON_ENTER_BATTLEFIELD',
       ...base,
     } as TriggeredAbility;
@@ -142,7 +242,11 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
 
   const normalized = {
     type: 'activated',
-    ...(ability.allowedZones !== undefined ? { allowedZones: structuredClone(ability.allowedZones) as ActivatedAbility['allowedZones'] } : {}),
+    ...(ability.allowedZones !== undefined
+      ? {
+          allowedZones: structuredClone(ability.allowedZones) as ActivatedAbility['allowedZones'],
+        }
+      : {}),
     ...(declarations.length ? { numericDeclarations: structuredClone(declarations) } : {}),
     cost: normalizeActionCost(ability.cost as Record<string, unknown> | undefined, declarations),
     ...normalizeCostRoutes(ability, declarations),
@@ -152,6 +256,7 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
   return normalized;
 }
 
+/** Build a normalized blueprint from an authored card definition. */
 export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint {
   raw = parseContract(RawCardSchema, raw, typeof raw?.id === 'string' ? raw.id : 'card') as Record<string, unknown>;
   if (!raw.id) {
@@ -160,19 +265,24 @@ export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint
 
   // Mana cost lives at the top level of the card JSON (e.g. "{4}{R}{R}"),
   // not inside castRequirements.cost. Parse it and inject into the cost.
-  const declarations = raw.numericDeclarations === undefined ? [] : raw.numericDeclarations as NumericDeclaration[];
+  const declarations = raw.numericDeclarations === undefined ? [] : (raw.numericDeclarations as NumericDeclaration[]);
   assertNumericDeclarations(declarations);
   const manaCost = parseManaCost((raw.manaCost as string) || '');
-  const castCost = normalizeActionCost((raw.castRequirements as Record<string, unknown>)?.cost as Record<string, unknown> | undefined, declarations);
+  const castCost = normalizeActionCost(
+    (raw.castRequirements as Record<string, unknown>)?.cost as Record<string, unknown> | undefined,
+    declarations,
+  );
   if (Object.keys(manaCost).length > 0) {
     castCost.mana = manaCost;
   }
 
   const abilities = ((raw.abilities as Record<string, unknown>[]) || [])
-    .map(parseAbilityDefinition).filter((a): a is CardAbility => a !== null);
+    .map(parseAbilityDefinition)
+    .filter((a): a is CardAbility => a !== null);
   const ids = new Set<string>();
   for (const ability of abilities) {
-    if (!ability.id || ids.has(ability.id)) throw new Error(`[CardParser] Missing or duplicate ability ID on ${raw.id}`);
+    if (!ability.id || ids.has(ability.id))
+      throw new Error(`[CardParser] Missing or duplicate ability ID on ${raw.id}`);
     ids.add(ability.id);
   }
 
@@ -183,20 +293,34 @@ export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint
     cardTypes: (raw.cardTypes as CardType[]) || [],
     subTypes: (raw.subTypes as string[]) || [],
     ...(raw.superTypes ? { superTypes: raw.superTypes as string[] } : {}),
-    ...(raw.attachmentRequirements ? { attachmentRequirements: structuredClone(raw.attachmentRequirements) as import('../types/effect.types').TargetingDefinition } : {}),
+    ...(raw.attachmentRequirements
+      ? {
+          attachmentRequirements: structuredClone(
+            raw.attachmentRequirements,
+          ) as import('../types/effect.types').TargetingDefinition,
+        }
+      : {}),
     keywords: (raw.keywords as string[]) || [],
     ...(Array.isArray(raw.colors) ? { colors: raw.colors as ManaColor[] } : {}),
     rulesText: (raw.rulesText as string) || '',
     power: raw.power as number | undefined,
     toughness: raw.toughness as number | undefined,
-    ...(Array.isArray(raw.modes) ? { modes: normalizeModes(raw.modes as Record<string, unknown>[], declarations) } : {}),
+    ...(Array.isArray(raw.modes)
+      ? {
+          modes: normalizeModes(raw.modes as Record<string, unknown>[], declarations),
+        }
+      : {}),
     ...(raw.modeCount ? { modeCount: raw.modeCount as { min: number; max: number } } : {}),
 
-    onCastEffects: ((raw.onCastEffects as Record<string, unknown>[]) || []).map(effect => parseInstructionDefinition(effect, declarations)),
-    onEnterEffects: ((raw.onEnterEffects as Record<string, unknown>[]) || []).map(effect => parseInstructionDefinition(effect)),
+    onCastEffects: ((raw.onCastEffects as Record<string, unknown>[]) || []).map((effect) =>
+      parseInstructionDefinition(effect, declarations),
+    ),
+    onEnterEffects: ((raw.onEnterEffects as Record<string, unknown>[]) || []).map((effect) =>
+      parseInstructionDefinition(effect),
+    ),
 
     castRequirements: {
-      allowedZones: (raw.castRequirements as Record<string, unknown>)?.allowedZones as CardZone[] || ['hand'],
+      allowedZones: ((raw.castRequirements as Record<string, unknown>)?.allowedZones as CardZone[]) || ['hand'],
       speed: ((raw.castRequirements as Record<string, unknown>)?.speed as 'instant' | 'sorcery') || 'sorcery',
       cost: castCost,
       ...normalizeCostRoutes((raw.castRequirements as Record<string, unknown>) ?? {}, declarations),
@@ -209,9 +333,10 @@ export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint
   return blueprint;
 }
 
+/** Parse an explicit catalog map, preserving canonical IDs. */
 export function parseAll(rawMap: Record<string, Record<string, unknown>>): Record<string, CardBlueprint> {
   const out: Record<string, CardBlueprint> = {};
-  Object.keys(rawMap).forEach(k => {
+  Object.keys(rawMap).forEach((k) => {
     out[k] = parseCardDefinition(rawMap[k]);
   });
   return out;
@@ -219,12 +344,19 @@ export function parseAll(rawMap: Record<string, Record<string, unknown>>): Recor
 
 function normalizeModes(modes: Record<string, unknown>[], declarations: NumericDeclaration[] = []) {
   const ids = new Set<string>();
-  return modes.map(mode => {
-    if (typeof mode.id !== 'string' || !mode.id.trim() || ids.has(mode.id)) throw new Error('Missing or duplicate mode ID');
+  return modes.map((mode) => {
+    if (typeof mode.id !== 'string' || !mode.id.trim() || ids.has(mode.id))
+      throw new Error('Missing or duplicate mode ID');
     ids.add(mode.id);
-    if (mode.castSpeed !== undefined && mode.castSpeed !== 'instant' && mode.castSpeed !== 'sorcery') throw new Error('Invalid mode castSpeed');
-    return { id: mode.id, label: typeof mode.label === 'string' ? mode.label : mode.id,
+    if (mode.castSpeed !== undefined && mode.castSpeed !== 'instant' && mode.castSpeed !== 'sorcery')
+      throw new Error('Invalid mode castSpeed');
+    return {
+      id: mode.id,
+      label: typeof mode.label === 'string' ? mode.label : mode.id,
       ...(mode.castSpeed !== undefined ? { castSpeed: mode.castSpeed as 'instant' | 'sorcery' } : {}),
-      effects: ((mode.effects as Record<string, unknown>[]) ?? []).map(effect => parseInstructionDefinition(effect, declarations)) };
+      effects: ((mode.effects as Record<string, unknown>[]) ?? []).map((effect) =>
+        parseInstructionDefinition(effect, declarations),
+      ),
+    };
   });
 }

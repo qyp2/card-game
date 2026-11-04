@@ -17,44 +17,93 @@ export class MutationCommitter {
   private eventBatches: AppliedEventBatch[] = [];
   lastBatchId?: string;
 
-  constructor(private room: GameRoom, private readonly eventBus: EventBus,
-    private readonly mutationCollector: GameMutation[], private readonly generateUuid: () => string,
-    private readonly getCommand: () => CommandContext | undefined) {}
+  constructor(
+    private room: GameRoom,
+    private readonly eventBus: EventBus,
+    private readonly mutationCollector: GameMutation[],
+    private readonly generateUuid: () => string,
+    private readonly getCommand: () => CommandContext | undefined,
+  ) {}
 
-  get roomState(): GameRoom { return this.room; }
+  get roomState(): GameRoom {
+    return this.room;
+  }
 
-  drainEventBatches(): AppliedEventBatch[] { return this.eventBatches.splice(0); }
+  drainEventBatches(): AppliedEventBatch[] {
+    return this.eventBatches.splice(0);
+  }
 
-  clearEventBatches(): void { this.eventBatches.length = 0; }
+  clearEventBatches(): void {
+    this.eventBatches.length = 0;
+  }
 
-  private get isGameOver(): boolean { return this.room.status === 'gameOver' || this.room.outcome !== undefined; }
+  private get isGameOver(): boolean {
+    return this.room.status === 'gameOver' || this.room.outcome !== undefined;
+  }
 
-  private identifyChoice(choice: PendingChoice): PendingChoice { return { ...choice, id: this.generateUuid() }; }
+  private identifyChoice(choice: PendingChoice): PendingChoice {
+    return { ...choice, id: this.generateUuid() };
+  }
 
   /** Finish proposal decisions before committing any part of this transaction. */
   commit(mutations: GameMutation[], cause: BatchCause, resolution?: ResolutionReport): GameMutation[] {
     const command = this.getCommand();
-    const object = resolution?.stackObj ?? mutations.flatMap(m => m.type === 'PUSH_STACK' ? [m.stackObject] : [])[0];
+    const object =
+      resolution?.stackObj ?? mutations.flatMap((m) => (m.type === 'PUSH_STACK' ? [m.stackObject] : []))[0];
     const id = command?.commandId ?? this.generateUuid();
-    const attributed = attributeMutations(mutations, { id, rootId: id, parentId: cause.parentBatchId,
-      kind: object ? 'effect' : command ? 'command' : 'rule', source: object ? object.sourceInfo ?? captureCauseSource(this.room, object.source) : command?.source,
-      controllerId: object?.controllerId ?? command?.playerId, stackUuid: object?.uuid, abilityId: object && object.type !== 'spell' ? object.ability?.id : command?.abilityId }, this.room);
-    const plan = planProposedMutations(this.room, attributed, { simultaneous: cause.kind === 'state-based-action', cause, resolution });
+    let kind: import('../types/change-cause.types').ChangeCause['kind'] = 'rule';
+    if (command) kind = 'command';
+    if (object) kind = 'effect';
+    let source = command?.source;
+    let abilityId = command?.abilityId;
+    if (object) {
+      source = object.sourceInfo ?? captureCauseSource(this.room, object.source);
+      if (object.type !== 'spell') abilityId = object.ability?.id;
+    }
+    const attributed = attributeMutations(
+      mutations,
+      {
+        id,
+        rootId: id,
+        parentId: cause.parentBatchId,
+        kind,
+        source,
+        abilityId,
+        controllerId: object?.controllerId ?? command?.playerId,
+        stackUuid: object?.uuid,
+      },
+      this.room,
+    );
+    const plan = planProposedMutations(this.room, attributed, {
+      simultaneous: cause.kind === 'state-based-action',
+      cause,
+      resolution,
+    });
 
     // A pending choice suspends the transaction: park the choice and stop.
     if (plan.pendingChoice) {
-      return this.commitPreparedMutations([
-        { type: 'SET_PENDING_CHOICE', choice: this.identifyChoice(plan.pendingChoice) },
-        { type: 'SET_PRIORITY', playerId: null },
-        { type: 'SET_ENGINE_STATE', state: cause.kind === 'state-based-action' ? 'state_based_actions' : 'resolving_stack' },
-      ], cause);
+      return this.commitPreparedMutations(
+        [
+          { type: 'SET_PENDING_CHOICE', choice: this.identifyChoice(plan.pendingChoice) },
+          { type: 'SET_PRIORITY', playerId: null },
+          {
+            type: 'SET_ENGINE_STATE',
+            state: cause.kind === 'state-based-action' ? 'state_based_actions' : 'resolving_stack',
+          },
+        ],
+        cause,
+      );
     }
 
     return this.commitPreparedMutations(plan.mutations, cause, resolution);
   }
 
   /** Apply and publish one complete prepared batch. Settlement belongs to the checkpoint. */
-  private commitPreparedMutations(mutations: GameMutation[], cause: BatchCause, resolution?: ResolutionReport): GameMutation[] {
+  private commitPreparedMutations(
+    mutations: GameMutation[],
+    cause: BatchCause,
+    resolution?: ResolutionReport,
+  ): GameMutation[] {
     const before = this.room;
     const steps: AppliedMutation[] = [];
 
@@ -65,18 +114,20 @@ export class MutationCommitter {
       const previous = this.room;
 
       // A simultaneous SBA move needs the pre-batch battlefield card for its snapshot.
-      const simultaneous = proposed.type === 'MOVE_CARD' && cause.kind === 'state-based-action'
-        ? before.battlefield.find((card) => card.uuid === proposed.cardUuid)
-        : undefined;
+      const simultaneous =
+        proposed.type === 'MOVE_CARD' && cause.kind === 'state-based-action'
+          ? before.battlefield.find((card) => card.uuid === proposed.cardUuid)
+          : undefined;
 
       // Fill in any identifier the caller left blank.
-      const mutation: GameMutation = proposed.type === 'ADD_DELAYED_TRIGGER' && !proposed.registration.id
-        ? { ...proposed, registration: { ...proposed.registration, id: this.generateUuid() } }
-        : proposed.type === 'SET_PENDING_CHOICE' && proposed.choice && !proposed.choice.id
-          ? { ...proposed, choice: this.identifyChoice(proposed.choice) }
-          : simultaneous && proposed.type === 'MOVE_CARD'
-            ? { ...proposed, sourceSnapshot: captureSourceInformation(before, simultaneous) }
-            : proposed;
+      let mutation: GameMutation = proposed;
+      if (proposed.type === 'ADD_DELAYED_TRIGGER' && !proposed.registration.id) {
+        mutation = { ...proposed, registration: { ...proposed.registration, id: this.generateUuid() } };
+      } else if (proposed.type === 'SET_PENDING_CHOICE' && proposed.choice && !proposed.choice.id) {
+        mutation = { ...proposed, choice: this.identifyChoice(proposed.choice) };
+      } else if (simultaneous && proposed.type === 'MOVE_CARD') {
+        mutation = { ...proposed, sourceSnapshot: captureSourceInformation(before, simultaneous) };
+      }
 
       const outcome = reduceGameOperation(previous, mutation);
 
@@ -98,18 +149,25 @@ export class MutationCommitter {
             const pending = this.mutationCollector[index];
 
             if (pending.type === 'PUSH_STACK') {
-              this.mutationCollector[index] = { ...pending, stackObject: retainDepartingSource(pending.stackObject, snapshot) };
+              this.mutationCollector[index] = {
+                ...pending,
+                stackObject: retainDepartingSource(pending.stackObject, snapshot),
+              };
             }
           }
         }
       }
 
       // Continuous effects whose source left the battlefield are removed.
-      if (mutation.type === 'MOVE_CARD') for (const entry of next.continuousEffectPool) {
-        if (entry.source === mutation.cardUuid && !effectIsActive(roomCards(next), entry)) this.mutationCollector.push(entry.id
-          ? { type: 'REMOVE_CONTINUOUS_EFFECT', id: entry.id }
-          : { type: 'REMOVE_CONTINUOUS_EFFECT', source: entry.source, dependentOnly: true });
-      }
+      if (mutation.type === 'MOVE_CARD')
+        for (const entry of next.continuousEffectPool) {
+          if (entry.source === mutation.cardUuid && !effectIsActive(roomCards(next), entry))
+            this.mutationCollector.push(
+              entry.id
+                ? { type: 'REMOVE_CONTINUOUS_EFFECT', id: entry.id }
+                : { type: 'REMOVE_CONTINUOUS_EFFECT', source: entry.source, dependentOnly: true },
+            );
+        }
     }
 
     // Guard: nothing committed and nothing immediate means there is no batch to publish.
@@ -140,8 +198,15 @@ export class MutationCommitter {
       }
 
       // Ability-use and land-play records are carried over from the committed state.
-      if (event.eventId === 'MUTATION_APPLIED' && ['RECORD_ABILITY_USE', 'RECORD_LAND_PLAY', 'SET_TURN_HISTORY'].includes(event.payload.mutation.type)) {
-        history = { ...history, uses: context.after.turnHistory?.uses ?? history.uses, landPlays: context.after.turnHistory?.landPlays ?? history.landPlays };
+      if (
+        event.eventId === 'MUTATION_APPLIED' &&
+        ['RECORD_ABILITY_USE', 'RECORD_LAND_PLAY', 'SET_TURN_HISTORY'].includes(event.payload.mutation.type)
+      ) {
+        history = {
+          ...history,
+          uses: context.after.turnHistory?.uses ?? history.uses,
+          landPlays: context.after.turnHistory?.landPlays ?? history.landPlays,
+        };
       }
 
       const previousHistory = history;
@@ -149,7 +214,10 @@ export class MutationCommitter {
       recorded ||= history !== previousHistory;
 
       context.before = {
-        ...(cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId) ? before : context.before),
+        ...(cause.kind === 'state-based-action' &&
+        ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId)
+          ? before
+          : context.before),
         turnHistory: previousHistory,
       };
       context.after = { ...context.after, turnHistory: history };
@@ -166,7 +234,12 @@ export class MutationCommitter {
 
       const event = deriveAppliedEvents(previous, this.room, [step])[0];
       eventContexts.push({ before: previous, after: this.room, command: this.getCommand() });
-      events.push({ ...event, batchId, eventUuid: batchId + ':' + events.length, commandId: this.getCommand()?.commandId });
+      events.push({
+        ...event,
+        batchId,
+        eventUuid: batchId + ':' + events.length,
+        commandId: this.getCommand()?.commandId,
+      });
     }
 
     const batch: AppliedEventBatch = {
@@ -187,7 +260,10 @@ export class MutationCommitter {
 
       // SBAs happen simultaneously: every departure witnesses the complete
       // batch's history, while retaining battlefield information from before it.
-      if (cause.kind === 'state-based-action' && ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId)) {
+      if (
+        cause.kind === 'state-based-action' &&
+        ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED', 'CREATURE_KILLED'].includes(event.eventId)
+      ) {
         context.after = { ...context.after, turnHistory: this.room.turnHistory };
       }
 
@@ -211,7 +287,10 @@ export class MutationCommitter {
         const pending = this.mutationCollector[index];
 
         if (pending.type === 'PUSH_STACK') {
-          this.mutationCollector[index] = { ...pending, stackObject: retainDepartingSource(pending.stackObject, snapshot) };
+          this.mutationCollector[index] = {
+            ...pending,
+            stackObject: retainDepartingSource(pending.stackObject, snapshot),
+          };
         }
       }
     }

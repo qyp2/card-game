@@ -94,11 +94,9 @@ The causal index is server-only; existing player projections remain explicit and
 
 ## Next largest blocker
 
-**Atomic additional payments** still affect **14** missing in-scope cards. Six specifically require counter payment: 幻影女王 赫拉, 冰龍魔杖, 極光龍宮, 寒巢之主 亞蕾雅, 天使皇 亞拉里亞 and 蒼海帝 洛基.
+The follow-up [counter and optional payment delivery](counter-payment-architecture.md) extends `planActionCosts` rather than adding another cost engine. It supports source/controlled-battlefield counter removal, ordinary costs inside optional resolution branches, and existing mana-ability choices. 幻影女王 赫拉 and 天使皇 亞拉里亞 are registered consumers. Exact payment and usage commit together; countering later does not refund them.
 
-The engine can remove counters as a resolving effect. It still needs to select/validate the counter sources and pay them atomically with activation or an optional triggered-payment branch. For example, 赫拉 must pay five charge counters before its destroy ability is committed. An unaffordable payment cannot create the ability or consume counters/usage, and later countering must not refund a paid cost.
-
-Other payment-family gaps include selected exile, ritual materials, optional resolution payment and binding/storage costs. The next largest separate family is captured reveal workflows (**13** missing cards): larger windows, multiple categories, take-all/distinct-name rules, deployment, remainder destinations and repetition. Those counts overlap other families and are not promises that one slice fully delivers that many cards.
+**Captured reveal workflows** are now the largest remaining family, affecting **13** missing cards. The gap includes retained larger windows, multiple filtered selections, take-all/distinct-name rules, deployment, remainder destinations/order and repetition. Selected exile, ritual materials and binding/storage still account for **five PAY rows**. Counts overlap; see the [current row-by-row ledger](card-blockers-current.md).
 
 ## Verification
 

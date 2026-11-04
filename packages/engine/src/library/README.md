@@ -80,7 +80,7 @@ Draw/discard/counter/damage amounts must evaluate to nonnegative integers. Mana 
 
 Each requires exactly one `effect` or a nonempty ordered `effects` list. Both use one parser and execution list. An ordered list belongs to one stack object; separate abilities create separate triggers. No flattened instruction fields belong on the ability.
 
-Activated abilities declare cost, timing and optional `allowedZones` (battlefield by default; hand must be explicit). They support numeric declarations, additional/alternative costs and `limitPerTurn`. Costs support mana, tap/untap, life, discard, discardSelf and sacrifice; omit a cost or use `{}` for none. An alternative replaces the base cost; additional costs follow. Use `immediate` only for a supported immediate ability. Cost modifiers currently modify spells, not activations.
+Activated abilities declare cost, timing and optional `allowedZones` (battlefield by default; hand must be explicit). They support numeric declarations, additional/alternative costs and `limitPerTurn`. Costs support mana, tap/untap, life, discard, discardSelf, sacrifice and `removeCounters`; omit a cost or use `{}` for none. An alternative replaces the base cost; additional costs follow. Use `immediate` only for a supported immediate ability. Cost modifiers currently modify spells, not activations.
 
 Triggered abilities require `triggerCondition`. Optional `trigger` filters subject/controller/type/subtype/condition; `interveningIf` is rechecked at resolution. `sharedPerEvent` combines the same controller's identical ability IDs for an event. `limitPerTurn` is implemented. Ordinary activated/triggered abilities now support `usage` with turn/game periods and shared groups; see [shared infrastructure](../../../../docs/shared-card-infrastructure.md).
 
@@ -93,6 +93,33 @@ Triggered abilities require `triggerCondition`. Optional `trigger` filters subje
   "effect": { "family": "cards", "operation": "draw", "params": { "amount": 1 } }
 }
 ```
+
+## Counter costs and optional paid branches
+
+An activation pays counters in `cost`, before entering the stack:
+
+```json
+"cost": {
+  "removeCounters": [{ "from": "source", "counterType": "charge", "amount": 5 }]
+}
+```
+
+Use `from: "battlefield"` with an optional shared `filter` to split a literal total across eligible permanents you control. These are payments, not targets. Overlapping clauses share one inventory; other cost clauses and usage commit atomically.
+
+For “you may pay …; if you do …” during resolution, use an ordinary instruction:
+
+```json
+{
+  "family": "resources",
+  "operation": "pay_cost",
+  "params": {
+    "cost": { "life": 2 },
+    "then": [{ "family": "cards", "operation": "draw", "params": { "amount": 1 } }]
+  }
+}
+```
+
+`then` is a nonempty ordered instruction list. The chooser may decline or cancel before payment commits. After complete payment succeeds, the branch runs; later failure does not refund it. Branch targets must be self/all or use an explicit resolution `selection`/`search` choice. Ordinary announced targets hidden inside a paid branch are rejected. See the [payment architecture and examples](../../../../docs/counter-payment-architecture.md) for selection, replay and supported boundaries.
 
 ## Static modifier rules
 
@@ -127,7 +154,7 @@ Cost/event rules may specify `usage`: period `turn` or `game`, positive limit, i
 
 ## Shared filters, conditions and numbers
 
-One CardFilter serves targeting, search, scopes, counts and action-zone checks: IDs, types/subtypes/colors, names, owner/controller, stat/mana-value bounds, counters, summon provenance and nested `allOf`/`anyOf`/`not`. Zones belong to the wrapper. Exact targets also retain zone revisions and visibility/permission checks; searching a zone does not inherit hexproof.
+One CardFilter serves targeting, search, scopes, counts and action-zone checks: IDs, types/subtypes/colors, names, owner/controller, stat/mana-value bounds, counters, `tapped`, summon provenance and nested `allOf`/`anyOf`/`not`. Zones belong to the wrapper. Exact targets also retain zone revisions and visibility/permission checks; searching a zone does not inherit hexproof.
 
 Conditions support `all`, `any`, `not`, and comparisons `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `includes`. `{ "path": "controller.life" }` reads a safe contextual field. Static rules expose source/target/controller/room/history, cost rules additionally actorId, replacement rules additionally event. Rules cannot read an unavailable event or announced binding they do not own. Room exposes phase, turnNumber and activeTurnPlayerId. Missing fields are not implicitly zero.
 

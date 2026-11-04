@@ -3,7 +3,15 @@
  * Stack and target typing for resolving card actions and abilities.
  */
 
-import type { CardType, CardZone, ManaCost, CardInstance, CardSnapshot, ActivatedAbility, TriggeredAbility } from './card.types';
+import type {
+  CardType,
+  CardZone,
+  ManaCost,
+  CardInstance,
+  CardSnapshot,
+  ActivatedAbility,
+  TriggeredAbility,
+} from './card.types';
 import type { GameRoom } from './game.room.types';
 import type { CardFilter, RelativePlayer } from './card-query.types';
 
@@ -29,46 +37,47 @@ export type TargetType = 'self' | 'player' | 'card' | 'permanent' | 'spell' | 's
 // ============================================================================
 
 export interface ActionCost {
-    mana?: ManaCost;
-    /** Presence identifies loyalty activation; it is not a mana ability. */
-    loyalty?: number;
-    tap?: boolean;
-    untap?: boolean;
-    life?: number;
-    discard?: number;
-    /** Discard this source from its owner's hand as payment, before resolution. */
-    discardSelf?: boolean;
-    sacrifice?: boolean;
+  removeCounters?: import('./counter-cost.types').CounterRemovalCost[];
+  mana?: ManaCost;
+  /** Presence identifies loyalty activation; it is not a mana ability. */
+  loyalty?: number;
+  tap?: boolean;
+  untap?: boolean;
+  life?: number;
+  discard?: number;
+  /** Discard this source from its owner's hand as payment, before resolution. */
+  discardSelf?: boolean;
+  sacrifice?: boolean;
 }
 
 /** Authored generic requirements become concrete before payment planning. */
 export type AuthoredActionCost = Omit<ActionCost, 'mana'> & {
-    mana?: Omit<ManaCost, 'generic'> & { generic?: import('./numeric-value.types').NumericValue };
+  mana?: Omit<ManaCost, 'generic'> & { generic?: import('./numeric-value.types').NumericValue };
 };
 
 /** Each alternative replaces the complete base cost; the extra applies to all routes. */
 export interface CostRoutes {
-    alternativeCosts?: { id: string; label: string; cost: AuthoredActionCost }[];
-    additionalCost?: AuthoredActionCost;
+  alternativeCosts?: { id: string; label: string; cost: AuthoredActionCost }[];
+  additionalCost?: AuthoredActionCost;
 }
 export type CostRouteSelection = { kind: 'base' } | { kind: 'alternative'; id: string };
 
 export interface ActionCondition {
-    zoneCheck?: {
-        zone: CardZone[];
-        ownedBy: 'self' | 'opponent' | 'any';
-        cardType?: CardType;
-        cardId?: string;
-        minCount?: number;
-        filter?: CardFilter;
-    };
+  zoneCheck?: {
+    zone: CardZone[];
+    ownedBy: 'self' | 'opponent' | 'any';
+    cardType?: CardType;
+    cardId?: string;
+    minCount?: number;
+    filter?: CardFilter;
+  };
 }
 
 export interface ActionRequirements extends CostRoutes {
-    allowedZones: CardZone[];
-    speed: 'instant' | 'sorcery';
-    cost?: AuthoredActionCost;
-    condition?: ActionCondition;
+  allowedZones: CardZone[];
+  speed: 'instant' | 'sorcery';
+  cost?: AuthoredActionCost;
+  condition?: ActionCondition;
 }
 
 // ============================================================================
@@ -76,24 +85,24 @@ export interface ActionRequirements extends CostRoutes {
 // ============================================================================
 
 export interface TargetPointer {
-    zoneRevision?: number;
-    targetType: TargetType;
-    controllerId?: string;
-    playerId?: string;
-    cardUuid?: string;
-    cardId?: string;
-    zone?: string;
-    stackUuid?: string;
-    required?: boolean;
-    index?: number;
-    metadata?: Record<string, any>;
-    // "all matching" expansion (anthem/AOE) — set by buildStackEffects when
-    // the TargetingDefinition has `all: true`. Expanded into concrete
-    // cardUuid targets at resolve time by expandTargets().
-    all?: boolean;
-    cardTypes?: string[];
-    subTypes?: string[];
-    controller?: 'self' | 'opponent' | 'any';
+  zoneRevision?: number;
+  targetType: TargetType;
+  controllerId?: string;
+  playerId?: string;
+  cardUuid?: string;
+  cardId?: string;
+  zone?: string;
+  stackUuid?: string;
+  required?: boolean;
+  index?: number;
+  metadata?: Record<string, any>;
+  // "all matching" expansion (anthem/AOE) — set by buildStackEffects when
+  // the TargetingDefinition has `all: true`. Expanded into concrete
+  // cardUuid targets at resolve time by expandTargets().
+  all?: boolean;
+  cardTypes?: string[];
+  subTypes?: string[];
+  controller?: 'self' | 'opponent' | 'any';
 }
 
 // ============================================================================
@@ -121,13 +130,13 @@ export interface StackEffect {
   requiresOutcome?: string;
   choice?: EffectChoice;
   targetGroup?: string;
-  action: string;                    // primitive name, e.g. 'MODIFY_STATS'
-  params: Record<string, unknown>;   // snapshot values locked at propose time
-  dynamicParams?: Record<string, unknown>;  // values computed at resolve time (e.g., current power)
-  tags: string[];                    // e.g. ['damage']
-  targets: TargetPointer[];          // locked-in targets chosen at cast time
-  targeting?: TargetingDefinition;   // the targeting definition this effect was built from
-  fizzled?: boolean;                 // set at resolve time when required targets all became illegal (CR 114.5)
+  action: string; // primitive name, e.g. 'MODIFY_STATS'
+  params: Record<string, unknown>; // snapshot values locked at propose time
+  dynamicParams?: Record<string, unknown>; // values computed at resolve time (e.g., current power)
+  tags: string[]; // e.g. ['damage']
+  targets: TargetPointer[]; // locked-in targets chosen at cast time
+  targeting?: TargetingDefinition; // the targeting definition this effect was built from
+  fizzled?: boolean; // set at resolve time when required targets all became illegal (CR 114.5)
 }
 
 /**
@@ -149,7 +158,7 @@ export interface TargetingDefinition extends CardFilter {
   required: boolean;
   minTargets?: number;
   maxTargets?: number;
-  all?: boolean;                 // "all matching" mode (anthem/AOE) — expanded at resolve time
+  all?: boolean; // "all matching" mode (anthem/AOE) — expanded at resolve time
   /** Self effects default to the controller; permanent buffs can select the source. */
   subject?: 'controller' | 'source';
 }
@@ -185,11 +194,11 @@ export interface SpellStackObject {
   readonly uuid: string;
   readonly type: 'spell';
   readonly controllerId: string;
-  readonly source: CardInstance;   // the card ON the stack
+  readonly source: CardInstance; // the card ON the stack
   readonly effects: StackEffect[]; // resolves in order
   readonly timestamp?: number;
-  countered: boolean;              // set true if countered; effects skipped on resolution
-  fizzled?: boolean;               // set true at resolve time when all required targets became illegal (CR 114.5)
+  countered: boolean; // set true if countered; effects skipped on resolution
+  fizzled?: boolean; // set true at resolve time when all required targets became illegal (CR 114.5)
 }
 
 /**
@@ -203,8 +212,8 @@ export interface ActivatedStackObject {
   readonly uuid: string;
   readonly type: 'activated';
   readonly controllerId: string;
-  readonly source: CardInstance;   // the permanent (stays on battlefield)
-  readonly ability: ActivatedAbility;  // the ability being activated
+  readonly source: CardInstance; // the permanent (stays on battlefield)
+  readonly ability: ActivatedAbility; // the ability being activated
   readonly effects: StackEffect[]; // resolves in order
   readonly timestamp?: number;
   countered: boolean;
@@ -242,8 +251,8 @@ export interface TriggeredStackObject {
   readonly uuid: string;
   readonly type: 'triggered';
   readonly controllerId: string;
-  readonly source: CardInstance;   // the permanent (stays on battlefield)
-  readonly ability?: TriggeredAbility;  // the ability that triggered (optional for legacy path)
+  readonly source: CardInstance; // the permanent (stays on battlefield)
+  readonly ability?: TriggeredAbility; // the ability that triggered (optional for legacy path)
   readonly effects: StackEffect[]; // resolves in order
   /** The event that caused this trigger (last-known info for resolve time). */
   readonly triggeringEvent?: TriggeringEvent;
@@ -253,24 +262,57 @@ export interface TriggeredStackObject {
 }
 
 /** Exact cards exposed by this resolution; expires with its continuation. */
-export interface ResolutionReveal { cards: CardInstance[]; sourceInfo: CardSnapshot; controllerId: string }
-export interface OutcomeDefinition { name: string; kind: 'destroyed' | 'discarded' | 'killed' }
-export interface OutcomeProbe extends OutcomeDefinition { cards: { cardUuid: string; zoneRevision: number }[] }
+export interface ResolutionReveal {
+  cards: CardInstance[];
+  sourceInfo: CardSnapshot;
+  controllerId: string;
+}
+export interface OutcomeDefinition {
+  name: string;
+  kind: 'destroyed' | 'discarded' | 'killed';
+}
+export interface OutcomeProbe extends OutcomeDefinition {
+  cards: { cardUuid: string; zoneRevision: number }[];
+}
 export type StackObject = (SpellStackObject | ActivatedStackObject | TriggeredStackObject) & {
   resolutionResults?: import('./resolution-result.types').ResolutionCardResults;
   resolutionReveals?: ResolutionReveal[];
   resolutionOutcomes?: Record<string, boolean>;
 };
 
-export interface TargetGroupDefinition { id: string; targeting: TargetingDefinition }
-export interface StackTargetGroup extends TargetGroupDefinition { targets: TargetPointer[] }
+export interface TargetGroupDefinition {
+  id: string;
+  targeting: TargetingDefinition;
+}
+export interface StackTargetGroup extends TargetGroupDefinition {
+  targets: TargetPointer[];
+}
 
-export interface ModeDefinition { id: string; label: string; castSpeed?: ActionSpeed; effects: EffectDefinition[] }
+export interface ModeDefinition {
+  id: string;
+  label: string;
+  castSpeed?: ActionSpeed;
+  effects: EffectDefinition[];
+}
 export type EffectChoice =
   | { kind: 'optional'; prompt?: string }
   | { kind: 'discard'; prompt?: string }
   | { kind: 'options' | 'ordering'; options: ModeDefinition[]; min?: number; max?: number; prompt?: string }
-  | (CardFilter & { kind: 'search'; zone: CardZone; zonePlayer?: RelativePlayer; from?: import('./resolution-result.types').CardResultSource & { view?: 'current' }; cardRefs?: { cardUuid: string; zoneRevision: number }[]; allAvailable?: boolean; min?: number; max?: number; prompt?: string; ordered?: boolean })
+  | (CardFilter & {
+      kind: 'search';
+      zone: CardZone;
+      zonePlayer?: RelativePlayer;
+      from?: import('./resolution-result.types').CardResultSource & { view?: 'current' };
+      cardRefs?: {
+        cardUuid: string;
+        zoneRevision: number;
+      }[];
+      allAvailable?: boolean;
+      min?: number;
+      max?: number;
+      prompt?: string;
+      ordered?: boolean;
+    })
   | { kind: 'selection'; criteria: TargetingDefinition; prompt?: string }
   | { kind: 'distribution'; total: number; field?: string; prompt?: string };
 
@@ -287,7 +329,7 @@ export interface CombatDeclaration {
   /** Explicit status; optional only for legacy room snapshots. */
   readonly blocked?: boolean;
   readonly uuid: string;
-  readonly attacker: CardInstance;      // declaration snapshot and rules-object reference
-  readonly attackerPower: number;      // declaration-time debug value; damage queries live power
-  readonly blockers: CardInstance[];   // surviving declaration snapshots; blocked status is independent
+  readonly attacker: CardInstance; // declaration snapshot and rules-object reference
+  readonly attackerPower: number; // declaration-time debug value; damage queries live power
+  readonly blockers: CardInstance[]; // surviving declaration snapshots; blocked status is independent
 }

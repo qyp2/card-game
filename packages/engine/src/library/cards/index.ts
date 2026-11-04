@@ -1,3 +1,5 @@
+import phantomQueenHera from './workbook/phantom-queen-hera.json';
+import angelEmperorAralaria from './workbook/angel-emperor-aralaria.json';
 import phantomPuppet from './workbook/phantom-puppet.json';
 import phantomGiant from './workbook/phantom-giant.json';
 // Explicit content manifest: add new definitions here; validated by the catalog.
@@ -97,6 +99,8 @@ import card77 from './workbook/worlds-sin-emperor.json';
 import card78 from './workbook/worlds-traveler.json';
 
 const cards: Record<string, unknown> = {
+  'phantom-queen-hera': phantomQueenHera,
+  'angel-emperor-aralaria': angelEmperorAralaria,
   'phantom-puppet': phantomPuppet,
   'phantom-giant': phantomGiant,
   'phantom-sapper': queryCard0,
@@ -128,8 +132,8 @@ const cards: Record<string, unknown> = {
   'blazing-wind-river': card11,
   'bloodrage-maadini': card12,
   'broken-fireball': card13,
-  'card_09876_core_set': card14,
-  'chiron': card15,
+  card_09876_core_set: card14,
+  chiron: card15,
   'choice-practice': card16,
   'counterspell-fixture': card17,
   'demon-flame-abyss': card18,
@@ -137,7 +141,7 @@ const cards: Record<string, unknown> = {
   'empire-servant': card20,
   'far-north-graveyard': card21,
   'fatiao-warrior': card22,
-  'fireball': card23,
+  fireball: card23,
   'flame-ballista': card24,
   'flame-emperor-achilles': card25,
   'flame-fangs': card26,
@@ -153,7 +157,7 @@ const cards: Record<string, unknown> = {
   'nether-ancient-land': card36,
   'okair-mountains': card37,
   'okair-tomb': card38,
-  'paper': card39,
+  paper: card39,
   'phantom-captain': card40,
   'phantom-castle': card41,
   'phantom-land-soldier': card42,
@@ -164,8 +168,8 @@ const cards: Record<string, unknown> = {
   'raging-sea-power': card47,
   'red-wolf': card48,
   'rise-of-power': card49,
-  'rock': card50,
-  'scissors': card51,
+  rock: card50,
+  scissors: card51,
   'sea-city-noble': card52,
   'sea-depths': card53,
   'sea-domain': card54,
