@@ -26,7 +26,10 @@ describe('committed operation outcomes', () => {
       effects: ['SHUFFLE', 'DRAW'].map(action => ({ action, params: action === 'DRAW' ? { amount: 1 } : {}, tags: [],
         targeting: { type: 'self' }, targets: [{ targetType: 'player', playerId: 'player1' }] })) };
     const mutations = resolveEffects(room, object, [], false, { random: () => 0 });
-    expect(mutations[0]).toEqual(shuffle([b, c, a].map(reference)));
+    expect(mutations[0]).toEqual({ ...shuffle([b, c, a].map(reference)), cause: expect.objectContaining({
+      kind: 'effect', stackUuid: object.uuid,
+      source: expect.objectContaining({ card: expect.objectContaining({ uuid: object.source.uuid }) }),
+    }) });
     const next = mutations.reduce(gameReducer, room);
     expect(next.players.player1.hand.at(-1)?.uuid).toBe(a.uuid);
     expect(next.players.player1.deck).toEqual([b, c]);
@@ -122,7 +125,11 @@ describe('committed operation outcomes', () => {
     const instruction = shuffle(deck.map(reference));
     const engine = new GameEngine(room);
     try {
-      expect(engine.applyMutations([instruction]).filter(mutation => mutation.type === 'SHUFFLE_LIBRARY')).toEqual([instruction]);
+      const committed = engine.applyMutations([instruction]).filter(mutation => mutation.type === 'SHUFFLE_LIBRARY');
+      expect(committed).toEqual([{ ...instruction, cause: expect.objectContaining({
+        kind: 'rule', id: expect.any(String), rootId: expect.any(String),
+      }) }]);
+      expect(committed[0].cause?.rootId).toBe(committed[0].cause?.id);
       expect(engine.roomState.players).toBe(room.players);
       expect(engine.roomState.players.player1.deck).toBe(deck);
       const batches = engine.drainEventBatches();

@@ -158,6 +158,10 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() =>
             Object.keys(value.targeting).some(key => !['type', 'required'].includes(key)))))) {
         ctx.addIssue({ code: 'custom', message: 'Collection instructions do not accept targeting or outcome choices' });
       }
+      if (action === 'CREATE_TOKEN' && value.targeting &&
+        (value.targeting.type !== 'player' && value.targeting.type !== 'self' || value.targeting.subject === 'source')) {
+        ctx.addIssue({ code: 'custom', path: ['targeting'], message: 'Token creation recipients must be players' });
+      }
       const parsed = parameters[action as InstructionAction].safeParse(value.params ?? {});
       if (!parsed.success)
         for (const issue of parsed.error.issues)

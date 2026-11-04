@@ -37,6 +37,7 @@ A two-player, MTG-inspired card game with a TypeScript/Express/Socket.IO server 
 - [Strict rule contracts, functional effect families and legacy review](docs/rule-contract-architecture.md)
 - [Temporary mill result sets, exact-card recovery and follow-up queries](docs/resolution-results-architecture.md)
 - [Captured reveal/look windows and configurable visibility](docs/card-window-design.md)
+- [Predefined token templates, creation and board-only lifecycle](docs/token-architecture.md)
 - [Platform roadmap](docs/platform-plan-2026-10-24.md)
 - [Navigation and Test Lab roadmap](docs/navigation-test-lab-plan.md)
 - [Current navigation, shared sign-in and migration](docs/navigation-session-architecture.md)

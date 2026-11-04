@@ -1,7 +1,7 @@
 import { damageCause } from './change-cause';
 import type { ChangeCause } from '../types/change-cause.types';
 import type { GameRoom } from '../types/game.room.types';
-import type { CardSnapshot } from '../types/card.types';
+import type { CardInstance, CardSnapshot } from '../types/card.types';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { EventDraft, GameEventPayloads, ResolutionReport } from '../types/game-event.types';
 import { captureSourceInformation } from './source-information';
@@ -43,6 +43,13 @@ export function deriveAppliedEvents(
     } as EventDraft);
     observe?.(eventBefore, eventAfter);
   };
+
+  // Creation and real zone transitions publish exactly the same ETB contract.
+  const entered = (room: GameRoom, card: CardInstance) =>
+    add('PERMANENT_ENTERED', {
+      card,
+      controllerId: CardCharacteristicService.resolveController(room, card),
+    });
 
   for (const { mutation: m, before, after, events: ownedEvents } of steps) {
     eventBefore = before;
@@ -228,6 +235,13 @@ export function deriveAppliedEvents(
         });
     }
 
+    if (m.type === 'CREATE_TOKEN') {
+      const card = after.battlefield.find((card) => card.uuid === m.cardUuid);
+      if (card && !before.battlefield.some((old) => old.uuid === m.cardUuid)) {
+        entered(after, card);
+      }
+    }
+
     if (m.type === 'MOVE_CARD') {
       const oldCard = getCardInZone(before, m.cardUuid, m.playerId, m.from);
       const newCard = getCardInZone(after, m.cardUuid, m.playerId, m.to);
@@ -264,16 +278,20 @@ export function deriveAppliedEvents(
           const snapshot = m.sourceSnapshot ?? captureSourceInformation(before, departed);
           const payload = { card: snapshot.card, snapshot, controllerId: snapshot.card.state.controllerId };
 
+          const tokenCeased =
+            departed.isToken === true && !after.battlefield.some((card) => card.uuid === departed.uuid);
           add('PERMANENT_LEFT', payload);
+          if (tokenCeased) add('TOKEN_CEASED', { ...payload, destination: m.to });
           if (
-            newCard &&
+            (newCard || tokenCeased) &&
             m.kill &&
             ['graveyard', 'exile'].includes(m.to) &&
             m.kill.victim.zoneRevision === (departed.state.zoneRevision ?? 0)
           )
             add('CREATURE_KILLED', { ...payload, destination: m.to, outcome: m.kill });
 
-          if (newCard && m.to === 'graveyard' && m.reason === 'destroy') add('PERMANENT_DESTROYED', payload);
+          if ((newCard || tokenCeased) && m.to === 'graveyard' && m.reason === 'destroy')
+            add('PERMANENT_DESTROYED', payload);
           if (
             m.to === 'graveyard' &&
             CardCharacteristicService.resolveTypes(before, snapshot.card).includes('Creature')
@@ -282,11 +300,7 @@ export function deriveAppliedEvents(
         }
       }
 
-      if (m.to === 'battlefield' && newCard)
-        add('PERMANENT_ENTERED', {
-          card: newCard,
-          controllerId: CardCharacteristicService.resolveController(after, newCard),
-        });
+      if (m.to === 'battlefield' && newCard) entered(after, newCard);
     }
 
     if (m.type === 'SET_DAMAGE') {

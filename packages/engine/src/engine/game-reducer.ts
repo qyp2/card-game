@@ -4,6 +4,7 @@
 // Untouched subtrees are shared by reference.
 
 import { recordCardObservation, closeCardObservations } from './observation-state';
+import { createToken } from './token-creation';
 import { trackCausalChange } from './change-cause';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { DamageAssignment } from '../types/damage.types';
@@ -191,6 +192,7 @@ function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | Ope
   if (state.status === 'gameOver' || state.outcome) return state;
 
   switch (mutation.type) {
+    case 'CREATE_TOKEN': return createToken(state, mutation);
     case 'RECORD_CARD_OBSERVATION': return recordCardObservation(state, mutation.observation, mutation.sequence);
     case 'CLOSE_CARD_OBSERVATIONS': return closeCardObservations(state, mutation.ownerStackUuid);
     case 'SHUFFLE_LIBRARY': return applyLibraryShuffle(state, mutation);

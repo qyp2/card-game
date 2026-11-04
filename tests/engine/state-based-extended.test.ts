@@ -28,7 +28,7 @@ describe('extended simultaneous state-based settlement', () => {
     expect(engine.hasPendingRulesWork).toBe(false); engine.dispose();
   });
 
-  it('keeps a token death event then removes the token from its graveyard', () => {
+  it('keeps a token death event without ever inserting it into the graveyard', () => {
     const token = { ...creature('token', 'player1', 1, 1), isToken: true }; token.state.damageTaken = 1;
     const engine = settle([token]);
     expect(engine.roomState.battlefield).toEqual([]);

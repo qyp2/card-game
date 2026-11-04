@@ -22,6 +22,7 @@ export type GameOutcome =
     | { type: 'draw'; losses: PlayerLoss[] };
 
 export interface GameRoom {
+    tokenSequence?: number;
     cardObservations?: import('./card-observation.types').ObservationState;
     /** Rules-only causal ledger, keyed by exact battlefield incarnation; never projected raw. */
     causalState?: Record<string, import('./change-cause.types').LethalAttribution>;

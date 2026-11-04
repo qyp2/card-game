@@ -146,7 +146,7 @@ describe('short real lab HTTP/socket acceptance', () => {
         expect((await req(path, 'POST', { protocolVersion: 1 }, admin.token)).status).toBe(403);
         expect((await req(path, 'POST', { protocolVersion: 1 }, one.token)).status).toBe(200);
         const parent = app.auth.sessions.issue({ kind: 'account', id: one.account!.id }, 'game', { kind: 'browser' }), sibling = app.auth.gameTab(parent.record);
-        expect((await req(path, 'POST', { protocolVersion: 1 }, sibling.token)).status).toBe(403);
+        expect((await req(path, 'POST', { protocolVersion: 1 }, sibling.token)).status).toBe(409);
         expect((await req('/api/admin/scenarios/runs/' + randomUUID() + '/reset', 'POST', { protocolVersion: 1 })).status).toBe(404);
     });
     it('rejects stale revisions and leaves running snapshots after source deletion; audits storage failures atomically', async () => {

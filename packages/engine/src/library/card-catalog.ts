@@ -1,6 +1,13 @@
 import type { CardBlueprint } from '../types/card.types';
 import rawCardData from './cards';
+import rawTokenData, { isTokenDefinition } from './tokens';
+export { isTokenDefinition } from './tokens';
 import { parseCardDefinition } from './card-parser';
+
+for (const id of Object.keys(rawTokenData)) {
+  if (Object.prototype.hasOwnProperty.call(rawCardData, id)) throw new Error('Duplicate card/token definition: ' + id);
+}
+const definitions: Record<string, unknown> = { ...rawCardData, ...rawTokenData };
 
 type BlueprintCache = Record<string, CardBlueprint>;
 const blueprintCache: BlueprintCache = {};
@@ -13,17 +20,35 @@ function deepFreeze<T>(value: T, seen = new Set<object>()): T {
 }
 
 export function getBlueprint(cardId: string): CardBlueprint {
-  if (!Object.prototype.hasOwnProperty.call(rawCardData, cardId)) throw new Error('Unknown card definition');
-  const raw = (rawCardData as Record<string, unknown>)[cardId] as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(definitions, cardId)) throw new Error('Unknown card definition');
+  const raw = definitions[cardId] as Record<string, unknown>;
   if (!raw) {
     throw new Error(`[CardFactory] No raw card data found for ID: ${cardId}`);
   }
 
   if (!blueprintCache[cardId]) {
-    blueprintCache[cardId] = deepFreeze(parseCardDefinition(raw));
+    const parsed = parseCardDefinition(raw);
+    if (parsed.id !== cardId) throw new Error('Definition ID does not match manifest: ' + cardId);
+    if (isTokenDefinition(cardId) && (!parsed.cardTypes.length || parsed.cardTypes.includes('Spell'))) {
+      throw new Error('Token blueprints must describe permanents');
+    }
+    blueprintCache[cardId] = deepFreeze(parsed);
   }
   return blueprintCache[cardId];
 }
 
 /** Stable catalog enumeration without exposing the mutable authored data map. */
-export function getCardIds(): string[] { return Object.keys(rawCardData).sort(); }
+export function getCardIds(): string[] {
+  return Object.keys(rawCardData).sort();
+}
+
+/** Token templates share parsing/caching, while normal-card enumeration remains unchanged. */
+export function getTokenIds(): string[] {
+  return Object.keys(rawTokenData).sort();
+}
+
+/** Fetch only an explicitly registered token, never convert an ordinary card into a token implicitly. */
+export function getTokenBlueprint(tokenId: string): CardBlueprint {
+  if (!isTokenDefinition(tokenId)) throw new Error('Unknown token definition');
+  return getBlueprint(tokenId);
+}

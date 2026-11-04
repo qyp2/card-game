@@ -1,9 +1,12 @@
+import { isTokenDefinition } from '../../library/tokens';
+import { tokenPolicy } from '../../shared/token-policy';
 import { z } from 'zod';
 import { observationLimits } from '../../shared/observation-policy';
 import { CaptureWindowSchema, CollectionVisibilitySchema } from './observations';
 import {
   Color,
   Count,
+  CountExpression,
   Identifier,
   EffectNumber,
   EffectCount,
@@ -27,6 +30,7 @@ export const InstructionNames = {
   SHUFFLE: ['cards', 'shuffle'],
   REORDER_LIBRARY: ['cards', 'reorder_library'],
   REVEAL_TOP: ['cards', 'reveal_top'],
+  CREATE_TOKEN: ['cards', 'create_token'],
   CAPTURE_WINDOW: ['cards', 'capture_window'],
   SET_COLLECTION_VISIBILITY: ['cards', 'set_collection_visibility'],
   MOVE_ZONE: ['cards', 'move'],
@@ -63,6 +67,9 @@ export function instructionParameterSchemas(
     .strictObject(stats)
     .refine((v) => v.power !== undefined || v.toughness !== undefined, 'Stat change requires a value');
   return {
+    CREATE_TOKEN: z.strictObject({ tokenId: Identifier.refine(isTokenDefinition, 'Unknown token definition'),
+      amount: CountExpression.refine(value => typeof value !== 'number' || value <= tokenPolicy.maxCreatedPerInstruction,
+        'Token creation exceeds its work bound').optional() }),
     CAPTURE_WINDOW: CaptureWindowSchema,
     SET_COLLECTION_VISIBILITY: CollectionVisibilitySchema,
     PAY_COST: z.strictObject({

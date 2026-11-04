@@ -104,7 +104,7 @@ describe('Milestone 7 integration boundaries', () => {
     expect(room.battlefield[0].state.worldTimestamp).toBeGreaterThan(gained);
   });
 
-  it('prevents a departed token returning before its cessation checkpoint', () => {
+  it('prevents a token returning after its atomic departure', () => {
     const token = { ...creature('token', 'player1'), isToken: true };
     let room = createTestRoom({ battlefield: [token] });
     room = gameReducer(room, { type: 'MOVE_CARD', cardUuid: token.uuid, playerId: 'player1', from: 'battlefield', to: 'graveyard' });

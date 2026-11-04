@@ -88,7 +88,7 @@ Generic counter storage and prevention are available. That does not certify the 
 | EVENT | Off-zone source discovery and tap/draw-step/life-change/reveal provenance events |
 | PAY | Selected exile, ritual materials and binding/storage payments; ordinary counter and optional resolution payments are delivered |
 | ENTRY | Atomic tapped entry or summon-method provenance |
-| TOKEN | Token creation with authored characteristics/abilities |
+| TOKEN | Complete card-specific token recipes/proof; predefined creation and board-only lifecycle are delivered |
 | EXPIRY | Battle/attack lifetime and skip-next-untap scheduling |
 | HOST | Real cards stored under a host and host-bound release |
 | COUNTER | Counter-owned granted behavior, identity and lifecycle proof |
@@ -101,6 +101,10 @@ Generic counter storage and prevention are available. That does not certify the 
 | HEAL | Global healing-amount modification |
 | RANDOM | Authoritative random selection/reveal/discard with downstream identity |
 | DRAW | Bottom/opponent-library draw semantics |
+
+## Token creation follow-up
+
+[Predefined tokens and board-only lifecycle](token-architecture.md) now clear the generic creation dependency. The 1/1 vanilla token uses subtype 上使, as ruled by the owner. Tokens still fire genuine death triggers for a settled graveyard-bound creature departure, while never occupying graveyard, hand, deck, exile or stack. They may carry normal printed abilities; cessation is not a removable/counterable on-death exile ability. No workbook definitions are registered by this infrastructure delivery, so normal coverage remains 72/142 plus one separately enumerated token template.
 
 ## Every missing in-scope row
 
@@ -117,7 +121,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 13 | 幻影夢人 | B | EVENT | Need the draw-step trigger. Optional pay-two-life-then-draw now uses `resources / pay_cost`; ordinary life payment is no longer a blocker. |
 | 14 | 幻影木偶 鬼斧 | P | — | The shared killed-outcome gate now supports a stat reduction followed by a success-only bonus. Still deliver the exact attack/target/buff composition proof for this card. |
 | 15 | 幻影木偶 鬼火 | U | — | Existing optional mill result capture, black noncreature-type filter and exact-card recovery compose on entry and attack. Seven focused recipe tests cover this card and the scythe; definition/registration still to deliver. |
-| 17 | 死亡組裝 | B/W | TOKEN | Multi-target friendly destruction is supported. Token creation, including the token's attack ability, is missing. Clarify whether successful destruction of all three is a prerequisite rather than only an instruction sequence. |
+| 17 | 死亡組裝 | W/P | TOKEN | Predefined token creation and ordinary token attack abilities are supported. Still define/prove the named 7/6 token recipe and clarify whether all three friendly destructions must succeed before creation; the existing boolean any-success outcome is not an all-three prerequisite. |
 | 18 | 幻影木偶軍團長 | B | EXPIRY | Graveyard deployment exists. The +4 bonus must expire at this battle's end; end-of-turn expiry is not equivalent. |
 | 19 | 幻影木偶智者* | B/P | USAGE | The graveyard effective-cost setter is now supported. Nonstacking stat anthems across multiple copies still need their consumer/composition; ability usage groups do not deduplicate continuously applied stat deltas. |
 | 20 | 赫拉幻影術 | W | VALUE | Effective mana-value filtering now sees graveyard setters. Clarify whether ignore all graveyard effects means explicitly selecting by printed cost or suppressing effects more broadly; those are distinct selection/permission policies. |
@@ -170,13 +174,13 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 
 | Row | Card | Status | Families | Current disposition |
 |---:|---|---|---|---|
-| 8 | 亞拉里亞最終兵器 天域神城 | B | TOKEN | Create the 1/1 vanilla angel token. Existing token cleanup does not create tokens. |
+| 8 | 亞拉里亞最終兵器 天域神城 | P | TOKEN | The predefined 1/1 vanilla 上使 token and creation effect are implemented. Prove/register the complete card recipe before U. |
 | 11 | 聖能術 · 速 | B | DRAW | Need drawing specifically from library bottom; ordinary DRAW consumes the top. |
 | 12 | 亞拉里亞的終末 | B | PAY | Global opposing destruction exists. Need an atomic exile payment selecting the named emperor with at least five charge counters. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
 | 13 | 天域之獸 | P | REVEAL | A recorded captured-window yellow-card count can determine life gained while ordinary search selects from the same current set. Prove/register the full printed yellow-land recipe before U. |
 | 14 | 天域三侯 坡加 | B/W | HOST, PAY | Take-all-spells capture handling exists. Under-host land storage/release, the 縛鎖1 payment contract and the stored-land source ruling remain. |
 | 16 | 天域三侯 伊雲 | P | REVEAL | Eight-card capture, take-all-spells search, exile of the exact current remainder and once-per-game entry usage are supported. Prove/register the complete recipe before U. |
-| 17 | 雷霆之門 | B | TOKEN | Healing triggers and mana generation exist. Need token creation; ordinary once-per-game triggered usage is supported. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
+| 17 | 雷霆之門 | P | TOKEN | Mana generation, healing triggers, ordinary game-period usage and predefined 1/1 上使-token creation are implemented. Prove/register the complete card recipe, including its use identity, before U. |
 | 18 | 亞拉里亞的截擊 | B/W | STACK | Ability/spell countering exists. Need associated-source selection and source-zone-aware discard/destruction; clarify which effects are counterable and what happens to a source already gone. |
 | 20 | 天使的皇座 | B/W | HOST, USAGE, PAY | Need under-host storage/release, 縛鎖3 and reversible changes to ability 1's use limit. Shared groups can enforce the common 2/3 budget; changing ability 1's limit still lacks a consumer. |
 | 21 | 天使女帝 蝶后 | B | EVENT, HEAL | Need hand-zone life-loss response with self-discard and a global healing-amount modifier. Existing battlefield triggers and damage modifiers do not implement these consumers. |

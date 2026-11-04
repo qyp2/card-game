@@ -177,6 +177,9 @@ export function moveCard(room: GameRoom, move: Extract<GameMutation, { type: 'MO
     };
   }
 
+  // Tokens cease as part of departure. The settled destination remains semantic event data, never occupancy.
+  if (card.isToken) return next;
+
   // Insert the card into its destination zone.
   if (move.to === 'battlefield') return { ...next, battlefield: [...next.battlefield, updated] };
   if (move.to === 'stack') return { ...next, stack: [...next.stack, { ...spell!, source: updated }] };

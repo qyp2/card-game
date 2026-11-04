@@ -111,3 +111,5 @@ Runtime state belongs in SQLite/rooms, not config files. This refactor adds neit
 
 
 Capture/reveal work and history retention use `packages/engine/src/config/observations.json`: `maxWindowCards` (default 64, validated range 8–256) and `historyLimit` (default 128 per viewer, range 1–1024). Reload/rebuild after editing. Private observation traffic cannot consume another viewer's history budget. See [card windows and visibility](card-window-design.md).
+
+Token templates live in `packages/engine/src/library/tokens/` and use the ordinary strict card parser. Token creation work is bounded by `packages/engine/src/config/tokens.json` (`maxCreatedPerInstruction`, default 64, range 1–256). These templates are not normal deck catalog entries. See [token creation and lifecycle](token-architecture.md).

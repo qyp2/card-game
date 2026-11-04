@@ -112,7 +112,8 @@ function moveCardChanges(
 
   // The reset card, or its destination spell, is added by the same move.
   {
-    if (mutation.to === 'exile' && oldState.players[mutation.playerId].exile === undefined) {
+    if (mutation.to === 'exile' && oldState.players[mutation.playerId].exile === undefined &&
+      newState.players[mutation.playerId].exile !== undefined) {
       changes.push({ path: `players.${mutation.playerId}.exile`, op: 'add', value: newState.players[mutation.playerId].exile });
       return changes;
     }
@@ -152,6 +153,7 @@ function mutationToChanges(mutation: GameMutation, oldState: GameRoom, newState:
 
 function mutationChanges(mutation: GameMutation, oldState: GameRoom, newState: GameRoom): DeltaChange[] {
   switch (mutation.type) {
+    case 'CREATE_TOKEN': return ['battlefield', 'tokenSequence'].map(path => updateChange(path, oldState, newState));
     case 'SHUFFLE_LIBRARY':
     case 'REORDER_LIBRARY': return [updateChange(`players.${mutation.playerId}.deck`, oldState, newState)];
     case 'ADD_REPLACEMENT_EFFECT': return ['replacementEffects', 'replacementSequence'].map(path => updateChange(path, oldState, newState));

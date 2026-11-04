@@ -1,3 +1,4 @@
+import { planTokenCreation } from './token-creation';
 import { collectCardSource } from '../shared/card-collections';
 import { matchesCardFilter } from '../shared/card-query';
 import { CardCharacteristicService } from './card-characteristic-service';
@@ -115,6 +116,8 @@ export const EffectRegistry: Record<string, EffectHandler> = {
       ...(effect.params.discard ? { reason: 'discard' as const } : {}),
     }];
   },
+
+  'CREATE_TOKEN': (room, _stackObj, effect, context = defaultEffectContext) => planTokenCreation(room, effect, context),
 
   'DISCARD_FROM_LIBRARY': (room, _stackObj, effect) => {
     const amount = effect.params.amount;

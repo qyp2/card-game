@@ -56,7 +56,7 @@ export class GameEngine {
     private readonly actionRegistry = createDefaultActionRegistry(),
   ) {
     this.runtimeContext = resolveRuntimeContext(dependencies);
-    this.effectContext = { ...defaultEffectContext, random: this.runtimeContext.random };
+    this.effectContext = { ...defaultEffectContext, random: this.runtimeContext.random, uuid: this.runtimeContext.uuid };
     this.mutationCollector.push(...room.pendingTriggers ?? []);
     this.eventBus = new EventBus(room.roomId);
     this.commits = new MutationCommitter(room, this.eventBus, this.mutationCollector, () => this.generateUuid(), () => this.commandContext);

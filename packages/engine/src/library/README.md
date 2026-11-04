@@ -179,6 +179,20 @@ Search/numeric scopes reuse `from: { kind: "result", name: "window" }`. `cards /
 
 See the [full schema, examples and projection/lifecycle contract](../../../../docs/card-window-design.md). Distinct-name selection, same-zone selected-card exclusion, conditional repetition and cross-owner destinations remain unsupported rather than being approximated.
 
+## Named tokens
+
+Token templates in `library/tokens/` use this same card schema and normal abilities. The factory marks their instances with `isToken`; disappearance is intrinsic rather than an authored on-death exile instruction. Templates stay out of ordinary deck catalog enumeration.
+
+```json
+{
+  "family": "cards",
+  "operation": "create_token",
+  "params": { "tokenId": "token-angel-1-1", "amount": 1 }
+}
+```
+
+Recipients use self/player targeting. Amount defaults to one and supports the existing numeric-expression contract, bounded by `config/tokens.json`; unknown token IDs, inline card definitions, destination overrides and non-player recipients are rejected. Tokens enter directly through normal battlefield-entry events and may have ordinary entry/death abilities. They never occupy a nonboard zone: settled graveyard-bound creature departures still count as death, while bounce/exile departures do not. See the [full token lifecycle guide](../../../../docs/token-architecture.md).
+
 ## Effective costs and causal outcomes
 
 A characteristic rule with `operation: { type: "MANA_COST", mana: {} }` makes all effective cost/value queries see zero while its zone/condition applies. Preserve the printed blueprint; payment-only adjustments remain in the costs family.
