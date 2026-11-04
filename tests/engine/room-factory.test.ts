@@ -10,6 +10,8 @@ describe('buildTestDeck', () => {
     expect(deck.length).toBe(12);
     for (const card of deck) {
       expect(card.state.zone).toBe('library');
+      expect(card.state.visibility).toBe('hidden');
+      expect(card.state.visibilityZone).toBe('library');
       expect(card.state.ownerId).toBe('p1');
       expect(card.state.controllerId).toBe('p1');
       expect(card.uuid).toBeTruthy();
@@ -65,10 +67,14 @@ describe('dealStartingHands', () => {
     for (const card of room.players['p1'].hand) {
       expect(card.uuid).toBeTruthy();
       expect(card.state.zone).toBe('hand');
+      expect(card.state.visibility).toBe('owner');
+      expect(card.state.visibilityZone).toBe('hand');
     }
     for (const card of room.players['p2'].hand) {
       expect(card.uuid).toBeTruthy();
       expect(card.state.zone).toBe('hand');
+      expect(card.state.visibility).toBe('owner');
+      expect(card.state.visibilityZone).toBe('hand');
     }
   });
 
@@ -116,6 +122,8 @@ describe('setupRPS', () => {
 
     for (const card of p1.hand) {
       expect(card.state.zone).toBe('hand');
+      expect(card.state.visibility).toBe('owner');
+      expect(card.state.visibilityZone).toBe('hand');
       expect(card.state.ownerId).toBe('p1');
       expect(card.state.controllerId).toBe('p1');
       expect(['rock', 'paper', 'scissors']).toContain(card.blueprint.id);
@@ -123,6 +131,8 @@ describe('setupRPS', () => {
 
     for (const card of p2.hand) {
       expect(card.state.zone).toBe('hand');
+      expect(card.state.visibility).toBe('owner');
+      expect(card.state.visibilityZone).toBe('hand');
       expect(card.state.ownerId).toBe('p2');
       expect(card.state.controllerId).toBe('p2');
       expect(['rock', 'paper', 'scissors']).toContain(card.blueprint.id);

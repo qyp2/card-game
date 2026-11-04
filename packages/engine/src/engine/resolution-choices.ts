@@ -1,3 +1,4 @@
+import { canChooseCapturedCard } from './captured-windows';
 import { CardCharacteristicService } from './card-characteristic-service';
 import type { PendingChoice, ChoiceAnswer, ResolutionContinuation } from '../types/choice.types';
 import type { GameRoom } from '../types/game.room.types';
@@ -85,7 +86,8 @@ export function resolutionChoice(room: GameRoom, stackObj: StackObject, effect: 
 
       // Apply the pinned references and the authored card filter.
       const admitted = cards.filter(card => (!def.cardRefs || def.cardRefs.some(ref => ref.cardUuid === card.uuid && ref.zoneRevision === (card.state.zoneRevision ?? 0))) &&
-        matchesCardFilter(card, view(card), def, stackObj.controllerId));
+        matchesCardFilter(card, view(card), def, stackObj.controllerId) &&
+        (!def.from || canChooseCapturedCard(room, stackObj, def.from.name, card)));
 
       // Pinned references also fix the presentation order.
       const ordered = def.cardRefs

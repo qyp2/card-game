@@ -96,7 +96,7 @@ The causal index is server-only; existing player projections remain explicit and
 
 The follow-up [counter and optional payment delivery](counter-payment-architecture.md) extends `planActionCosts` rather than adding another cost engine. It supports source/controlled-battlefield counter removal, ordinary costs inside optional resolution branches, and existing mana-ability choices. 幻影女王 赫拉 and 天使皇 亞拉里亞 are registered consumers. Exact payment and usage commit together; countering later does not refund them.
 
-**Captured reveal workflows** are now the largest remaining family, affecting **13** missing cards. The gap includes retained larger windows, multiple filtered selections, take-all/distinct-name rules, deployment, remainder destinations/order and repetition. Selected exile, ritual materials and binding/storage still account for **five PAY rows**. Counts overlap; see the [current row-by-row ledger](card-blockers-current.md).
+The [captured-window and visibility foundation](card-window-design.md) is now delivered, including larger windows, shared filters, independent selections, take-all, exact-remainder milling and projected observations/history. Of thirteen reveal rows, six now need full card-specific proof, three retain specific selection/repetition blockers and four retain other dependencies. Selected exile, ritual materials and binding/storage still account for **five PAY rows**. Counts overlap; see the [current row-by-row ledger](card-blockers-current.md).
 
 ## Verification
 

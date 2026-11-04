@@ -1,3 +1,4 @@
+import { capturedChoiceAllowed, choiceSourceOrderVisible } from '@card-game/engine/engine/captured-windows';
 import { createHmac, randomBytes } from 'node:crypto';
 import type { GameRoom } from '@card-game/engine/types/game.room.types';
 import type { ChoiceView } from '@card-game/protocol';
@@ -17,8 +18,10 @@ function optionId(room: GameRoom, choiceId: string, playerId: string, id: string
 export function buildChoiceView(room: GameRoom, viewerId: string): ChoiceView | null {
   const choice = room.pendingChoice;
   if (!choice) return null;
-  if (!canSeeChoice(room, viewerId)) return { kind: 'waiting', playerId: choice.playerId };
+  if (!canSeeChoice(room, viewerId) || !capturedChoiceAllowed(room, choice))
+    return { kind: 'waiting', playerId: choice.playerId };
   const continuation = choice.continuation;
+  const exposeSourceOrder = choiceSourceOrderVisible(room, choice);
   const sourceUuid =
     continuation.type === 'action'
       ? continuation.data.cardUuid
@@ -54,30 +57,32 @@ export function buildChoiceView(room: GameRoom, viewerId: string): ChoiceView | 
     max: choice.max,
     ...(choice.total !== undefined ? { total: choice.total } : {}),
     ...(choice.minimumPerOption !== undefined ? { minimumPerOption: choice.minimumPerOption } : {}),
-    options: choice.options.map((option) => {
-      const recipient = continuation.type === 'combat' ? (option.value as DamageRecipient) : undefined;
-      const card =
-        recipient?.kind === 'permanent'
-          ? room.battlefield.find(
-              (card) => card.uuid === recipient.cardUuid && (card.state.zoneRevision ?? 0) === recipient.zoneRevision,
-            )
-          : undefined;
-      const label =
-        recipient?.kind === 'player'
-          ? recipient.playerId === viewerId
-            ? 'You'
-            : 'Opponent'
-          : card
-            ? battlefieldCardLabel(room, card)
-            : continuation.type === 'trigger' && continuation.field === 'order'
-              ? option.label.split('@')[0]
-              : choiceOptionLabel(room, viewerId, option.label);
-      return {
-        id: optionId(room, choice.id, viewerId, option.id),
-        label,
-        ...(option.limit !== undefined ? { limit: option.limit } : {}),
-      };
-    }),
+    options: choice.options
+      .map((option) => {
+        const recipient = continuation.type === 'combat' ? (option.value as DamageRecipient) : undefined;
+        const card =
+          recipient?.kind === 'permanent'
+            ? room.battlefield.find(
+                (card) => card.uuid === recipient.cardUuid && (card.state.zoneRevision ?? 0) === recipient.zoneRevision,
+              )
+            : undefined;
+        const label =
+          recipient?.kind === 'player'
+            ? recipient.playerId === viewerId
+              ? 'You'
+              : 'Opponent'
+            : card
+              ? battlefieldCardLabel(room, card)
+              : continuation.type === 'trigger' && continuation.field === 'order'
+                ? option.label.split('@')[0]
+                : choiceOptionLabel(room, viewerId, option.label);
+        return {
+          id: optionId(room, choice.id, viewerId, option.id),
+          label,
+          ...(option.limit !== undefined ? { limit: option.limit } : {}),
+        };
+      })
+      .sort((a, b) => (exposeSourceOrder ? 0 : a.id.localeCompare(b.id))),
   };
 }
 

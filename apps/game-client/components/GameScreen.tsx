@@ -10,6 +10,7 @@ import LogDrawer from './LogDrawer';
 import ContextMenu from './ContextMenu';
 import TargetSelector from './TargetSelector';
 import ChoicePanel from './ChoicePanel';
+import CardObservations from './CardObservations';
 import RotateGate from './RotateGate';
 import RoomControls from './RoomControls';
 
@@ -50,6 +51,7 @@ export default function GameScreen() {
             <PlayerInfo />
             <div className="board-pill">
               <PhaseBar />
+              <CardObservations />
               {!gameOver && <ChoicePanel />}
             </div>
           </div>

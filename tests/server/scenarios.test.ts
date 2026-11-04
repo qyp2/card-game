@@ -63,6 +63,10 @@ describe('scenario contracts and independent fixtures', () => {
         expect(a.players.one.hand).toHaveLength(4);
         expect(a.players.one.graveyard).toHaveLength(1);
         expect(a.battlefield).toHaveLength(1);
+        expect(a.players.one.hand.every(card => card.state.visibility === 'owner')).toBe(true);
+        expect(a.players.one.deck.every(card => card.state.visibility === 'hidden')).toBe(true);
+        expect(a.players.one.graveyard.every(card => card.state.visibility === 'public')).toBe(true);
+        expect(a.battlefield.every(card => card.state.visibility === 'public')).toBe(true);
     });
 });
 describe('short real lab HTTP/socket acceptance', () => {

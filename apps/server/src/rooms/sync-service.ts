@@ -328,6 +328,8 @@ function mutationChanges(mutation: GameMutation, oldState: GameRoom, newState: G
     case 'SET_ENGINE_STATE':
       return [updateChange('engineState', oldState, newState)];
     case 'SET_PENDING_CHOICE': return [updateChange('pendingChoice', oldState, newState)];
+    case 'RECORD_CARD_OBSERVATION':
+    case 'CLOSE_CARD_OBSERVATIONS': return [updateChange('cardObservations', oldState, newState)];
     case 'SET_PENDING_TRIGGERS': return [updateChange('pendingTriggers', oldState, newState)];
     case 'SET_TRIGGER_QUEUE': return [updateChange('triggerQueue', oldState, newState)];
     case 'ADD_DELAYED_TRIGGER':
@@ -381,6 +383,10 @@ export class SyncService {
     for (const mutation of mutations) {
       const newState = gameReducer(currentState, mutation);
       if (newState !== currentState) changes.push(...mutationToChanges(mutation, currentState, newState));
+      if (newState.cardObservations !== currentState.cardObservations &&
+        !['RECORD_CARD_OBSERVATION', 'CLOSE_CARD_OBSERVATIONS'].includes(mutation.type)) {
+        changes.push(updateChange('cardObservations', currentState, newState));
+      }
       if (newState.effectTimestamp !== currentState.effectTimestamp) changes.push(updateChange('effectTimestamp', currentState, newState));
       if (newState.effectSequence !== currentState.effectSequence) changes.push(updateChange('effectSequence', currentState, newState));
       currentState = newState;

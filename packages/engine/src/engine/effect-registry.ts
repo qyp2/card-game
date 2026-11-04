@@ -1,3 +1,9 @@
+import { collectCardSource } from '../shared/card-collections';
+import { matchesCardFilter } from '../shared/card-query';
+import { CardCharacteristicService } from './card-characteristic-service';
+import { roomCards } from './continuous-effect-state';
+import type { CardResultSource } from '../types/resolution-result.types';
+import type { CardFilter } from '../types/card-query.types';
 import { abilityEffects } from './ability-effects';
 // src/engine/effect-registry.ts
 import type { GameMutation } from '../types/game-mutation.types';
@@ -112,6 +118,16 @@ export const EffectRegistry: Record<string, EffectHandler> = {
 
   'DISCARD_FROM_LIBRARY': (room, _stackObj, effect) => {
     const amount = effect.params.amount;
+    if (effect.params.from) {
+      const members = collectCardSource(roomCards(room), effect.params.from as CardResultSource, _stackObj.resolutionResults);
+      if (!members || (amount !== undefined && (!Number.isSafeInteger(amount) || (amount as number) < 0))) return [];
+      return members.map(entry => entry.card).filter(card => card.state.zone === 'library' && matchesCardFilter(card,
+        CardCharacteristicService.resolve(room, card), effect.params.filter as CardFilter ?? {}, _stackObj.controllerId))
+        .slice(0, amount as number | undefined).map(card => ({ type: 'MOVE_CARD' as const,
+          cardUuid: card.uuid, playerId: card.state.ownerId, from: 'library' as const, to: 'graveyard' as const,
+          zoneRevision: card.state.zoneRevision ?? 0, reason: 'discard' as const,
+        }));
+    }
 
     // Guard: the amount must be a non-negative integer.
     if (!Number.isSafeInteger(amount) || (amount as number) < 0) return [];

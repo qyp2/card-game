@@ -155,7 +155,12 @@ export type { ContinuousEffect, ContinuousEffectEntry } from './continuous-effec
  * Mutable object state. Effective characteristics are derived by the shared
  * facade; printed blueprints remain immutable. Timestamps order static sources.
  */
+export type CardVisibility = 'public' | 'owner' | 'hidden';
 export interface CardState {
+    /** Base visibility, reset on zone changes; temporary observations are separate grants. */
+    visibility?: CardVisibility;
+    /** The zone to which this stored base value belongs (old snapshots may omit both fields). */
+    visibilityZone?: CardZone;
     /** How this battlefield incarnation entered; cleared when it leaves. */
     summonKind?: 'cast' | 'effect';
     worldTimestamp?: number;

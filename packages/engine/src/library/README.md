@@ -74,7 +74,7 @@ Use `{ "family", "operation", "params", "targeting" }`. Omit params/targeting on
 
 These compile to live engine primitives such as `DRAW`, `MOVE_ZONE` and `CREATE_CONTINUOUS_EFFECT`. The structured spelling `{ "action": "DRAW", "params": { "amount": 1 } }` remains supported with identical operation-specific validation. These are active primitives, not abandoned implementations. Do not mix `action` with functional names.
 
-Draw/discard/counter/damage amounts must evaluate to nonnegative integers. Mana generation requires a positive integer amount and exactly one of `color` or `colors`; the latter requests a choice. Zone moves specify `destination`, optionally `origin`; `libraryPlacement` applies only to a library destination. Reveal windows currently support one to three cards. Destroy, sacrifice and movement have distinct event semantics.
+Draw/discard/counter/damage amounts must evaluate to nonnegative integers. Mana generation requires a positive integer amount and exactly one of `color` or `colors`; the latter requests a choice. Zone moves specify `destination`, optionally `origin`; `libraryPlacement` applies only to a library destination. Capture and starter reveal windows support the configured work bound (currently one to sixty-four cards). Destroy, sacrifice and movement have distinct event semantics.
 
 ## Activated and triggered abilities
 
@@ -168,6 +168,16 @@ Mill instructions can capture `recordResult: { "name": "milled", "kind": "milled
 
 See [rule-contract architecture and blocker assessment](../../../../docs/rule-contract-architecture.md) for ownership, migration evidence, legacy review and remaining mechanics.
 
+
+## Captured windows and visibility
+
+Cards have base `visibility` state: battlefield/graveyard/exile/stack public, hand owner-only, library hidden. Actual zone transitions reset this state. Temporary look/reveal access is a resolution-owned observation, not a sticky override on a live card.
+
+Use `cards / capture_window` with `params: { zone: "library", zonePlayer: "self", position: "top", amount: 6 }` and `recordResult: { name: "window", kind: "captured" }`. Omitted visibility grants nothing. An explicit visibility object has `faces`, `count`, `order` audience arrays and `expires: "resolution_end"`; roles are `controller`, `opponent`, `zone_owner`, `all_players`. Face audiences must receive counts; order audiences must receive faces. `event: "revealed"` requires explicit public faces, while omitted/`none` does not trigger revelation.
+
+Search/numeric scopes reuse `from: { kind: "result", name: "window" }`. `cards / set_collection_visibility` takes `from`, optional shared `filter`, a visibility policy and optional event. Captured choices require current face access. `cards / mill` also accepts `params: { from: { kind: "result", name: "window" } }` to mill the exact current remainder, with optional `filter`/`amount`; normal mill replacements and result accounting still apply.
+
+See the [full schema, examples and projection/lifecycle contract](../../../../docs/card-window-design.md). Distinct-name selection, same-zone selected-card exclusion, conditional repetition and cross-owner destinations remain unsupported rather than being approximated.
 
 ## Effective costs and causal outcomes
 

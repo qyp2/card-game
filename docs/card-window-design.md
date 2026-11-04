@@ -1,6 +1,6 @@
 # Captured card windows and configurable visibility
 
-Status: **design, not yet implemented**. This supplements [resolution-local card collections](resolution-results-architecture.md) and the [current blocker ledger](card-blockers-current.md). Examples below propose additions to the authored contract; the current parser does not accept them yet.
+Status: **implemented, 4 November 2026**. This supplements [resolution-local card collections](resolution-results-architecture.md) and the [current blocker ledger](card-blockers-current.md). Examples below are accepted by the shared strict parser. This delivery adds infrastructure and UI; it does not register new workbook cards.
 
 ## The shared model
 
@@ -16,9 +16,23 @@ Neither collection owns live cards or creates another physical zone. A revealed 
 
 Reuse `StackObject.resolutionResults`, its continuation ownership and the existing `from: { kind: "result", name: "window" }` query source. Generalize the result kind to include captured observations while retaining `milled` as useful provenance. Do not create a second reveal-only query engine or rename working mill behavior merely for consistency.
 
+## Base visibility belongs to the card instance
+
+`CardState.visibility` stores `public`, `owner` or `hidden`. Creation and every actual zone change initialize it through `createCardState`:
+
+| Zone | Base visibility |
+|---|---|
+| Battlefield, graveyard, exile, spell stack | `public` |
+| Hand | `owner` |
+| Library | `hidden`, including to its owner |
+
+`visibilityZone` records which zone that stored value belongs to. Older snapshots and stale imported/fixture states use the current zone's default. Real transitions reset both fields, so a revealed library card moving to hand receives owner visibility. This is a base state, not a client permission to set visibility or a complete face-down-card mechanic.
+
+Temporary observation audiences live in `GameRoom.cardObservations`, bound to their resolving stack object and exact captured incarnation. They do not overwrite the base flag. This permits a private look, public revelation or partial exposure without creating a sticky public card or tracking a card into a later hidden zone. Server `canSeeCard` reads authoritative live membership and base visibility; observation/choice projection separately checks the temporary grant. An arbitrary nested snapshot cannot authorize access.
+
 ## An editable authored contract
 
-Proposed private look at the top six cards of your library:
+Private look at the top six cards of your library:
 
 ```json
 {
@@ -43,16 +57,16 @@ Proposed private look at the top six cards of your library:
 
 To publicly reveal those six instead, use `all_players` for faces/count/order and `event: "revealed"`. Public revelation and private looking share capture mechanics but have different information and trigger semantics.
 
-These are strict data fields, not executable callbacks. The first implementation should support bounded top-library capture for self/opponent, using the same card-source collection layer. Additional origins or window-selection recipes can extend that boundary later; unimplemented combinations must fail validation. The amount limit should be a documented work bound supporting the included five-, six- and eight-card recipes, rather than the old starter-card bound of three.
+These are strict data fields, not executable callbacks. Capture currently supports the top of self/opponent libraries, one to sixty-four cards, with short/empty libraries recording the actual available cards. Work bounds live in `packages/engine/src/config/observations.json`: `maxWindowCards` is 64 and `historyLimit` is 128 per viewer. Both values are validated at module load. Unsupported origins/positions, unknown fields, unsafe names, incorrect result kinds and contradictory audiences fail validation. Capture requires its named result and does not accept its own choice/target/outcome configuration; wrap optional capture in an ordinary modal or optional payment branch.
 
-Existing authored `cards / reveal_top` recipes remain supported. Lower them into the shared public capture/selection/remainder path, preserving their printed behavior and reveal events. Keep the top/bottom remainder recipe as a convenience; do not make it the behavior of every capture.
+Existing authored `cards / reveal_top` recipes now lower into this shared public capture/selection/remainder path. They retain their printed behavior and completion-time reveal events; the convenience recipe also accepts the configured capture bound. Its take-to-hand/bottom recipe does not become the behavior of every capture. Generated result names avoid existing declarations.
 
 ## Visibility is an explicit policy
 
 | Field | Meaning |
 |---|---|
 | `faces` | Who may see card names and faces in this captured observation |
-| `count` | Who may see how many cards were captured |
+| `count` | Who may count the members covered by this grant; undisclosed members never contribute to the projected count |
 | `order` | Who may see their captured source order, such as top-to-bottom |
 | `expires` | When this temporary observation grant stops being active |
 
@@ -60,15 +74,15 @@ Audience entries are a closed vocabulary: `controller`, `opponent`, `zone_owner`
 
 Validate policy relationships. Seeing every face necessarily reveals the set's size, so every face audience must also receive count visibility. Order visibility requires face visibility. Reject contradictory policies rather than letting array shape accidentally override them. Hidden order must use a display order unrelated to source position, without exposing source indices. Captured order is an observation at capture time, not a claim about the current library after a later reorder or shuffle.
 
-Safe defaults for generic capture grant no additional information and emit no reveal event. The normal game-zone visibility still applies: this policy can expose an otherwise hidden library observation, but cannot turn public graveyard/battlefield cards face down. Face-down cards or concealed public-zone identities require their own actual game mechanic.
+An omitted visibility policy grants no additional information; an omitted event means `none`. The normal game-zone visibility still applies: this policy can expose an otherwise hidden library observation, but cannot turn public graveyard/battlefield cards face down. Face-down cards or concealed public-zone identities require their own actual game mechanic.
 
-Visibility must be enforced by server projection, using one shared audience resolver for views, events and history. Hiding a React component is insufficient. An unauthorized player receives no names, definitions, UUIDs, source positions or raw result maps. If count is allowed, send a count; if it is not allowed, omit that information rather than sending zero or an array of placeholders. A deliberately supported blind choice can receive opaque option handles, without gaining card identities.
+Visibility must be enforced by server projection, using one shared audience resolver for views, events and history. Hiding a React component is insufficient. An unauthorized player receives no names, definitions, UUIDs, source positions or raw result maps. Counts include only members whose count audience admits the viewer. Partial exposure can therefore publish a subset count without publishing the hidden total or any faces. With no authorized data, omit the observation entirely; do not send zero or placeholder arrays. Blind selection is not supported in this slice: captured choices require face access and unknown blind-choice fields are rejected.
 
 The admin Test Lab's authenticated inspection policy stays separate. Being an admin in a normal player seat must not automatically widen that seat's information rights.
 
 ## Updating visibility without changing membership
 
-A later instruction may change exposure for a captured set or filtered subset. Proposed example: after privately looking, reveal only its creatures:
+A later instruction may change exposure for a captured set or filtered subset. For example, after privately looking, reveal only its creatures:
 
 ```json
 {
@@ -90,7 +104,7 @@ A later instruction may change exposure for a captured set or filtered subset. P
 
 The subset uses the same shared card filter, materialized into exact member references at this instruction. It does not become a continuously changing library filter. Authorize any emitted reveal event against the effective exposed audience; public `revealed` requires public faces. Merely changing visibility does not create a reveal event unless the instruction explicitly requests it. A private look never silently fires `ON_REVEAL`.
 
-An exposure update replaces that observation's grant on the selected members; ordinary zone visibility and independent valid grants still apply. Reducing exposure stops publishing active information, but cannot make a person forget already seen cards or erase their legitimate history. The grant applies to the captured observation, not a tracking right into the card's later hidden zones. When a member moves, its new incarnation follows normal destination visibility; the old observation may remain in authorized history.
+An exposure update replaces that observation's grant on the selected members; ordinary zone visibility and independent valid grants still apply. Reducing exposure stops publishing active information, but cannot make a person forget already seen cards or erase their legitimate history. The active panel displays snapshots from the last explicit observation; it does not show live hidden-zone changes. A later exposure update takes fresh snapshots for its selected current members while retaining the original capture anchors and historical observations. The grant applies to the captured observation, not a tracking right into the card's later hidden zones. When a member moves, its new incarnation follows normal destination visibility; the old observation may remain in authorized history.
 
 Keep the visibility record separate from collection membership. Showing or hiding a card must not remove it from a rule query, change a count used by the engine, or change who chooses. Persistent visibility after resolution would require a separately owned room effect with explicit lifetime; do not retain a completed stack object's temporary collection forever.
 
@@ -115,11 +129,24 @@ After capture, reuse the existing search/filter pattern:
 }
 ```
 
+To mill the exact current remainder without an additional human selection:
+
+```json
+{
+  "family": "cards",
+  "operation": "mill",
+  "params": { "from": { "kind": "result", "name": "window" } },
+  "recordResult": { "name": "remainder", "kind": "milled" }
+}
+```
+
+This reuses ordinary discard/movement replacements and successful-arrival accounting. Optional `filter` and `amount` restrict that source; omitted amount means every current library member in the set. A missing set never becomes a whole-library mill. Ordinary amount-only milling is unchanged.
+
 A second instruction can select an artifact from the same window; the first selected card has left the library and is no longer in that window's current actionable members. A final instruction moves or orders all remaining current members. No follow-up may fall back to the whole library if the named set is missing.
 
-A chooser's permission and visibility are distinct. Seeing a public window does not let the opponent answer its controller's choice. Conversely, creating a choice must not itself reveal identities that its policy denies; require suitable face access or an explicitly supported blind-selection mode. Opponents can see public revealed cards while still seeing the ordinary waiting view for another player's pending decision. Unsubmitted selections stay private.
+A chooser's permission and visibility are distinct. Seeing a public window does not let the opponent answer its controller's choice. Conversely, creating a choice must not itself reveal identities that its policy denies; require suitable face access. A future blind-selection mode needs its own explicit contract. Opponents can see public revealed cards while still seeing the ordinary waiting view for another player's pending decision. Unsubmitted selections stay private.
 
-Use shared filters, `current`/`recorded` queries, explicit optional/mandatory bounds and ordinary movement/replacement handling. Take-all, distinct-name selections and repeated capture are separate validated recipe options, not ad hoc card handlers. Repetition must allocate distinct occurrence identities or explicitly replace a consumed window; duplicate names must not silently merge unrelated captures.
+Use shared filters, `current`/`recorded` queries, explicit optional/mandatory bounds and ordinary movement/replacement handling. Take-all uses the existing `allAvailable` search recipe. Distinct-name selections, same-zone picked-card exclusion and conditional repetition are still separate work, not silently accepted options. Repetition must allocate distinct occurrence identities or explicitly replace a consumed window; duplicate names must not silently merge unrelated captures.
 
 ## Current versus recorded observations
 
@@ -133,21 +160,25 @@ Capture does not have cancelled-movement semantics because it does not move anyt
 
 ## Projection, logs and lifecycle
 
-The current mill result maps are deliberately server-only. The current starter reveal path retains `resolutionReveals` and emits `CARD_REVEALED` on completion; it does not yet supply the configurable live window view proposed here. The existing chooser-only choice view is also insufficient for showing a public window to both players while one chooses.
+Raw mill/capture result maps and probes remain server-only. `PlayerView.observations` exposes separate `active` and `history` lists. Cards contain a viewer-specific opaque handle, printed definition identity and captured face display data, with no physical UUID, source positions, authored rule objects or actions. Hidden order is an independent stable handle order rather than source order. Library-choice options apply the same rule, including ordinary searches without a captured set. Public reveal events use canonical card order when any player lacks order visibility, preventing notifications or trigger discovery from disclosing the library order. The client has a read-only active observation panel and an expandable history beside its choices.
 
-Implement a projected active-observation view that reads the resolving stack/continuation and applies the policy. Keep raw result snapshots internal. Capture-time visibility must become available when the window is opened, not only after resolution, and reconnect must reconstruct the same authorized view. Reveal events need a single stable occurrence identity so replay does not fire twice; preserve existing starter trigger ordering until its migration is explicitly tested and documented.
+Capture-time information is available in the same committed snapshot/delta that opens the following choice. Reconnect reconstructs authorized observations from room state. Monotonic exposure sequences reject duplicate/out-of-order mutation replay. Public reveal triggers retain the existing completion-time ordering; migrating `reveal_top` does not fire them early or twice. A private look never enters that event/notification path.
 
-Public and private history must be projected per recipient. In particular, do not feed a private-look name into the current public `CARD_REVEALED` notification path. Authorized history may keep the observed snapshot after the active window closes, which supports browser refresh without granting current hand/library access. A later opponent reconnect must not receive another player's private observations through a shared log, delta or completion report.
+Every historical exposure stores its immutable audience and snapshots. History retention is bounded per viewer: private exposures cannot evict another player's legitimate history, reveal private revision gaps, or consume the other viewer's budget. Unauthorized names are absent from snapshots, deltas, notifications and refresh history. Decreasing active exposure preserves earlier legitimate observations without granting current hand/library access.
+
+Server-only diagnostics/internal delta logs may retain raw snapshots under the existing trusted logging policy. Those are not player replay payloads; player projection always runs again for the authenticated seat. Rooms remain in-memory; browser reconnect is supported, not server-crash room persistence.
 
 The collection and temporary grants survive payment, search and replacement pauses as serializable continuation data. They expire with the whole resolving object on completion, countering or fizzling. A cancelled optional reveal creates no observation or event. Earlier committed movement stays committed; collection cleanup never moves the cards again.
 
-## Delivery and acceptance
+## Ownership, verification and remaining scope
 
-1. Generalize capture anchors behind the existing result-source query API, retaining mill semantics and strict parser ownership.
-2. Add capture plus validated visibility/exposure updates, central audience resolution and projected active observations/history.
-3. Lower starter reveal recipes into this path and prove event/replay compatibility.
-4. Add explicit selection/remainder recipes, then implement complete workbook cards whose remaining dependencies are settled.
+- `types/card-observation.types.ts` owns typed audiences, snapshots and observation state; `CardState` owns base zone visibility.
+- `rules/schema/observations.ts` owns strict authored capture/exposure contracts, using the shared filter/result-source schemas.
+- `shared/observation-policy.ts` resolves audiences and validates implications; `shared/card-visibility.ts` owns normal zone defaults.
+- `engine/captured-windows.ts` creates named captures and changes current-member grants. `engine/observation-state.ts` owns replay-safe storage, retention and closure.
+- Existing result collectors, numeric queries, search choices, movement/replacement transactions and mill arrivals consume the same collection API. Saved captured choices recheck current face access before projection and acceptance.
+- Server `projection/observation-view.ts` emits per-viewer display snapshots. The client consumes these projections only.
 
-Focused logic tests should cover private look, public reveal, opponent-library roles, hidden count/order, partial exposure, chooser authority, no accidental reveal trigger, immutable historical counts, exact remainder membership, movement/reentry, JSON reconstruction, reconnect/deltas, cleanup and log redaction. Existing mill/reveal/card-query/projection tests remain regression checks. No long socket test or full suite is needed for this design slice.
+Focused logic checks cover private/public/partial exposure, count/order independence, opponent-library roles, immutable history, chooser authority, stale access, exact remainder milling and replacement redirects/pauses, short/empty libraries, reconstruction, replay, cleanup and projection/log redaction. Existing mill/reveal/query/zone/choice/trigger/numeric/protocol/client and architecture/readability checks are regression coverage. **360 distinct selected logic checks pass across 25 files**, using the latest result per file, including original catalog/preset preservation. All workspace typechecks pass. No browser smoke, long socket test or full suite is run. An incidental short HTTP/socket setup run found an occupied-seat test expecting 403 while the existing seat-claim path returns 409. That status mismatch is outside this visibility change and remains unresolved; subsequent scenario verification selects only its pure contract/fixture checks.
 
-This is an implementation design, not a completed engine unblocker or a change to card coverage. It addresses the retained-window foundation of the thirteen reveal rows; distinct-name rules, repetition, cross-owner destinations and other card-specific dependencies remain explicit work.
+This delivers retained-window infrastructure, not all thirteen complete reveal cards. Distinct printed-name selection, excluding a selected card which remains in the same zone, recursive repetition, off-zone source discovery and cross-owner hand destinations remain explicit dependencies. Persistent visibility and face-down public-zone mechanics need separately owned lifetimes and appropriate card-back views. Catalog coverage stays 72/142 until additional complete definitions are authored and proven.

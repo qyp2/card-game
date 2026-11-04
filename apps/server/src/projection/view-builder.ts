@@ -7,6 +7,7 @@ import { gameConfig, landPlayLimit } from '@card-game/engine/config';
 import { PROTOCOL_VERSION, type PlayerView, type StackView } from '@card-game/protocol';
 import { assertViewer, canSeeStackSource, canSeeHand, canSeeRpsPlay } from './reveal-policy';
 import { buildCardView } from './card-view';
+import { buildObservationViews } from './observation-view';
 import { buildChoiceView } from './choice-view';
 import { withCharacteristicCache } from '@card-game/engine/engine/card-characteristic-service';
 import { resolveSourceInformation } from '@card-game/engine/engine/source-information';
@@ -53,6 +54,7 @@ function projectPlayerView(room: GameRoom, viewerId: string): PlayerView {
     })),
     ...(room.combatDeclarations ? { combatDeclarations: { attackers: room.combatDeclarations.attackers, blockers: room.combatDeclarations.blockers } } : {}),
     ...(room.combatDamage ? { combatDamage: { completed: room.combatDamage.completed } } : { combatDamage: null }),
+    observations: buildObservationViews(room, viewerId),
     pendingChoice: buildChoiceView(room, viewerId),
     rpsState: { status: room.rpsState.status, playedCards: Object.fromEntries(Object.entries(room.rpsState.playedCards).filter(([id, value]) => canSeeRpsPlay(room, viewerId, id) && ['rock', 'paper', 'scissors'].includes(value))) },
   };

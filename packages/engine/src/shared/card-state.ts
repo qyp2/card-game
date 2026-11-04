@@ -1,3 +1,4 @@
+import { defaultCardVisibility } from './card-visibility';
 import type { CardBlueprint, CardState, CardZone } from '../types/card.types';
 
 /** Active state is constructed in one place for creation and real zone changes. */
@@ -9,6 +10,8 @@ export function createCardState(
 ): CardState {
   return {
     zone,
+    visibility: defaultCardVisibility(zone),
+    visibilityZone: zone,
     ownerId,
     controllerId,
     isTapped: false,

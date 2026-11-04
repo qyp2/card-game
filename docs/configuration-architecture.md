@@ -108,3 +108,6 @@ Runtime state belongs in SQLite/rooms, not config files. This refactor adds neit
 ## Milestone 7 lab capability
 
 `apps/server/src/config/lab.json` owns default-off capability and scenario/run capacity bounds. Capability additionally requires `navigation.purpose=lab` and `inspectionEnabled`; it is not panel-editable. `deploy/profiles/scenario-lab.example.json` supplies distinct local paths/identity/port. `npm run start:lab` selects that override and loopback binding; ordinary starts are unchanged. See [setup](scenario-lab-architecture.md). Development defaults now disable fixture fallback/debug; the test profile and explicit operator fixture mode retain legacy regressions. Normal selected-deck rooms resolve rule defaults without validating an unrelated fallback composition.
+
+
+Capture/reveal work and history retention use `packages/engine/src/config/observations.json`: `maxWindowCards` (default 64, validated range 8–256) and `historyLimit` (default 128 per viewer, range 1–1024). Reload/rebuild after editing. Private observation traffic cannot consume another viewer's history budget. See [card windows and visibility](card-window-design.md).

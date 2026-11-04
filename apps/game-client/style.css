@@ -1807,3 +1807,11 @@ label {
 .auto-pass-control { font-size: 0.85rem; }
 .auto-pass-control input { width: auto; }
 .auto-pass-control [role="status"] { font-variant-numeric: tabular-nums; }
+
+
+/* Read-only observations remain separate from actionable cards and the chooser's controls. */
+.card-observations { max-height: 15rem; overflow: auto; padding: .5rem; border: 1px solid #596174; border-radius: .4rem; }
+.card-observations h3, .card-observations p { margin: .25rem 0; }
+.card-observation { margin: .5rem 0; }
+.card-observation details { padding: .2rem 0; }
+.card-observation summary { cursor: pointer; }

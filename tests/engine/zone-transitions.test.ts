@@ -32,7 +32,8 @@ describe('central zone transitions', () => {
     const moved = next.players.player1[to === 'library' ? 'deck' : to][0];
     expect(moved.uuid).toBe(card.uuid);
     expect(moved.blueprint).toBe(card.blueprint);
-    expect(moved.state).toEqual({ zone: to, zoneRevision: 1, characteristicTimestamp: 1, ownerId: 'player1', controllerId: 'player1',
+    expect(moved.state).toEqual({ zone: to, visibility: { hand: 'owner', graveyard: 'public', library: 'hidden' }[to],
+      visibilityZone: to, zoneRevision: 1, characteristicTimestamp: 1, ownerId: 'player1', controllerId: 'player1',
       isTapped: false, damageTaken: 0, counters: {}, summoningSickness: false, attackedThisTurn: false });
     expect(card.state).toEqual(before);
     expect(next.battlefield).toEqual([]);

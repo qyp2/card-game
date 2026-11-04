@@ -1,3 +1,4 @@
+import { baseCardVisibleTo } from '@card-game/engine/shared/card-visibility';
 import type { GameRoom } from '@card-game/engine/types/game.room.types';
 import type { CardInstance } from '@card-game/engine/types/card.types';
 import type { StackObject } from '@card-game/engine/types/effect.types';
@@ -23,10 +24,12 @@ export function canSeeStackSource(room: GameRoom, viewerId: string, object: Stac
 }
 /** Visibility follows authoritative zone membership, not arbitrary nested card references. */
 export function canSeeCard(room: GameRoom, viewerId: string, card: CardInstance): boolean {
-  return room.battlefield.some(item => item.uuid === card.uuid)
-    || room.stack.some(item => item.type === 'spell' && item.source.uuid === card.uuid)
-    || room.players[viewerId]?.hand.some(item => item.uuid === card.uuid)
-    || Object.values(room.players).some(player => [...player.graveyard, ...player.exile ?? []].some(item => item.uuid === card.uuid));
+  const live = [...room.battlefield,
+    ...room.stack.flatMap(object => object.type === 'spell' ? [object.source] : []),
+    ...Object.values(room.players).flatMap(player => [...player.deck, ...player.hand, ...player.graveyard, ...player.exile ?? []]),
+  ].find(item => item.uuid === card.uuid && item.state.zone === card.state.zone &&
+    (item.state.zoneRevision ?? 0) === (card.state.zoneRevision ?? 0));
+  return !!live && baseCardVisibleTo(live, viewerId);
 }
 
 export function visibleTargetCards(room: GameRoom, viewerId: string): CardInstance[] {

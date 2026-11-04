@@ -3,6 +3,7 @@
 // Returns a new GameRoom with shallow copies along the changed path.
 // Untouched subtrees are shared by reference.
 
+import { recordCardObservation, closeCardObservations } from './observation-state';
 import { trackCausalChange } from './change-cause';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { DamageAssignment } from '../types/damage.types';
@@ -176,6 +177,10 @@ export function reduceGameOperation(state: GameRoom, mutation: GameMutation): Op
     if (worldGained) next = { ...next, effectTimestamp: worldTimestamp };
   }
 
+  if (next.status === 'gameOver') next = closeCardObservations(next);
+  for (const object of state.stack) {
+    if (!next.stack.some(current => current.uuid === object.uuid)) next = closeCardObservations(next, object.uuid);
+  }
   next = characteristicsChanged || next.combat !== state.combat ? reconcileCombat(next) : next;
 
   return { ...outcome, state: trackCausalChange(state, next, mutation) };
@@ -186,6 +191,8 @@ function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | Ope
   if (state.status === 'gameOver' || state.outcome) return state;
 
   switch (mutation.type) {
+    case 'RECORD_CARD_OBSERVATION': return recordCardObservation(state, mutation.observation, mutation.sequence);
+    case 'CLOSE_CARD_OBSERVATIONS': return closeCardObservations(state, mutation.ownerStackUuid);
     case 'SHUFFLE_LIBRARY': return applyLibraryShuffle(state, mutation);
     case 'REORDER_LIBRARY': return applyLibraryReorder(state, mutation);
 

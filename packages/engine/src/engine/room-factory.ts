@@ -3,6 +3,7 @@ import type { PlayerState } from '../types/game.player.types';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { CardInstance } from '../types/card.types';
 
+import { createCardState } from '../shared/card-state';
 import { instantiateCard, getBlueprint } from '../library/card-factory';
 import { gameConfig, snapshotSetupConfig } from '../config';
 import type { SetupConfig, RoomSettings } from '../types/setup-config.types';
@@ -92,15 +93,11 @@ export function setupRPS(
 
   for (const id of RPS_CARD_IDS) {
     const c1 = instantiateCard(id, context);
-    c1.state.zone = 'hand';
-    c1.state.ownerId = room.player1Id;
-    c1.state.controllerId = room.player1Id;
+    c1.state = createCardState(c1.blueprint, room.player1Id, room.player1Id, 'hand');
     p1.hand.push(c1);
 
     const c2 = instantiateCard(id, context);
-    c2.state.zone = 'hand';
-    c2.state.ownerId = room.player2Id;
-    c2.state.controllerId = room.player2Id;
+    c2.state = createCardState(c2.blueprint, room.player2Id, room.player2Id, 'hand');
     p2.hand.push(c2);
   }
 }
@@ -152,14 +149,14 @@ export function dealStartingHands(room: GameRoom): void {
     const p1Card = p1.deck.pop();
 
     if (p1Card) {
-      p1Card.state.zone = 'hand';
+      p1Card.state = createCardState(p1Card.blueprint, p1.id, p1.id, 'hand');
       p1.hand.push(p1Card);
     }
 
     const p2Card = p2.deck.pop();
 
     if (p2Card) {
-      p2Card.state.zone = 'hand';
+      p2Card.state = createCardState(p2Card.blueprint, p2.id, p2.id, 'hand');
       p2.hand.push(p2Card);
     }
   }

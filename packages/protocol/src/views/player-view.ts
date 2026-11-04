@@ -21,7 +21,7 @@ export interface CardView {
   uuid: string; definitionId: string; name: string; label: string; cardTypes: string[];
   subTypes: string[]; keywords: string[]; rulesText: string; manaCost: string;
   power?: number; toughness?: number; isToken?: boolean;
-  state: Pick<CardState, 'zone' | 'ownerId' | 'controllerId' | 'zoneRevision' | 'isTapped' | 'damageTaken' | 'summoningSickness' | 'attackedThisTurn' | 'counters' | 'attachedTo' | 'attachedToRevision' | 'attachedToPlayerId' | 'protectorId'>;
+  state: Pick<CardState, 'visibility' | 'zone' | 'ownerId' | 'controllerId' | 'zoneRevision' | 'isTapped' | 'damageTaken' | 'summoningSickness' | 'attackedThisTurn' | 'counters' | 'attachedTo' | 'attachedToRevision' | 'attachedToPlayerId' | 'protectorId'>;
   defaultActionId?: ActionIdOrAbility;
   actions: ActionOption[];
   targetGroups: Record<string, TargetGroupView[]>;
@@ -48,7 +48,17 @@ export interface PlayerStateView {
   id: string; life: number; failedDraw?: boolean; mana: ManaPool;
   hand: CardView[]; handCount: number; deckCount: number; graveyard: CardView[]; exile: CardView[];
 }
+export interface ObservedCardView {
+  id: string; definitionId: string; name: string; cardTypes: string[]; subTypes: string[];
+  rulesText: string; power?: number; toughness?: number;
+}
+export interface CardObservationView {
+  /** Count includes only members whose count visibility admits this viewer, never a hidden total. */
+  id: string; turnNumber: number; count?: number; ordered: boolean;
+  cards?: ObservedCardView[];
+}
 export interface PlayerView extends Versioned {
+  observations?: { active: CardObservationView[]; history: CardObservationView[] };
   viewerId: string; roomId: string; player1Id: string; player2Id: string | null;
   players: Record<string, PlayerStateView>; phase: Phase; status: GameStatus; debugMode: DebugMode;
   turnNumber: number; outcome?: GameOutcome; engineState: 'waiting_for_player' | 'resolving_stack' | 'state_based_actions' | 'game_over';

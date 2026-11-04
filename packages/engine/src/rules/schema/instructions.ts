@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { observationLimits } from '../../shared/observation-policy';
+import { CaptureWindowSchema, CollectionVisibilitySchema } from './observations';
 import {
   Color,
   Count,
@@ -10,6 +12,7 @@ import {
   Zone,
   CardFilterSchema,
   CostSchema,
+  CardResultSourceSchema,
 } from './shared';
 import { AuthoredReplacementSchema } from './event-replacements';
 
@@ -24,6 +27,8 @@ export const InstructionNames = {
   SHUFFLE: ['cards', 'shuffle'],
   REORDER_LIBRARY: ['cards', 'reorder_library'],
   REVEAL_TOP: ['cards', 'reveal_top'],
+  CAPTURE_WINDOW: ['cards', 'capture_window'],
+  SET_COLLECTION_VISIBILITY: ['cards', 'set_collection_visibility'],
   MOVE_ZONE: ['cards', 'move'],
   DESTROY: ['cards', 'destroy'],
   SACRIFICE: ['cards', 'sacrifice'],
@@ -58,6 +63,8 @@ export function instructionParameterSchemas(
     .strictObject(stats)
     .refine((v) => v.power !== undefined || v.toughness !== undefined, 'Stat change requires a value');
   return {
+    CAPTURE_WINDOW: CaptureWindowSchema,
+    SET_COLLECTION_VISIBILITY: CollectionVisibilitySchema,
     PAY_COST: z.strictObject({
       cost: CostSchema,
       then: z.array(z.lazy(instruction)).min(1).max(32),
@@ -65,7 +72,11 @@ export function instructionParameterSchemas(
     }),
     ATTACH: empty,
     CLAIM_REVEALED_SELF: z.strictObject({ discard: z.boolean().optional() }),
-    DISCARD_FROM_LIBRARY: z.strictObject({ amount: EffectCount }),
+    DISCARD_FROM_LIBRARY: z.union([
+      z.strictObject({ amount: EffectCount }),
+      z.strictObject({ from: CardResultSourceSchema.extend({ view: z.literal('current').optional() }),
+        filter: CardFilterSchema.optional(), amount: EffectCount.optional() }),
+    ]),
     DISCARD_FROM_HAND: z.strictObject({ amount: EffectCount }),
     DISCARD_HAND: empty,
     DRAW: z.strictObject({ amount: EffectCount }),
@@ -73,7 +84,7 @@ export function instructionParameterSchemas(
     REORDER_LIBRARY: z.strictObject({ placement: z.enum(['top', 'bottom']) }),
     REVEAL_TOP: z
       .strictObject({
-        amount: Count.min(1).max(3),
+        amount: Count.min(1).max(observationLimits.maxWindowCards),
         filter: CardFilterSchema.optional(),
         min: Count.optional(),
         max: Count.optional(),

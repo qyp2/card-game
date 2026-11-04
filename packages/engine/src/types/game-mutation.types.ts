@@ -14,6 +14,8 @@ import type { LibraryCardReference, LibraryPlacement } from './library.types';
 
 export type GameMutation = GameMutationBody & { cause?: import('./change-cause.types').ChangeCause; kill?: import('./change-cause.types').KillOutcome };
 type GameMutationBody =
+  | { type: 'RECORD_CARD_OBSERVATION'; observation: import('./card-observation.types').CardObservation; sequence: number }
+  | { type: 'CLOSE_CARD_OBSERVATIONS'; ownerStackUuid: string }
   | { type: 'SHUFFLE_LIBRARY'; playerId: PlayerId; order: LibraryCardReference[] }
   | { type: 'REORDER_LIBRARY'; playerId: PlayerId; order: LibraryCardReference[] }
   | { type: 'ADD_REPLACEMENT_EFFECT'; effect: Omit<import('./proposed-event.types').ReplacementDefinition, 'id'> & { id?: string } }

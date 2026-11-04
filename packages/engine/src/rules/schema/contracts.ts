@@ -142,12 +142,22 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() =>
         });
         return;
       }
-      if (value.recordResult && action !== 'DISCARD_FROM_LIBRARY')
+      if (value.recordResult && !((action === 'DISCARD_FROM_LIBRARY' && value.recordResult.kind === 'milled') ||
+        (action === 'CAPTURE_WINDOW' && value.recordResult.kind === 'captured')))
         ctx.addIssue({
           code: 'custom',
           path: ['recordResult'],
-          message: 'Milled results require a mill instruction',
+          message: 'Result kind must match its mill or capture instruction',
         });
+      if (action === 'CAPTURE_WINDOW' && !value.recordResult) {
+        ctx.addIssue({ code: 'custom', path: ['recordResult'], message: 'Capture requires a named captured result' });
+      }
+      if (['CAPTURE_WINDOW', 'SET_COLLECTION_VISIBILITY'].includes(action) &&
+        (value.choice || value.targetGroup || value.recordOutcome || value.onKill ||
+          (value.targeting && (value.targeting.type !== 'self' || value.targeting.required ||
+            Object.keys(value.targeting).some(key => !['type', 'required'].includes(key)))))) {
+        ctx.addIssue({ code: 'custom', message: 'Collection instructions do not accept targeting or outcome choices' });
+      }
       const parsed = parameters[action as InstructionAction].safeParse(value.params ?? {});
       if (!parsed.success)
         for (const issue of parsed.error.issues)

@@ -1,3 +1,5 @@
+import { createCardState } from '../shared/card-state';
+import { defaultCardVisibility } from '../shared/card-visibility';
 import { createRoom, joinRoom } from './room-factory';
 import { instantiateCard } from '../library/card-factory';
 import { gameConfig } from '../config';
@@ -54,7 +56,8 @@ export function buildScenarioRoom(roomId: string, players: readonly [
     players.forEach((id, index) => {
         const spec = input.players[index], p = room.players[id];
         p.life = spec.life;
-        const cards = (ids: readonly string[], zone: 'library' | 'hand' | 'graveyard' | 'battlefield') => ids.map(cardId => { const card = instantiateCard(cardId, context); card.state = { ...card.state, ownerId: id, controllerId: id, zone }; return card; });
+        const cards = (ids: readonly string[], zone: 'library' | 'hand' | 'graveyard' | 'battlefield') => ids.map(cardId => { const card = instantiateCard(cardId, context); card.state = { ...card.state, ownerId: id, controllerId: id, zone,
+          visibility: defaultCardVisibility(zone), visibilityZone: zone }; return card; });
         let library = [...(spec.libraryOrder ?? expand(spec.library))];
         if (input.shuffle === 'seeded')
             for (let i = library.length - 1; i > 0; i--) {
@@ -68,7 +71,7 @@ export function buildScenarioRoom(roomId: string, players: readonly [
             const card = p.deck.pop();
             if (!card)
                 throw new Error('Invalid opening draw');
-            card.state.zone = 'hand';
+            card.state = createCardState(card.blueprint, id, id, 'hand');
             p.hand.push(card);
         }
         room.battlefield.push(...cards(expand(spec.battlefield), 'battlefield'));

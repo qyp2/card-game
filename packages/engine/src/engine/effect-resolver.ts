@@ -1,4 +1,5 @@
 // src/engine/effect-resolver.ts
+import { captureCardWindow, setCollectionVisibility } from './captured-windows';
 import { offerResolutionPayment } from './resolution-payments';
 import { attributeMutations, effectCause } from './change-cause';
 import { EffectRegistry } from './effect-registry';
@@ -323,6 +324,16 @@ function continueResolution(
         continue;
       }
 
+      if (effect.action === 'CAPTURE_WINDOW' || effect.action === 'SET_COLLECTION_VISIBILITY') {
+        const plan = effect.action === 'CAPTURE_WINDOW'
+          ? captureCardWindow(workingRoom, resolving, effect) : setCollectionVisibility(workingRoom, resolving, effect);
+        resolving = plan.object;
+        mutations.push(...plan.mutations);
+        for (const mutation of plan.mutations) workingRoom = gameReducer(workingRoom, mutation);
+        results.push({ effectId: effect.action, fizzled: false });
+        continue;
+      }
+
       if (effect.action === 'PAY_COST') {
         const payment = offerResolutionPayment(workingRoom, resolving, index, results);
         if (!payment.success) throw new Error(payment.reason);
@@ -408,6 +419,9 @@ function continueResolution(
     }
   }
 
+  if (Object.values(workingRoom.cardObservations?.active ?? {}).some(item => item.ownerStackUuid === resolving.uuid)) {
+    mutations.push({ type: 'CLOSE_CARD_OBSERVATIONS', ownerStackUuid: resolving.uuid });
+  }
   resolving = clearCardResults(resolving);
   mutations.push(...applyStructuralZoneChange(workingRoom, resolving).mutations);
 

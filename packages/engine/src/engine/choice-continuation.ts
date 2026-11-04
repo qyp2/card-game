@@ -1,4 +1,5 @@
 import type { ActionData, ActionResult } from './action-registry';
+import { capturedChoiceAllowed } from './captured-windows';
 import { gameReducer } from './game-reducer';
 import { validateChoiceAnswer } from './choices';
 import { applyResolutionChoice } from './resolution-choices';
@@ -39,6 +40,7 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
   // Guard: the choice must belong to this player and still be current.
   if (choice.playerId !== playerId) return reject('This choice belongs to another player');
   if (data.choiceId !== choice.id) return reject('Choice request is stale');
+  if (!capturedChoiceAllowed(host.room, choice)) return reject('Captured card access is no longer available');
 
   if (choice.continuation.type === 'resolution' && 'paymentStage' in choice.continuation) {
     const answer = data.cancel === true ? undefined : validateChoiceAnswer(choice, data);

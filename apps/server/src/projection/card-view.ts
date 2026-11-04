@@ -7,6 +7,7 @@ import { battlefieldCardLabel } from '@card-game/engine/shared/card-label';
 import type { CardView } from '@card-game/protocol';
 import { buildTargetGroups } from './target-groups';
 import { isPublicPermanent } from './reveal-policy';
+import { baseCardVisibility } from '@card-game/engine/shared/card-visibility';
 import { projectActionOptions } from './action-options';
 
 const options = new OptionService();
@@ -32,6 +33,7 @@ export function buildCardView(room: GameRoom, viewerId: string, card: CardInstan
     ...(creature ? { power: effective.power, toughness: effective.toughness } : {}),
     ...(card.isToken ? { isToken: true } : {}),
     state: {
+      visibility: baseCardVisibility(card),
       zone: state.zone, ownerId: state.ownerId, controllerId: effective.controllerId,
       zoneRevision: state.zoneRevision ?? 0, isTapped: state.isTapped, damageTaken: state.damageTaken,
       summoningSickness: state.summoningSickness, attackedThisTurn: state.attackedThisTurn,

@@ -2,7 +2,7 @@
 
 **Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
 
-Status: mill results implemented, 2026-11-03. Supplements the [rule contracts](rule-contract-architecture.md) and [shared card queries](card-query-architecture.md). The [captured-window and visibility extension](card-window-design.md) is a proposed design, not yet a runtime capability.
+Status: mill results implemented, 2026-11-03. Supplements the [rule contracts](rule-contract-architecture.md) and [shared card queries](card-query-architecture.md). The [captured-window and visibility extension](card-window-design.md) is implemented on the same result-source API.
 
 ## Decision
 
@@ -36,7 +36,7 @@ A mill instruction may capture a result:
 }
 ```
 
-`recordResult` is currently supported only for mill instructions. Names are safe nonempty identifiers, local to a single resolving stack object. Executing a second declaration of the same name is an error, not an overwrite; use distinct names for successive mills. No result is allocated for ordinary instructions that do not request capture.
+`recordResult` supports mill (`kind: "milled"`) and library capture (`kind: "captured"`) instructions. Names are safe nonempty identifiers, local to a single resolving stack object. Executing a second declaration of the same name is an error, not an overwrite; use distinct names for successive mills. No result is allocated for ordinary instructions that do not request capture.
 
 A later instruction can search that set using the ordinary card filters and choice flow:
 
@@ -111,7 +111,7 @@ Earlier trusted diagnostic events/logs can contain snapshots of a pending contin
 
 This adds exact-mill recovery, current/historical filtered counts and conditional follow-up instructions without per-card handlers. It reuses normal movement, replacement decisions, numeric expression validation and the existing choice UI. Capturing full characteristic snapshots costs memory/work only for instructions opting into results; ordinary milling remains unchanged.
 
-The explicit current/recorded distinction adds authoring detail but prevents stale-card recovery and changing historical counts. Persistent remembered sets, result iteration, stat summation, milling-quantity modifiers, new physical zones and new workbook cards are outside this change. Larger capture/reveal windows and configurable visibility follow the [shared collection design](card-window-design.md). Counter-removal and optional ordinary payments are now delivered separately in the [payment guide](counter-payment-architecture.md); material costs and unspecified special-summon wording remain separate work.
+The explicit current/recorded distinction adds authoring detail but prevents stale-card recovery and changing historical counts. Persistent remembered sets, result iteration, stat summation, milling-quantity modifiers, new physical zones and new workbook cards are outside this change. Larger capture/reveal windows and configurable visibility are implemented through the [shared collection guide](card-window-design.md). Counter-removal and optional ordinary payments are now delivered separately in the [payment guide](counter-payment-architecture.md); material costs and unspecified special-summon wording remain separate work.
 
 The exact-card portion of 幻像祭壇's mill-then-claim blocker is now supported; its tapped-entry requirement still needs its own implementation. The creature-count portion of 諸界六皇 萬智之德步尼 is supported; its per-game activation and integer-division requirements remain. No workbook implementation count changes.
 
