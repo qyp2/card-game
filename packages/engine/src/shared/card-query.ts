@@ -96,5 +96,15 @@ export function collectCards(
       if (includes('library')) cards.push(...player.deck);
       if (includes('exile')) cards.push(...(player.exile ?? []));
     }
-  return [...new Map(cards.map((card) => [card.uuid, card])).values()];
+
+  // Keep the first occurrence of each uuid. Battlefield and stack are collected
+  // before the player zones, so a card caught mid-transition (present in both a
+  // live zone and a stale one) resolves as the live object rather than the
+  // leftover copy. Callers key characteristic maps by object identity, so the
+  // surviving object has to be the one they will look up.
+  const unique = new Map<string, CardInstance>();
+
+  for (const card of cards) if (!unique.has(card.uuid)) unique.set(card.uuid, card);
+
+  return [...unique.values()];
 }

@@ -10,11 +10,17 @@ import type { StackObject, StackEffect } from '@shared/effect.types';
 import { v4 as uuidv4 } from 'uuid';
 
 function makeStackObj(room: GameRoom, effects: StackEffect[]): StackObject {
+  // A real card, not a stub: resolving an effect now reads the source's
+  // characteristics, so the source has to be a well-formed instance.
+  const source = instantiateCard('empire-servant');
+  source.state.ownerId = 'player1';
+  source.state.controllerId = 'player1';
+
   return {
     uuid: uuidv4(),
     type: 'spell',
     controllerId: 'player1',
-    source: {} as any,
+    source,
     effects,
     countered: false,
   };
@@ -229,11 +235,15 @@ describe('revalidateTargets', () => {
   });
 
   it('should keep stack targets that are still on the stack', () => {
+    const source = instantiateCard('empire-servant');
+    source.state.ownerId = 'player2';
+    source.state.controllerId = 'player2';
+
     const stackObj = {
       uuid: 'stack-uuid-1',
       type: 'spell' as const,
       controllerId: 'player2',
-      source: {} as any,
+      source,
       effects: [],
       countered: false,
     };
@@ -416,11 +426,15 @@ describe('buildDynamicParams', () => {
       targets: [],
     };
 
+    const source = instantiateCard('empire-servant');
+    source.state.ownerId = 'player1';
+    source.state.controllerId = 'player1';
+
     const stackObj = {
       uuid: 'test-uuid',
       type: 'spell' as const,
       controllerId: 'player1',
-      source: {} as any,
+      source,
       effects: [effect],
       countered: false,
     };

@@ -31,12 +31,17 @@ import path from 'node:path';
  * `undocumented-export` were paid back to their original budgets in the same
  * merge, and the remaining long lines are confined to the new files listed in
  * `docs/readability-gate.md`. Paying that debt down is tracked separately.
+ *
+ * Lowered on 2026-11-04 after `platform/foundation` was merged into `main` and
+ * the branch's own formatting pass landed: 380 -> 221 long lines, 46 -> 41
+ * nested ternaries, 33 -> 20 undocumented exports. `else-after-return` stays at
+ * zero. Every number here is measured, never assumed.
  */
 const BUDGET: Record<ReadabilityRule, number> = {
-  'max-line-length': 380,
-  'nested-ternary': 46,
+  'max-line-length': 221,
+  'nested-ternary': 41,
   'else-after-return': 0,
-  'undocumented-export': 33,
+  'undocumented-export': 20,
 };
 
 const repoRoot = process.cwd();

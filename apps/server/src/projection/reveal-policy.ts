@@ -24,11 +24,14 @@ export function canSeeStackSource(room: GameRoom, viewerId: string, object: Stac
 }
 /** Visibility follows authoritative zone membership, not arbitrary nested card references. */
 export function canSeeCard(room: GameRoom, viewerId: string, card: CardInstance): boolean {
+  // Locate the card by identity and read visibility from the live instance. The
+  // caller's object may be a stale reference to an earlier incarnation (a source
+  // that has since changed zone), so its own state must never be trusted; only
+  // the room's authoritative membership decides what the viewer may see.
   const live = [...room.battlefield,
     ...room.stack.flatMap(object => object.type === 'spell' ? [object.source] : []),
     ...Object.values(room.players).flatMap(player => [...player.deck, ...player.hand, ...player.graveyard, ...player.exile ?? []]),
-  ].find(item => item.uuid === card.uuid && item.state.zone === card.state.zone &&
-    (item.state.zoneRevision ?? 0) === (card.state.zoneRevision ?? 0));
+  ].find(item => item.uuid === card.uuid);
   return !!live && baseCardVisibleTo(live, viewerId);
 }
 

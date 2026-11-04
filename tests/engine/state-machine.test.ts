@@ -319,11 +319,17 @@ describe('StateMachine', () => {
     });
 
     function makeStackObj(uuid: string, controllerId: string) {
+      // A real card, not a stub: resolving an effect now reads the source's
+      // characteristics, so the source has to be a well-formed instance.
+      const source = instantiateCard('empire-servant');
+      source.state.ownerId = controllerId;
+      source.state.controllerId = controllerId;
+
       return {
         uuid,
         type: 'spell' as const,
         controllerId,
-        source: { id: 'test', uuid: `card-${uuid}`, name: 'Test Card', cardTypes: ['Spell'] as any, state: { zone: 'stack' as const } as any },
+        source,
         effects: [] as any[],
         countered: false,
       };

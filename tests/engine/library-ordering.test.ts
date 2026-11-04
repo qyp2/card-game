@@ -178,7 +178,12 @@ describe('ordered library operations', () => {
       const mutations = engine.applyMutations([instruction]);
       const batches = engine.drainEventBatches();
       expect(batches.flatMap(batch => batch.events).map(event => event.eventId)).toEqual(['MUTATION_APPLIED']);
-      expect(batches[0].mutations).toEqual([instruction]);
+
+      // The committer stamps a causal identity onto every mutation it publishes.
+      // The batch must still carry exactly the reorder instruction, so compare
+      // the payload and ignore that bookkeeping field.
+      expect(batches[0].mutations.map(({ cause, ...rest }) => rest)).toEqual([instruction]);
+
       const delta = new SyncService({} as never).buildDelta(room, mutations, { action: 'test', playerId: 'player1', batches });
       expect(delta.changes.map(change => change.path)).toEqual(['players.player1.deck']);
       expect(applyDeltaChanges(room, JSON.parse(JSON.stringify(delta.changes)))).toEqual(JSON.parse(JSON.stringify(engine.roomState)));

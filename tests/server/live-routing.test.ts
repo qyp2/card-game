@@ -18,6 +18,7 @@ import { GameLogger } from '@rules/game-logger';
 import { gameConfig, triggerTestSetup, st01aTestSetup, workbookTestSetup, smallMechanicsTestSetup } from '@config';
 import { describeStackObject } from '@rules/action-description';
 import { buildPlayerView } from '@server/projection/view-builder';
+import { optionId } from '@server/projection/choice-view';
 import type { PlayerView, ViewDelta } from '@card-game/protocol';
 import { AuthResponseSchema, type AuthResponse } from '@card-game/protocol';
 import { createGameApplication } from '@server/application';
@@ -228,7 +229,11 @@ describe('actual server routing', { timeout: 15_000 }, () => {
       const raw = m.engine.roomState.pendingChoice;
       const dto = buildPlayerView(m.engine.roomState, view === m.a ? m.p1 : m.p2).pendingChoice;
       if (raw && raw.kind !== 'number' && dto && dto.kind !== 'number' && dto.kind !== 'waiting') {
-        const ids = new Map(raw.options.map((option, index) => [option.id, dto.options[index].id]));
+        // The projection may reorder options to hide a library's source order, so
+        // position is not a reliable correspondence. Recompute the handle the
+        // projection would have issued for each raw option instead.
+        const viewerId = view === m.a ? m.p1 : m.p2;
+        const ids = new Map(raw.options.map(option => [option.id, optionId(m.engine.roomState, raw.id, viewerId, option.id)]));
         data = { ...data };
         if (Array.isArray(data.choices)) data.choices = data.choices.map(id => ids.get(id) ?? id);
         if (data.allocations && typeof data.allocations === 'object') data.allocations = Object.fromEntries(Object.entries(data.allocations).map(([id, amount]) => [ids.get(id) ?? id, amount]));
@@ -1740,7 +1745,9 @@ describe('actual server routing', { timeout: 15_000 }, () => {
     const visitor = await client('visitor');
     const error = once<{ message: string }>(visitor.socket, 'error');
     visitor.socket.emit('playerAction', { protocolVersion: 1, roomId: m.roomId, actionId: 'end_turn', playerId: m.p1 });
-    expect((await error).message).toContain('not in this room');
+    // A socket that never joined is rejected by the seat check before the engine
+    // ever sees the packet, so the message names the seat rather than the player.
+    expect((await error).message).toContain('not seated in that room');
     expect(await visitor.socket.timeout(2500).emitWithAck('getOptions', { protocolVersion: 1, roomId: m.roomId, cardUuid: 'missing', zone: 'hand' })).toMatchObject({ protocolVersion: 1, options: [] });
     expect(await m.a.socket.timeout(2500).emitWithAck('getOptions', null)).toMatchObject({ protocolVersion: 1, options: [] });
     const options = once<{ options: unknown[] }>(m.a.socket, 'optionsForCard');

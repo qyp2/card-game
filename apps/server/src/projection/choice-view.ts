@@ -9,7 +9,7 @@ import { canSeeChoice, choiceOptionLabel } from './reveal-policy';
 // Stable for reconnects within this process; rooms themselves are in-memory.
 // These are option handles, not authentication credentials.
 const choiceKey = randomBytes(32);
-function optionId(room: GameRoom, choiceId: string, playerId: string, id: string): string {
+export function optionId(room: GameRoom, choiceId: string, playerId: string, id: string): string {
   return createHmac('sha256', choiceKey)
     .update(JSON.stringify([room.roomId, choiceId, playerId, id]))
     .digest('hex');

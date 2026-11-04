@@ -156,7 +156,12 @@ export function trackCausalChange(before: GameRoom, after: GameRoom, mutation: G
     afterValues = resolveRoomCharacteristics(after);
   for (const card of after.battlefield) {
     const old = before.battlefield.find((c) => causalKey(c) === causalKey(card));
-    const value = afterValues.get(card)!;
+    const value = afterValues.get(card);
+
+    // Guard: a battlefield card the board evaluation did not cover cannot be
+    // attributed. Skipping it is safer than dereferencing a missing value.
+    if (!value) continue;
+
     if (!value.cardTypes.includes('Creature')) continue;
     const previous = old ? beforeValues.get(old) : undefined;
     const health = value.toughness - card.state.damageTaken;
