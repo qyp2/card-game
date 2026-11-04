@@ -217,7 +217,7 @@ The largest remaining family is **captured reveal workflows: 13 missing cards**.
 
 Counter payments and optional ordinary payments during resolution are delivered. They clear all six former counter-cost dependencies and the optional payment clauses of 幻影夢人, 幻影魔神 赫拉尼亞 and 獸帝的號令. Other clauses still block those cards. **Five PAY rows remain**: 亞拉里亞的終末 (selected exile), 天域三侯 坡加 / 天使的皇座 (binding/storage), and 蒼海王子 / 深淵巨人 (ritual materials). Counts overlap other families.
 
-1. Deliver retained reveal windows with shared filters, independent selections, deployment and explicit remainder destinations/order. Extend the existing resolution-result ownership model; do not invent a second physical card zone.
+1. Deliver retained reveal/look windows with shared filters, independent selections, deployment and explicit remainder destinations/order. The [captured-window design](card-window-design.md) reuses resolution-result ownership, separates movement from capture, and makes faces/count/order visibility explicit. It is planned, not a delivered unblocker; do not invent a second physical card zone.
 2. Author/prove complete recipes whose dependencies are cleared. 幻影女王 赫拉 and 天使皇 亞拉里亞 are now registered and tested. The two Ghostfire mill recipes remain confirmed U; delivering those would reach **74/142** registered rows, leaving **68** missing.
 3. Resolve 冰龍魔杖's staff/host wording before implementing it. Clearing a payment dependency does not settle its intended source.
 4. Complete/prove counter-owned Aurora/霜器 behavior, then combat lifetimes, host storage, ritual/random/cross-owner and immunity behavior.

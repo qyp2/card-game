@@ -2,7 +2,7 @@
 
 **Current blocker status:** see [the current card blocker ledger](card-blockers-current.md). Tables and verification counts below describe their original delivery snapshots.
 
-Status: implemented, 2026-11-03. Supplements the [rule contracts](rule-contract-architecture.md) and [shared card queries](card-query-architecture.md).
+Status: mill results implemented, 2026-11-03. Supplements the [rule contracts](rule-contract-architecture.md) and [shared card queries](card-query-architecture.md). The [captured-window and visibility extension](card-window-design.md) is a proposed design, not yet a runtime capability.
 
 ## Decision
 
@@ -111,7 +111,7 @@ Earlier trusted diagnostic events/logs can contain snapshots of a pending contin
 
 This adds exact-mill recovery, current/historical filtered counts and conditional follow-up instructions without per-card handlers. It reuses normal movement, replacement decisions, numeric expression validation and the existing choice UI. Capturing full characteristic snapshots costs memory/work only for instructions opting into results; ordinary milling remains unchanged.
 
-The explicit current/recorded distinction adds authoring detail but prevents stale-card recovery and changing historical counts. Persistent remembered sets, result iteration, stat summation, milling-quantity modifiers, new physical zones and new workbook cards are outside this change. Existing larger reveal windows, material/counter-removal costs and unspecified special-summon wording remain separate work.
+The explicit current/recorded distinction adds authoring detail but prevents stale-card recovery and changing historical counts. Persistent remembered sets, result iteration, stat summation, milling-quantity modifiers, new physical zones and new workbook cards are outside this change. Larger capture/reveal windows and configurable visibility follow the [shared collection design](card-window-design.md). Counter-removal and optional ordinary payments are now delivered separately in the [payment guide](counter-payment-architecture.md); material costs and unspecified special-summon wording remain separate work.
 
 The exact-card portion of 幻像祭壇's mill-then-claim blocker is now supported; its tapped-entry requirement still needs its own implementation. The creature-count portion of 諸界六皇 萬智之德步尼 is supported; its per-game activation and integer-division requirements remain. No workbook implementation count changes.
 
