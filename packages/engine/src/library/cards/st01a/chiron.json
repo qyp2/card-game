@@ -38,6 +38,14 @@
           "minTargets": 1,
           "maxTargets": 1
         }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       }
     },
     {
@@ -62,6 +70,14 @@
           "minTargets": 1,
           "maxTargets": 1
         }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       }
     },
     {
@@ -85,6 +101,14 @@
           "required": true,
           "minTargets": 1,
           "maxTargets": 1
+        }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
         }
       }
     }

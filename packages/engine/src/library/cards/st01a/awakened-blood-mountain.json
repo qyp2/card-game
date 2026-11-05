@@ -16,7 +16,13 @@
       "type": "triggered",
       "triggerCondition": "ON_LIFE_LOSS",
       "trigger": {
-        "controller": "opponent"
+        "controller": "opponent",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",
@@ -42,6 +48,13 @@
             "path": "event.payload.sourceInfo.card.lastKnownCharacteristics.subTypes"
           },
           "right": "炎獸"
+        },
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "library",
+            "hand"
+          ]
         }
       },
       "effect": {

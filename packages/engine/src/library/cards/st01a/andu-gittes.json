@@ -39,6 +39,13 @@
               "right": "Creature"
             }
           ]
+        },
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "library",
+            "hand"
+          ]
         }
       },
       "effects": [

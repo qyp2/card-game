@@ -1,6 +1,9 @@
 import type { CardInstance, CardSnapshot } from '../types/card.types';
 import type { GameRoom } from '../types/game.room.types';
 import type { StackObject } from '../types/effect.types';
+import { roomCards } from './continuous-effect-state';
+import { sameCardObject } from '../shared/card-identity';
+import { TRIGGER_EVENTS } from './trigger-events';
 import { CardCharacteristicService } from './card-characteristic-service';
 
 /** Snapshot a card's characteristics at the moment it becomes a source. */
@@ -25,10 +28,7 @@ export function retainDepartingSource(object: StackObject, snapshot: CardSnapsho
 
   // Spells carry their own source; only permanents need a departure snapshot,
   // and only while the object still matches the snapshot's incarnation.
-  return object.type !== 'spell' &&
-    source.uuid === snapshot.card.uuid &&
-    source.state.zone === snapshot.card.state.zone &&
-    (source.state.zoneRevision ?? 0) === (snapshot.card.state.zoneRevision ?? 0)
+  return object.type !== 'spell' && sameCardObject(source, snapshot.card)
     ? { ...object, sourceInfo: snapshot }
     : object;
 }
@@ -38,14 +38,7 @@ export function resolveSourceInformation(room: GameRoom, object: StackObject): C
   const expected = object.source;
 
   // Prefer the live card, but only if it is still the same incarnation.
-  const live = [
-    ...room.battlefield,
-    ...room.stack.filter((item) => item.type === 'spell').map((item) => item.source),
-    ...Object.values(room.players).flatMap((player) => [...player.hand, ...player.graveyard, ...player.deck, ...player.exile ?? []]),
-  ].find((card) =>
-    card.uuid === expected.uuid &&
-    card.state.zone === expected.state.zone &&
-    (card.state.zoneRevision ?? 0) === (expected.state.zoneRevision ?? 0));
+  const live = roomCards(room).find((card) => sameCardObject(card, expected));
 
   if (live) return captureSourceInformation(room, live);
 
@@ -54,13 +47,15 @@ export function resolveSourceInformation(room: GameRoom, object: StackObject): C
 
   // A triggered ability that fired on a permanent leaving may carry the
   // departure snapshot in its triggering event.
-  const departure = object.type === 'triggered' &&
-    ['PERMANENT_LEFT', 'PERMANENT_DIED', 'PERMANENT_DESTROYED'].includes(object.triggeringEvent?.eventId ?? '')
-    ? object.triggeringEvent?.payload.snapshot as CardSnapshot | undefined
-    : undefined;
+  const departure =
+    object.type === 'triggered' && TRIGGER_EVENTS[object.triggeringEvent?.eventId ?? '']?.watcherState === 'before'
+      ? (object.triggeringEvent?.payload.snapshot as CardSnapshot | undefined)
+      : undefined;
 
-  return current?.sourceInfo ??
+  return (
+    current?.sourceInfo ??
     object.sourceInfo ??
-    (departure?.card.uuid === expected.uuid ? departure : undefined) ??
-    captureSourceInformation(room, expected);
+    (departure && sameCardObject(departure.card, expected) ? departure : undefined) ??
+    captureSourceInformation(room, expected)
+  );
 }

@@ -33,6 +33,14 @@
             "order": "min"
           }
         }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       }
     },
     {
@@ -47,7 +55,13 @@
         ],
         "subTypes": [
           "炎獸"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "counters",

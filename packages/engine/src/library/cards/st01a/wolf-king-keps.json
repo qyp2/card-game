@@ -21,9 +21,14 @@
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
-      "limitPerTurn": 1,
       "effects": [
         {
           "family": "cards",
@@ -57,7 +62,13 @@
           },
           "requiresOutcome": "destroyed"
         }
-      ]
+      ],
+      "usage": {
+        "period": "turn",
+        "identity": "source_incarnation",
+        "limit": 1,
+        "consume": "on_commit"
+      }
     }
   ]
 }

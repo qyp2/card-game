@@ -234,6 +234,10 @@ Deferred wording stays for the corresponding card implementation. These are the 
 
 The [strict listener schema and runtime consumer](trigger-listener-architecture.md) clear off-zone discovery as a generic engine blocker. `event_card` uses the subject's selected before/after snapshot; `watcher` uses declared active zones in the existing event window. Forty-two focused tests include real mill/discard/death/reveal pipelines, granted ability ordering, shared usage and pending-event deduplication. This is not a complete re-audit of the eleven formerly EVENT-tagged rows: their ledger tags also track other event consumers, value operations, targeting, wording and recipe proof. Coverage and the two confirmed U recipes remain unchanged; no new workbook cards were registered.
 
+### Trigger consolidation — 5 November 2026
+
+All 59 shipped trigger declarations are now explicit, and the three older turn-limit declarations use ordinary usage contracts. Candidate providers share one event context, evaluator and target-eligibility gate. Listener membership/characteristics can come from before the event, while board/player conditions inspect after-state: the newly milled card counts toward a five-card graveyard condition. No legal required target means no pending ability, occurrence record or spent budget; optional targets and untargeted effects remain eligible. Delayed registrations share those rules without losing their independent lifetime. This cleanup adds no new workbook cards or capability-family claims; the full recipe/ruling requirements above still apply.
+
 ## Audit evidence and ownership
 
 Use the existing owners when delivering a missing slice:

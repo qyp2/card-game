@@ -1,84 +1,33 @@
-import type { CardInstance, CardSnapshot, CardZone, TriggeredAbility, TriggerEvent } from '../types/card.types';
-import type { GameRoom } from '../types/game.room.types';
-import type { TriggeringEvent, TriggerSubject } from '../types/effect.types';
+import type {
+  CardInstance,
+  CardSnapshot,
+  CardZone,
+  TriggerEvent,
+  TriggeredAbility,
+  TriggerFilter,
+} from '../types/card.types';
+import type { EffectDefinition } from '../types/effect.types';
+import type { DelayedTrigger } from '../types/trigger.types';
+import type { GameMutation } from '../types/game-mutation.types';
 import type { GameEvent } from './event-bus';
+import type { TriggerEventDefinition } from './trigger-events';
+import type { TriggerRooms, TriggerEventContext } from './trigger-event-context';
 import { roomCards } from './continuous-effect-state';
-import { CardCharacteristicService, withCharacteristicCache } from './card-characteristic-service';
-import { captureSourceInformation } from './source-information';
+import { withCharacteristicCache } from './card-characteristic-service';
+import { captureSourceInformation, resolveSourceInformation } from './source-information';
+import { sameCardObject, cardObjectKey } from '../shared/card-identity';
 
-export interface ListenerCandidate {
-  sourceInfo: CardSnapshot;
-  ability: TriggeredAbility;
-  room?: GameRoom;
-  subject: NonNullable<TriggeringEvent['subject']>;
-}
-export interface ListenerRooms {
-  room?: GameRoom;
-  before?: GameRoom;
-  after?: GameRoom;
-}
-const arrivals = new Set(['PERMANENT_ENTERED', 'CARD_DRAWN', 'SPELL_CAST']);
-const departures = new Set([
-  'PERMANENT_LEFT',
-  'PERMANENT_DIED',
-  'PERMANENT_DESTROYED',
-  'CREATURE_KILLED',
-  'CARD_DISCARDED_FROM_HAND',
-  'CARD_DISCARDED_FROM_LIBRARY',
-]);
-function sameObject(a: CardInstance, b: CardInstance): boolean {
-  return (
-    a.uuid === b.uuid && a.state.zone === b.state.zone && (a.state.zoneRevision ?? 0) === (b.state.zoneRevision ?? 0)
-  );
-}
-function snapshot(room: GameRoom | undefined, card: CardInstance): CardSnapshot {
-  return room
-    ? captureSourceInformation(room, card)
-    : {
-        card: structuredClone(card),
-        power: card.lastKnownCharacteristics?.power ?? card.blueprint.power ?? 0,
-        toughness: card.lastKnownCharacteristics?.toughness ?? card.blueprint.toughness ?? 0,
-      };
-}
-function reference(info?: CardSnapshot): TriggerSubject | undefined {
-  if (!info) return undefined;
-  const { card } = info;
-  return {
-    cardUuid: card.uuid,
-    zone: card.state.zone,
-    zoneRevision: card.state.zoneRevision ?? 0,
-    ownerId: card.state.ownerId,
-    controllerId: card.state.controllerId,
-  };
-}
-
-/** Select real event windows, never a later incarnation merely sharing the UUID. */
-export function eventCardSnapshots(
-  event: GameEvent,
-  rooms: ListenerRooms,
-): { before?: CardSnapshot; after?: CardSnapshot } {
-  if (event.eventId === 'CARD_REVEALED') {
-    const retained = event.payload.revealedSnapshot as CardSnapshot | undefined;
-    const card = event.payload.revealedCard as CardInstance | undefined;
-    const info = retained ?? (card ? snapshot(rooms.before ?? rooms.room, card) : undefined);
-    return { before: info, after: info };
-  }
-  const card = event.payload.card as CardInstance | undefined;
-  if (!card) return {};
-  const retained = event.payload.snapshot as CardSnapshot | undefined;
-  const beforeCards = rooms.before ? roomCards(rooms.before) : [];
-  const afterCards = rooms.after ?? rooms.room;
-  const afterList = afterCards ? roomCards(afterCards) : [];
-  const moving = arrivals.has(event.eventId) || departures.has(event.eventId);
-  const previous = beforeCards.find((c) => c.uuid === card.uuid && (moving || sameObject(c, card)));
-  const next = afterList.find((c) => c.uuid === card.uuid && (moving || sameObject(c, card)));
-  let before = retained;
-  if (!before && previous) before = snapshot(rooms.before, previous);
-  if (!before && !arrivals.has(event.eventId) && !rooms.before) before = snapshot(rooms.room, card);
-  let after: CardSnapshot | undefined;
-  if (next) after = snapshot(afterCards, next);
-  if (!after && arrivals.has(event.eventId) && !afterCards) after = snapshot(undefined, card);
-  return { before, after };
+/** Discovery records source ownership; filtering, usage and queueing happen downstream. */
+export interface TriggerCandidate {
+  source: CardInstance;
+  sourceInfo?: CardSnapshot;
+  ability?: TriggeredAbility;
+  controllerId: string;
+  filter?: TriggerFilter;
+  /** An event-card listener compares against its selected subject snapshot. */
+  subjectInfo?: CardSnapshot;
+  effects?: EffectDefinition[];
+  registration?: DelayedTrigger;
 }
 
 interface ListenerHints {
@@ -86,11 +35,12 @@ interface ListenerHints {
   eventCard: boolean;
 }
 // Cache immutable definition metadata only; no room instances or subscriptions.
-const definitionHints = new WeakMap<object, ListenerHints>();
-function listenerHints(value: unknown): ListenerHints {
+const definitionHints = new WeakMap<object, Map<string, ListenerHints>>();
+/** Inspect nested grants/copies conservatively; this cache never authorizes an ability by itself. */
+function listenerHints(value: unknown, triggerEvent: TriggerEvent): ListenerHints {
   const hints: ListenerHints = { zones: new Set(), eventCard: false };
   if (!value || typeof value !== 'object') return hints;
-  const cached = definitionHints.get(value);
+  const cached = definitionHints.get(value)?.get(triggerEvent);
   if (cached) return cached;
   const record = value as Record<string, unknown>;
   hints.eventCard = record.kind === 'event_card';
@@ -103,77 +53,174 @@ function listenerHints(value: unknown): ListenerHints {
     for (const zone of ['library', 'hand', 'battlefield', 'graveyard', 'exile', 'stack'] as const)
       hints.zones.add(zone);
   }
-  for (const child of Object.values(record)) {
-    const nested = listenerHints(child);
+  for (const [key, child] of Object.entries(record)) {
+    // Another event's listener cannot expand this scan, but its effects may
+    // contain grants for this event and must still be inspected.
+    if (key === 'trigger' && record.triggerCondition !== triggerEvent) continue;
+    const nested = listenerHints(child, triggerEvent);
     hints.eventCard ||= nested.eventCard;
     for (const zone of nested.zones) hints.zones.add(zone);
   }
-  definitionHints.set(value, hints);
+  const byEvent = definitionHints.get(value) ?? new Map<string, ListenerHints>();
+  byEvent.set(triggerEvent, hints);
+  definitionHints.set(value, byEvent);
   return hints;
 }
-function discoveryHints(event: GameEvent, rooms: ListenerRooms): ListenerHints {
+/** Over-approximate only candidate zones; effective abilities decide actual admission. */
+function discoveryHints(rooms: TriggerRooms, context: TriggerEventContext, triggerEvent: TriggerEvent): ListenerHints {
   const definitions = new Set<object>();
   for (const room of new Set([rooms.room, rooms.before, rooms.after])) {
     if (!room) continue;
     for (const card of roomCards(room)) definitions.add(card.blueprint);
     for (const entry of room.continuousEffectPool) definitions.add(entry);
   }
-  const card = event.payload.card as CardInstance | undefined;
-  if (card) definitions.add(card.blueprint);
-  for (const key of ['snapshot', 'revealedSnapshot'] as const) {
-    const info = event.payload[key] as CardSnapshot | undefined;
-    if (info) definitions.add(info.card);
-  }
+  for (const info of [context.snapshots.before, context.snapshots.after]) if (info) definitions.add(info.card);
   const hints: ListenerHints = { zones: new Set(), eventCard: false };
   for (const definition of definitions) {
-    const nested = listenerHints(definition);
+    const nested = listenerHints(definition, triggerEvent);
     hints.eventCard ||= nested.eventCard;
     for (const zone of nested.zones) hints.zones.add(zone);
   }
   return hints;
 }
 
-/** Explicit listeners only. Implicit authored abilities retain their original scan. */
-export function explicitListenerCandidates(
+/** Share one ability loop for live watchers, retained event cards and older in-memory definitions. */
+function cardCandidates(
+  info: CardSnapshot,
+  definition: TriggerEventDefinition,
+  admits: (ability: TriggeredAbility) => boolean,
+  subjectInfo?: CardSnapshot,
+): TriggerCandidate[] {
+  const abilities = info.card.lastKnownCharacteristics?.abilities ?? info.card.blueprint.abilities;
+  return abilities.flatMap((ability) => {
+    if (ability.type !== 'triggered' || ability.triggerCondition !== definition.triggerEvent || !admits(ability))
+      return [];
+    return [
+      {
+        source: info.card,
+        sourceInfo: info,
+        ability,
+        filter: ability.trigger,
+        controllerId: info.card.state.controllerId,
+        ...(subjectInfo ? { subjectInfo } : {}),
+      },
+    ];
+  });
+}
+
+/** Explicit policy is authoritative. Omitted listeners are an admission adapter for old saved/test data only. */
+function admitsWatcher(
+  card: CardInstance,
+  ability: TriggeredAbility,
+  definition: TriggerEventDefinition,
+  battlefield: CardInstance[],
+  eventCard?: CardInstance,
+): boolean {
+  const listener = ability.trigger?.listener;
+  if (listener) return listener.kind === 'watcher' && listener.activeZones.includes(card.state.zone);
+  const onBoard = battlefield.some((live) => sameCardObject(live, card));
+  const isSubject = !!eventCard && sameCardObject(card, eventCard);
+  return (definition.implicit !== 'subject' && onBoard) || (definition.implicit !== 'battlefield' && isSubject);
+}
+
+/** Enumerate source families only; every result uses the same event facts and evaluator. */
+export function collectTriggerCandidates(
   event: GameEvent,
-  triggerEvent: TriggerEvent,
-  rooms: ListenerRooms,
-): ListenerCandidate[] {
-  const candidates: ListenerCandidate[] = [];
-  const hints = discoveryHints(event, rooms);
-  if (!hints.eventCard && !hints.zones.size) return candidates;
-  const states = eventCardSnapshots(event, rooms);
-  const subject = { before: reference(states.before), after: reference(states.after) };
-  for (const state of hints.eventCard ? (['before', 'after'] as const) : []) {
-    const sourceInfo = states[state];
-    if (!sourceInfo) continue;
-    const abilities = sourceInfo.card.lastKnownCharacteristics?.abilities ?? sourceInfo.card.blueprint.abilities;
-    for (const ability of abilities) {
-      if (ability.type !== 'triggered' || ability.triggerCondition !== triggerEvent) continue;
-      const listener = ability.trigger?.listener;
-      if (
-        listener?.kind !== 'event_card' ||
-        listener.state !== state ||
-        !listener.zones.includes(sourceInfo.card.state.zone)
-      )
-        continue;
-      candidates.push({ sourceInfo, ability, room: rooms[state] ?? rooms.room, subject });
+  definition: TriggerEventDefinition,
+  context: TriggerEventContext,
+  rooms: TriggerRooms & { battlefield: CardInstance[] },
+  reserved: GameMutation[] = [],
+): TriggerCandidate[] {
+  const candidates: TriggerCandidate[] = [];
+  const hints = discoveryHints(rooms, context, definition.triggerEvent);
+  const room = context.watcherRoom;
+  const battlefield = room?.battlefield ?? rooms.battlefield;
+  const eventCard = event.payload.card as CardInstance | undefined;
+  const collectWatchers = (): void => {
+    const inventory = new Map<string, CardInstance>();
+    const cards = room ? roomCards(room) : battlefield;
+    for (const card of cards)
+      if (card.state.zone === 'battlefield' || hints.zones.has(card.state.zone))
+        inventory.set(cardObjectKey(card), card);
+    // Old synthetic departure fixtures may retain the only copy in the payload.
+    // A live newer incarnation must never be replaced by that stale copy.
+    if (definition.implicit !== 'battlefield' && eventCard && !cards.some((card) => card.uuid === eventCard.uuid))
+      inventory.set(cardObjectKey(eventCard), eventCard);
+    for (const card of inventory.values()) {
+      const info = room
+        ? captureSourceInformation(room, card)
+        : {
+            card,
+            power: card.blueprint.power ?? 0,
+            toughness: card.blueprint.toughness ?? 0,
+          };
+      candidates.push(
+        ...cardCandidates(
+          info,
+          definition,
+          (ability) =>
+            (cards.some((live) => sameCardObject(live, card)) || !ability.trigger?.listener) &&
+            admitsWatcher(card, ability, definition, battlefield, eventCard),
+        ),
+      );
+      // Entry shorthand is a candidate adapter, so it shares eligibility and accounting.
+      const entry = info.card.lastKnownCharacteristics?.onEnterEffects ?? card.blueprint.onEnterEffects;
+      if (definition.entryEffects && eventCard && sameCardObject(card, eventCard) && entry?.length)
+        candidates.push({
+          source: info.card,
+          sourceInfo: info,
+          controllerId: info.card.state.controllerId,
+          filter: { subject: 'self' },
+          effects: entry,
+        });
     }
-  }
-  const room = rooms.room;
-  if (room && hints.zones.size)
-    withCharacteristicCache(room, () => {
-      const cards = roomCards(room);
-      for (const card of cards) {
-        if (!hints.zones.has(card.state.zone)) continue;
-        const abilities = CardCharacteristicService.resolveAbilities(room, card);
-        for (const ability of abilities) {
-          if (ability.type !== 'triggered' || ability.triggerCondition !== triggerEvent) continue;
+  };
+  if (room) withCharacteristicCache(room, collectWatchers);
+  else collectWatchers();
+
+  for (const state of hints.eventCard ? (['before', 'after'] as const) : []) {
+    const info = context.snapshots[state];
+    if (!info) continue;
+    candidates.push(
+      ...cardCandidates(
+        info,
+        definition,
+        (ability) => {
           const listener = ability.trigger?.listener;
-          if (listener?.kind !== 'watcher' || !listener.activeZones.includes(card.state.zone)) continue;
-          candidates.push({ sourceInfo: snapshot(room, card), ability, room, subject });
-        }
-      }
+          return (
+            listener?.kind === 'event_card' && listener.state === state && listener.zones.includes(info.card.state.zone)
+          );
+        },
+        info,
+      ),
+    );
+  }
+
+  // A delayed registration survives source departure; its own identity/lifetime
+  // must not be substituted with a live card's active-zone rule.
+  for (const registration of room?.delayedTriggers ?? []) {
+    if (
+      registration.ability.triggerCondition !== definition.triggerEvent ||
+      reserved.some((m) => m.type === 'REMOVE_DELAYED_TRIGGER' && m.id === registration.id)
+    )
+      continue;
+    const info = resolveSourceInformation(room!, {
+      type: 'triggered',
+      uuid: registration.id,
+      source: registration.source,
+      sourceInfo: registration.sourceInfo,
+      controllerId: registration.controllerId,
+      effects: [],
+      countered: false,
     });
+    candidates.push({
+      source: registration.source,
+      sourceInfo: info,
+      ability: registration.ability,
+      filter: registration.ability.trigger,
+      controllerId: registration.controllerId,
+      registration,
+    });
+  }
   return candidates;
 }

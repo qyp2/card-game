@@ -11,7 +11,7 @@ import { ManaPool } from './mana-pool';
 import { manaAbilities, manaOutput } from './mana-abilities';
 import { ActionValidator } from './action-validator';
 import { gameReducer } from './game-reducer';
-import { recordAbilityUsage } from './ability-usage';
+import { recordAbilityCommit } from './ability-usage';
 import { abilityLimitReached, abilityUseKey } from './turn-history';
 import { materializeAnnouncementCost } from './announcement-values';
 import { actionCostError } from './cost-composition';
@@ -344,11 +344,7 @@ export function planManaActivation(
           color: manaColor,
           amount: output.amount,
         },
-        {
-          type: 'RECORD_ABILITY_USE',
-          key: abilityUseKey(card, ability.id ?? ''),
-        },
-        ...recordAbilityUsage(room, card, ability, playerId),
+        ...recordAbilityCommit(room, card, ability, playerId),
       ],
       {
         id: causeId,

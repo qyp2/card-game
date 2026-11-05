@@ -20,10 +20,10 @@ function hash(value: unknown): string {
   return createHash('sha256').update(json).digest('hex');
 }
 describe('configuration ownership and preserved content', () => {
-  it('preserves all authored definitions and every pre-extraction preset exactly', () => {
+  it('locks migrated card definitions and preserves every pre-extraction preset exactly', () => {
     const originalCards = Object.fromEntries(baseline.cardIds.map(id => [id, getBlueprint(id)]));
     expect(Object.keys(originalCards)).toHaveLength(baseline.cardCount);
-    expect(cardDefinitionHash(originalCards)).toBe(schemaBaseline.originalSemanticCatalogHash);
+    expect(cardDefinitionHash(originalCards)).toBe(schemaBaseline.listenerMigration.originalSubsetSemanticCatalogHash);
     const presets = { gameConfig: gameConfig.setup, triggerTestSetup, st01aTestSetup, workbookTestSetup, smallMechanicsTestSetup };
     for (const [name, setup] of Object.entries(presets)) expect(hash(setup)).toBe(baseline.presets[name as keyof typeof baseline.presets]);
     for (const [id, card] of Object.entries(cards)) { expect((card as { id: string }).id).toBe(id); expect(getBlueprint(id).id).toBe(id); }

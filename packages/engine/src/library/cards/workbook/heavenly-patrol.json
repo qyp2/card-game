@@ -20,7 +20,6 @@
       "id": "emperor-charge-draw",
       "type": "triggered",
       "triggerCondition": "ON_COUNTER_CHANGED",
-      "limitPerTurn": 1,
       "trigger": {
         "subject": "any",
         "controller": "any",
@@ -48,6 +47,12 @@
               "right": 0
             }
           ]
+        },
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
         }
       },
       "effect": {
@@ -60,6 +65,12 @@
           "type": "self",
           "required": false
         }
+      },
+      "usage": {
+        "period": "turn",
+        "identity": "source_incarnation",
+        "limit": 1,
+        "consume": "on_commit"
       }
     }
   ]

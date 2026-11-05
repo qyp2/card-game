@@ -28,7 +28,13 @@
         ],
         "subTypes": [
           "蒼巨人"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",

@@ -28,7 +28,13 @@
         ],
         "subTypes": [
           "炎獸"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",
@@ -103,6 +109,14 @@
           "required": true,
           "minTargets": 1,
           "maxTargets": 1
+        }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
         }
       }
     }

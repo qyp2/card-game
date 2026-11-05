@@ -76,7 +76,13 @@
                 "castSpeed": "instant",
                 "triggerCondition": "ON_ATTACK",
                 "trigger": {
-                  "subject": "self"
+                  "subject": "self",
+                  "listener": {
+                    "kind": "watcher",
+                    "activeZones": [
+                      "battlefield"
+                    ]
+                  }
                 },
                 "effects": [
                   {

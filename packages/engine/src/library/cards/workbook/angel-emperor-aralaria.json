@@ -39,7 +39,13 @@
       "type": "triggered",
       "triggerCondition": "ON_LIFE_GAIN",
       "trigger": {
-        "controller": "self"
+        "controller": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "counters",
@@ -84,6 +90,12 @@
               },
               "right": 5
             }
+          ]
+        },
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
           ]
         }
       },

@@ -192,6 +192,7 @@ export function answerPendingChoice(host: ChoiceHost, playerId: PlayerId, data: 
 
   if (choice.continuation.type === 'trigger') {
     const queue = applyTriggerChoice(host.room, choice, answer);
+    if (!queue) return reject('Select trigger modes with legal required targets');
 
     return {
       success: true,

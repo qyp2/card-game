@@ -108,7 +108,15 @@
                       "maxTargets": 1
                     }
                   }
-                ]
+                ],
+                "trigger": {
+                  "listener": {
+                    "kind": "watcher",
+                    "activeZones": [
+                      "battlefield"
+                    ]
+                  }
+                }
               }
             ]
           }

@@ -11,6 +11,7 @@ import { captureSourceInformation, resolveSourceInformation } from './source-inf
 import { collectCardSource } from '../shared/card-collections';
 import { matchesCardFilter } from '../shared/card-query';
 import { roomCards } from './continuous-effect-state';
+import { sameCardObject as sameObservedCard } from '../shared/card-identity';
 import { CardCharacteristicService } from './card-characteristic-service';
 
 type WindowPlan = { object: StackObject; mutations: GameMutation[] };
@@ -134,16 +135,8 @@ export function setCollectionVisibility(room: GameRoom, object: StackObject, eff
 }
 
 /** Exact source-zone incarnations only; observation access never follows a card into a later zone. */
-export function sameObservedCard(card: CardInstance, captured: CardInstance): boolean {
-  return (
-    card.uuid === captured.uuid &&
-    card.state.zone === captured.state.zone &&
-    (card.state.zoneRevision ?? 0) === (captured.state.zoneRevision ?? 0)
-  );
-}
-
-/** Captured-result choices require an active face grant for the actual chooser. */
-export function canChooseCapturedCard(room: GameRoom, object: StackObject, name: string, card: CardInstance): boolean {
+export /** Captured-result choices require an active face grant for the actual chooser. */
+function canChooseCapturedCard(room: GameRoom, object: StackObject, name: string, card: CardInstance): boolean {
   const result = object.resolutionResults?.[name];
   if (result?.kind !== 'captured') return true;
   const observation = result.observationId ? room.cardObservations?.active[result.observationId] : undefined;

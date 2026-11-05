@@ -1,6 +1,8 @@
 import type { CardInstance, CardSnapshot, TriggerFilter } from '../types/card.types';
 import type { GameEvent } from '../types/game-event.types';
 import type { GameRoom } from '../types/game.room.types';
+import { sameCardObject } from '../shared/card-identity';
+import { TRIGGER_EVENTS } from './trigger-events';
 import { CardCharacteristicService } from './card-characteristic-service';
 
 /** Card events default to this object; player/step events default to its controller. */
@@ -12,15 +14,11 @@ export function triggerMatches(
   room?: GameRoom,
   subjectInfo?: CardSnapshot,
 ): boolean {
-  const card = event.payload.card as CardInstance | undefined;
+  const card = subjectInfo?.card ?? (event.payload.card as CardInstance | undefined);
   // Explicit event-card listeners match the selected historical characteristics,
   // including reveal observations published after the card has changed again.
   const recorded =
-    card &&
-    subjectInfo &&
-    card.uuid === subjectInfo.card.uuid &&
-    card.state.zone === subjectInfo.card.state.zone &&
-    (card.state.zoneRevision ?? 0) === (subjectInfo.card.state.zoneRevision ?? 0)
+    card && subjectInfo && sameCardObject(card, subjectInfo.card)
       ? (subjectInfo.card.lastKnownCharacteristics ?? subjectInfo.card.blueprint)
       : undefined;
   const causes =
@@ -43,12 +41,7 @@ export function triggerMatches(
 
   // Events that describe something happening *to* a player rather than to a
   // card; these default to "any" subject instead of "self".
-  const personalEvent = [
-    'CARD_DRAWN',
-    'CARD_DISCARDED_FROM_HAND',
-    'CARD_DISCARDED_FROM_LIBRARY',
-    'SPELL_CAST',
-  ].includes(event.eventId);
+  const personalEvent = TRIGGER_EVENTS[event.eventId]?.personal ?? false;
 
   const subject =
     filter.subject ??
@@ -58,11 +51,7 @@ export function triggerMatches(
 
   // Identity is UUID *plus* zone and revision: a card that left and returned is
   // a different rules object.
-  const sameObject =
-    !!card &&
-    card.uuid === source.uuid &&
-    card.state.zone === source.state.zone &&
-    (card.state.zoneRevision ?? 0) === (source.state.zoneRevision ?? 0);
+  const sameObject = !!card && sameCardObject(card, source);
 
   // Guard: subject filter.
   if (subject === 'self' && !sameObject) return false;

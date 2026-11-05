@@ -21,7 +21,13 @@
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",
@@ -66,7 +72,13 @@
         ],
         "subTypes": [
           "幽爾"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "characteristics",

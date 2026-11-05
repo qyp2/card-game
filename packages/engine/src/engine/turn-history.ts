@@ -1,3 +1,4 @@
+export { abilityUseKey } from '../shared/ability-identity';
 import { abilityUsageAvailable } from './ability-usage';
 import type { TurnHistory } from '../types/trigger.types';
 import type { TriggeringEvent } from '../types/effect.types';
@@ -30,8 +31,7 @@ export const HISTORY_EVENTS = [
 ] as const;
 
 /** A zeroed counter for every tracked event id. */
-export const emptyEventCounts = (): Record<string, number> =>
-  Object.fromEntries(HISTORY_EVENTS.map((id) => [id, 0]));
+export const emptyEventCounts = (): Record<string, number> => Object.fromEntries(HISTORY_EVENTS.map((id) => [id, 0]));
 
 /** Fresh history for a new turn. */
 export function newTurnHistory(turnNumber: number): TurnHistory {
@@ -45,19 +45,13 @@ export function newTurnHistory(turnNumber: number): TurnHistory {
   };
 }
 
-/** Ability-use key: scoped to the card's current incarnation, not just its UUID. */
-export const abilityUseKey = (source: CardInstance, id: string) =>
-  `${source.uuid}:${source.state.zoneRevision ?? 0}:${id}`;
-
-/** True when an ability has already been used as often as its per-turn limit allows. */
-export function abilityLimitReached(room: GameRoom, source: CardInstance, ability: ActivatedAbility | TriggeredAbility): boolean {
-  const limit = ability.limitPerTurn;
-
-  // No limit declared means the ability is unrestricted.
-  return !abilityUsageAvailable(room, source, ability) || limit !== undefined &&
-    (!Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      (room.turnHistory?.uses[abilityUseKey(source, ability.id ?? '')] ?? 0) >= limit);
+/** Compatibility facade; all budgets and old turn limits share the usage consumer. */
+export function abilityLimitReached(
+  room: GameRoom,
+  source: CardInstance,
+  ability: ActivatedAbility | TriggeredAbility,
+): boolean {
+  return !abilityUsageAvailable(room, source, ability);
 }
 
 /** Append a rules-relevant event to the turn history, updating both counters. */
@@ -67,15 +61,27 @@ export function recordRuleEvent(history: TurnHistory, event: TriggeringEvent): T
 
   const playerId = event.payload.controllerId ?? event.payload.playerId ?? event.payload.currentPlayer;
 
-  const players = event.eventId === 'CREATURE_KILLED'
-    ? [...new Set((event.payload.outcome as import('../types/change-cause.types').KillOutcome).causes.flatMap(c => c.controllerId ? [c.controllerId] : []))]
-    : typeof playerId === 'string' ? [playerId] : [];
+  const players =
+    event.eventId === 'CREATURE_KILLED'
+      ? [
+          ...new Set(
+            (event.payload.outcome as import('../types/change-cause.types').KillOutcome).causes.flatMap((c) =>
+              c.controllerId ? [c.controllerId] : [],
+            ),
+          ),
+        ]
+      : typeof playerId === 'string'
+        ? [playerId]
+        : [];
   const playerCounts = { ...history.playerCounts };
   for (const player of players) {
     const own = playerCounts[player] ?? emptyEventCounts();
     playerCounts[player] = { ...own, [event.eventId]: (own[event.eventId] ?? 0) + 1 };
   }
-  return { ...history, events: [...history.events, event],
-    counts: { ...history.counts, [event.eventId]: (history.counts[event.eventId] ?? 0) + 1 }, playerCounts };
-
+  return {
+    ...history,
+    events: [...history.events, event],
+    counts: { ...history.counts, [event.eventId]: (history.counts[event.eventId] ?? 0) + 1 },
+    playerCounts,
+  };
 }

@@ -45,6 +45,14 @@
         "choice": {
           "kind": "optional"
         }
+      },
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       }
     }
   ]

@@ -91,7 +91,15 @@
             "required": false
           }
         }
-      ]
+      ],
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
+      }
     },
     {
       "id": "yoer-attack-bonus",

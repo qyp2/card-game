@@ -44,6 +44,12 @@
               "right": 0
             }
           ]
+        },
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
         }
       },
       "effect": {

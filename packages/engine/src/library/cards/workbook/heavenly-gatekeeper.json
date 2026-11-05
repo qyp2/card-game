@@ -21,7 +21,13 @@
       "type": "triggered",
       "triggerCondition": "ON_BLOCK",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effects": [
         {
@@ -53,7 +59,13 @@
       "type": "triggered",
       "triggerCondition": "ON_DESTROY",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effects": [
         {

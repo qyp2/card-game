@@ -6,15 +6,20 @@ import type { TriggerQueue } from '../types/trigger.types';
 import type { StackTargetGroup, StackObject } from '../types/effect.types';
 import { immediateAction, isImmediateAction } from './mechanics/immediate-actions';
 import { choiceCanComplete, targetOptions } from './choices';
-import { buildStackEffects } from './effect-resolver';
+import { buildStackEffects } from './resolution-planning';
 import { selectModeEffects } from '../shared/action-modes';
-import { describeTargetGroups, isExplicitTargeting, targetKey } from '../shared/target-legality';
+import { isExplicitTargeting, targetKey } from '../shared/target-legality';
 import { planTargetGroups } from './target-groups';
 import { planAnnouncedDistributions } from './announced-distributions';
+import { canPrepareTrigger, availableTriggerModes, triggerTargetGroups } from './trigger-preparation';
 import { resolveSourceInformation } from './source-information';
 
 /** One scheduling step. The checkpoint runs SBAs between committed steps. */
-export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation[]; choice?: PendingChoice; immediateObject?: StackObject } {
+export function planTriggerScheduling(room: GameRoom): {
+  mutations: GameMutation[];
+  choice?: PendingChoice;
+  immediateObject?: StackObject;
+} {
   const queue = room.triggerQueue;
 
   // Guard: nothing to schedule without a queue.
@@ -32,12 +37,29 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
     };
   }
 
+  // Recheck after intervening state-based actions. Discovery already refused
+  // impossible triggers; a later state change may invalidate an accepted one.
+  const viable = queue.entries.filter((entry) => canPrepareTrigger(room, entry.object, entry.selections.modes));
+  if (viable.length !== queue.entries.length)
+    return {
+      mutations: [{ type: 'SET_TRIGGER_QUEUE', queue: { ...queue, entries: viable } }],
+    };
+
   // Active player's triggers go on the stack first.
-  const entries = [...queue.entries].sort((a, b) => Number(a.object.controllerId !== room.activeTurnPlayerId) - Number(b.object.controllerId !== room.activeTurnPlayerId));
-  const first = entries[0], object = first.object, playerId = object.controllerId;
+  const entries = [...queue.entries].sort(
+    (a, b) =>
+      Number(a.object.controllerId !== room.activeTurnPlayerId) -
+      Number(b.object.controllerId !== room.activeTurnPlayerId),
+  );
+  const first = entries[0],
+    object = first.object,
+    playerId = object.controllerId;
   const group = entries.filter((entry) => entry.object.controllerId === playerId);
 
-  const request = (choice: Omit<ListedChoice, 'id' | 'playerId'>) => ({ mutations: [] as GameMutation[], choice: { ...choice, id: '', playerId } });
+  const request = (choice: Omit<ListedChoice, 'id' | 'playerId'>) => ({
+    mutations: [] as GameMutation[],
+    choice: { ...choice, id: '', playerId },
+  });
 
   // Multiple unordered triggers from one player must be ordered first.
   if (group.length > 1 && group.some((entry) => !entry.ordered)) {
@@ -55,11 +77,19 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
     });
   }
 
-  const continuation = (field: 'modes' | 'targetGroups' | 'distributions', groupId?: string) => ({ type: 'trigger' as const, field, triggerUuid: object.uuid, groupId });
-  const ability = object.ability, data = first.selections;
+  const continuation = (field: 'modes' | 'targetGroups' | 'distributions', groupId?: string) => ({
+    type: 'trigger' as const,
+    field,
+    triggerUuid: object.uuid,
+    groupId,
+  });
+  const ability = object.ability,
+    data = first.selections;
 
   // Dropping the entry is the fallback whenever a choice cannot be completed.
-  const drop = () => ({ mutations: [{ type: 'SET_TRIGGER_QUEUE' as const, queue: { ...queue, entries: entries.slice(1) } }] });
+  const drop = () => ({
+    mutations: [{ type: 'SET_TRIGGER_QUEUE' as const, queue: { ...queue, entries: entries.slice(1) } }],
+  });
 
   // Step 1: mode selection.
   if (ability?.modes?.length && data.modes === undefined) {
@@ -69,7 +99,7 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
       prompt: 'Choose trigger modes',
       min: count.min,
       max: count.max,
-      options: ability.modes.map((mode) => ({ id: mode.id, label: mode.label, value: mode.id })),
+      options: availableTriggerModes(room, object).map((mode) => ({ id: mode.id, label: mode.label, value: mode.id })),
       continuation: continuation('modes'),
     });
 
@@ -77,13 +107,15 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
   }
 
   const source = resolveSourceInformation(room, object).card;
-  const selected = ability ? selectModeEffects(abilityEffects(ability), ability.modes, data.modes, ability.modeCount) : undefined;
+  const selected = ability
+    ? selectModeEffects(abilityEffects(ability), ability.modes, data.modes, ability.modeCount)
+    : undefined;
 
   // Guard: an ability whose modes cannot be resolved is dropped.
   if (ability && !selected) return drop();
 
   const effects = ability ? buildStackEffects(selected!, playerId, object.source) : object.effects;
-  const groups = describeTargetGroups(effects.map((effect) => ({ ...effect, targeting: effect.targeting ?? { type: 'self', required: false } })));
+  const groups = triggerTargetGroups(effects);
   const selectedGroups = data.targetGroups as StackTargetGroup[] | undefined;
   const missing = groups.find((group) => !selectedGroups?.some((selected) => selected.id === group.id));
 
@@ -108,9 +140,15 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
 
   // Step 3: distribution of a divided effect among its targets.
   for (let index = 0; index < targets.effects.length; index++) {
-    const effect = targets.effects[index], id = 'effect-' + index;
+    const effect = targets.effects[index],
+      id = 'effect-' + index;
 
-    if (effect.choice?.kind !== 'distribution' || !isExplicitTargeting(effect.targeting) || (data.distributions as Record<string, unknown> | undefined)?.[id] !== undefined) continue;
+    if (
+      effect.choice?.kind !== 'distribution' ||
+      !isExplicitTargeting(effect.targeting) ||
+      (data.distributions as Record<string, unknown> | undefined)?.[id] !== undefined
+    )
+      continue;
 
     const result = request({
       kind: 'distribution',
@@ -119,7 +157,11 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
       max: effect.targets.length,
       total: effect.choice.total,
       minimumPerOption: 1,
-      options: effect.targets.map((target) => ({ id: targetKey(target), label: target.playerId ?? target.cardUuid ?? target.stackUuid ?? 'target', value: target })),
+      options: effect.targets.map((target) => ({
+        id: targetKey(target),
+        label: target.playerId ?? target.cardUuid ?? target.stackUuid ?? 'target',
+        value: target,
+      })),
       continuation: continuation('distributions', id),
     });
 
@@ -150,11 +192,21 @@ export function planTriggerScheduling(room: GameRoom): { mutations: GameMutation
 }
 
 /** Fold a trigger scheduling answer back into the queue. */
-export function applyTriggerChoice(room: GameRoom, choice: PendingChoice, answer: ChoiceAnswer): TriggerQueue {
+export function applyTriggerChoice(
+  room: GameRoom,
+  choice: PendingChoice,
+  answer: ChoiceAnswer,
+): TriggerQueue | undefined {
   // Guard: only trigger continuations belong here, and a queue must exist.
-  if (choice.continuation.type !== 'trigger' || !room.triggerQueue) throw new Error('Expected trigger scheduling choice');
+  if (choice.continuation.type !== 'trigger' || !room.triggerQueue)
+    throw new Error('Expected trigger scheduling choice');
 
-  const continuation = choice.continuation, queue = room.triggerQueue;
+  const continuation = choice.continuation,
+    queue = room.triggerQueue;
+  if (continuation.field === 'modes') {
+    const entry = queue.entries.find((item) => item.object.uuid === continuation.triggerUuid);
+    if (!entry || !canPrepareTrigger(room, entry.object, answer.values)) return;
+  }
 
   // Ordering moves the chosen entries to the front and marks them ordered.
   if (continuation.field === 'order') {
@@ -178,11 +230,24 @@ export function applyTriggerChoice(room: GameRoom, choice: PendingChoice, answer
 
       return {
         ...entry,
-        selections: continuation.field === 'targetGroups'
-          ? { ...data, targetGroups: [...data.targetGroups as unknown[] ?? [], { id: continuation.groupId, targets: answer.values }] }
-          : continuation.field === 'distributions'
-            ? { ...data, distributions: { ...data.distributions as Record<string, unknown>, [continuation.groupId!]: answer.allocations } }
-            : { ...data, modes: answer.values },
+        selections:
+          continuation.field === 'targetGroups'
+            ? {
+                ...data,
+                targetGroups: [
+                  ...((data.targetGroups as unknown[]) ?? []),
+                  { id: continuation.groupId, targets: answer.values },
+                ],
+              }
+            : continuation.field === 'distributions'
+              ? {
+                  ...data,
+                  distributions: {
+                    ...(data.distributions as Record<string, unknown>),
+                    [continuation.groupId!]: answer.allocations,
+                  },
+                }
+              : { ...data, modes: answer.values },
       };
     }),
   };

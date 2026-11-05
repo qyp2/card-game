@@ -12,8 +12,8 @@ import { selectModeEffects } from '../../shared/action-modes';
 import { planAnnouncedDistributions } from '../announced-distributions';
 import { captureSourceInformation } from '../source-information';
 import { gameReducer } from '../game-reducer';
-import { recordAbilityUsage } from '../ability-usage';
-import { abilityLimitReached, abilityUseKey } from '../turn-history';
+import { recordAbilityCommit } from '../ability-usage';
+import { abilityLimitReached } from '../turn-history';
 import { prepareAnnouncement, abilityAnnouncementDefinition } from '../announcement-values';
 import { findActivationSource } from '../activation-source';
 import { abilityEffects } from '../ability-effects';
@@ -93,7 +93,7 @@ function plan(room: GameRoom, playerId: PlayerId, action: ActionData): ActionRes
   };
 
   mutations.push({ type: 'PUSH_STACK', stackObject });
-  mutations.push({ type: 'RECORD_ABILITY_USE', key: abilityUseKey(card, ability.id ?? '') }, ...recordAbilityUsage(room, card, ability, playerId));
+  mutations.push(...recordAbilityCommit(room, card, ability, playerId));
 
   return { success: true, stackObject, mutations };
 }

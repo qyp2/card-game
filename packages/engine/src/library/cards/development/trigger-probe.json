@@ -42,7 +42,13 @@
       "type": "triggered",
       "triggerCondition": "ON_ENTER_BATTLEFIELD",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",
@@ -57,7 +63,13 @@
       "type": "triggered",
       "triggerCondition": "ON_ATTACK",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",
@@ -79,7 +91,13 @@
       "type": "triggered",
       "triggerCondition": "ON_BLOCK",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",
@@ -94,7 +112,13 @@
       "type": "triggered",
       "triggerCondition": "ON_DIE",
       "trigger": {
-        "subject": "self"
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",
@@ -113,7 +137,13 @@
         "controller": "self",
         "cardTypes": [
           "Creature"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",
@@ -132,7 +162,13 @@
         "controller": "self",
         "cardTypes": [
           "Creature"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",
@@ -151,7 +187,13 @@
         "controller": "self",
         "cardTypes": [
           "Creature"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "cards",
@@ -166,7 +208,13 @@
       "type": "triggered",
       "triggerCondition": "ON_DRAW",
       "trigger": {
-        "controller": "self"
+        "controller": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effect": {
         "family": "resources",

@@ -80,9 +80,9 @@ Draw/discard/counter/damage amounts must evaluate to nonnegative integers. Mana 
 
 Each requires exactly one `effect` or a nonempty ordered `effects` list. Both use one parser and execution list. An ordered list belongs to one stack object; separate abilities create separate triggers. No flattened instruction fields belong on the ability.
 
-Activated abilities declare cost, timing and optional `allowedZones` (battlefield by default; hand must be explicit). They support numeric declarations, additional/alternative costs and `limitPerTurn`. Costs support mana, tap/untap, life, discard, discardSelf, sacrifice and `removeCounters`; omit a cost or use `{}` for none. An alternative replaces the base cost; additional costs follow. Use `immediate` only for a supported immediate ability. Cost modifiers currently modify spells, not activations.
+Activated abilities declare cost, timing and optional `allowedZones` (battlefield by default; hand must be explicit). They support numeric declarations, additional/alternative costs and ordinary `usage` limits (`limitPerTurn` remains an old-data spelling). Costs support mana, tap/untap, life, discard, discardSelf, sacrifice and `removeCounters`; omit a cost or use `{}` for none. An alternative replaces the base cost; additional costs follow. Use `immediate` only for a supported immediate ability. Cost modifiers currently modify spells, not activations.
 
-Triggered abilities require `triggerCondition`. Optional `trigger` filters subject/controller/type/subtype/condition; `interveningIf` is rechecked at resolution. `sharedPerEvent` combines the same controller's identical ability IDs for an event. `limitPerTurn` is implemented. Ordinary activated/triggered abilities now support `usage` with turn/game periods and shared groups; see [shared infrastructure](../../../../docs/shared-card-infrastructure.md).
+Triggered abilities require `triggerCondition`. Optional `trigger` filters subject/controller/type/subtype/condition; `interveningIf` is rechecked at resolution. `sharedPerEvent` combines the same controller's identical ability IDs for an event. `limitPerTurn` remains accepted for older definitions and shares the usage consumer. New activated/triggered abilities use `usage` with turn/game periods and shared groups; see [shared infrastructure](../../../../docs/shared-card-infrastructure.md).
 
 ```json
 {
@@ -96,7 +96,7 @@ Triggered abilities require `triggerCondition`. Optional `trigger` filters subje
 
 ### Explicit listener zones and snapshots
 
-Use `trigger.listener: { "kind": "event_card", "state": "before", "zones": ["library"] }` for a card responding to its own mill. Use `{ "kind": "watcher", "activeZones": ["hand"] }` for an ability listening from hand, such as a life-loss response. These are strict, separate policies; source zones do not alter visibility or casting permissions. Event-card listeners allow only a self subject. Abilities without a listener declaration retain existing discovery behavior.
+Use `trigger.listener: { "kind": "event_card", "state": "before", "zones": ["library"] }` for a card responding to its own mill. Use `{ "kind": "watcher", "activeZones": ["hand"] }` for an ability listening from hand, such as a life-loss response. These are strict, separate policies; source zones do not alter visibility or casting permissions. Event-card listeners allow only a self subject. All shipped triggers declare a listener. Older saved/test definitions without one use an admission adapter in the same pipeline. Conditions inspect the after-event room; a before-snapshot still supplies the listener's original characteristics. Required-target feasibility is checked before recording an occurrence or spending a use.
 
 See [the listener contract and event windows](../../../../docs/trigger-listener-architecture.md) for complete JSON examples, retained reveal/death snapshots, shared usage and delayed-registration boundaries.
 

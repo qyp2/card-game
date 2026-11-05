@@ -1,6 +1,7 @@
 import type { CardInstance } from '../types/card.types';
 import type { CardCharacteristics } from '../types/continuous-effect.types';
 import type { CardResultSource, ResolutionCardResults } from '../types/resolution-result.types';
+import { sameCardObject } from './card-identity';
 import { safeRuleKey } from './rule-path';
 
 export interface CollectedCard {
@@ -43,10 +44,6 @@ export function collectCardSource(
   const current = new Map(cards.map((card) => [card.uuid, card]));
   return anchors.flatMap((snapshot) => {
     const card = current.get(snapshot.card.uuid);
-    return card &&
-      card.state.zone === snapshot.card.state.zone &&
-      (card.state.zoneRevision ?? 0) === (snapshot.card.state.zoneRevision ?? 0)
-      ? [{ card }]
-      : [];
+    return card && sameCardObject(card, snapshot.card) ? [{ card }] : [];
   });
 }

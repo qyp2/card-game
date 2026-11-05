@@ -28,7 +28,13 @@
         ],
         "subTypes": [
           "幽爾"
-        ]
+        ],
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
       },
       "effects": [
         {

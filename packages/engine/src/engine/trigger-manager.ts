@@ -1,279 +1,107 @@
 import { abilityEffects } from './ability-effects';
-// src/engine/trigger-manager.ts
 import { EventBus, type GameEvent, type EventContext } from './event-bus';
 import { buildStackEffects } from './resolution-planning';
 import type { GameMutation } from '../types/game-mutation.types';
 import type { GameRoom } from '../types/game.room.types';
-import type { CardInstance, TriggeredAbility, TriggerEvent } from '../types/card.types';
+import type { CardInstance, CardSnapshot, TriggeredAbility } from '../types/card.types';
 import type { StackObject, StackEffect, TriggeringEvent } from '../types/effect.types';
-import { captureSourceInformation, resolveSourceInformation } from './source-information';
+import type { DelayedTrigger } from '../types/trigger.types';
+import { captureSourceInformation } from './source-information';
 import { triggerMatches } from './trigger-matching';
 import { conditionMatches, createRuleContext } from './rule-conditions';
-import { abilityUsageAvailable, recordAbilityUsage } from './ability-usage';
+import { abilityUsageAvailable, recordAbilityCommit, withReservedAbilityUses } from './ability-usage';
 import { abilityUseKey, newTurnHistory } from './turn-history';
-import type { CardSnapshot } from '../types/card.types';
-import { explicitListenerCandidates } from './trigger-listeners';
-import { CardCharacteristicService } from './card-characteristic-service';
+import { collectTriggerCandidates } from './trigger-listeners';
+import { createTriggerEventContext, type TriggerRooms } from './trigger-event-context';
+import { TRIGGER_EVENTS } from './trigger-events';
+import { canPrepareTrigger } from './trigger-preparation';
+import { cardObjectKey } from '../shared/card-identity';
 import { gameConfig } from '../config';
 import { engineLogger } from '../shared/game-logger';
 
-// ============================================================================
-// Trigger discovery — read-only
-// ============================================================================
-
-/**
- * A pending trigger: the result of trigger discovery. It records WHICH ability
- * triggered, on WHICH source object, controlled by WHOM, with the effects to
- * put on the stack. It does NOT choose targets, resolve effects, or touch the
- * stack — that is the coordinator's job.
- *
- * `ability` is undefined for the shorthand `onEnterEffects` path, which has no
- * TriggeredAbility wrapper.
- */
+/** A matched, target-eligible ability; discovery never chooses targets or spends uses. */
 export interface PendingTrigger {
   ability?: TriggeredAbility;
-  /** The listener incarnation whose ability triggered. */
   source: CardInstance;
   sourceInfo?: CardSnapshot;
-  /** Controller of the triggered ability at the moment it triggered. */
   controllerId: string;
-  /** Effects to place on the stack when this trigger is put there. */
   effects: StackEffect[];
-  /**
-   * The event that caused this trigger. Carried so effects can reference
-   * last-known info (the entering card, damage amount, etc.) at resolve time,
-   * even after the event's card has changed zones.
-   */
   event: TriggeringEvent;
+  /** Registration ownership survives source departure and is independent of card discovery zones. */
+  registration?: DelayedTrigger;
 }
 
-/**
- * Narrow, read-only view of game state that trigger discovery needs.
- * Includes committed before/after windows for explicit card listeners.
- */
-export interface TriggerContext {
-  room?: GameRoom;
-  before?: GameRoom;
-  after?: GameRoom;
+/** Read-only event windows. Battlefield-only inputs remain supported for small discovery fixtures. */
+export interface TriggerContext extends TriggerRooms {
   roomId: string;
   battlefield: CardInstance[];
 }
 
-/**
- * Maps a game event id to the TriggerEvent it corresponds to, plus how to
- * build the set of objects to scan for that event.
- *
- * - `scanBattlefield`: always scan all battlefield permanents (watchers).
- * - `includeEventCard`: also scan the card named in the event payload, even if
- *   it has left the battlefield. This is required for
- *   PERMANENT_LEFT / PERMANENT_DIED; entry events use committed after-state.
- * - `selfEntryEffects`: also check the ordered `onEnterEffects` shorthand.
- */
-interface EventMapping {
-  triggerEvent: TriggerEvent;
-  scanBattlefield: boolean;
-  includeEventCard: boolean;
-  selfEntryEffects?: boolean;
-}
-
-const EVENT_MAP: Record<string, EventMapping> = {
-  CREATURE_KILLED: { triggerEvent: 'ON_KILL', scanBattlefield: true, includeEventCard: false },
-  CHARACTERISTICS_CHANGED: {
-    triggerEvent: 'ON_CHARACTERISTICS_CHANGED',
-    scanBattlefield: true,
-    includeEventCard: true,
-  },
-  CARD_REVEALED: { triggerEvent: 'ON_REVEAL', scanBattlefield: false, includeEventCard: true },
-  PERMANENT_ENTERED: {
-    triggerEvent: 'ON_ENTER_BATTLEFIELD',
-    scanBattlefield: true,
-    includeEventCard: true,
-    selfEntryEffects: true,
-  },
-  PERMANENT_LEFT: { triggerEvent: 'ON_LEAVE_BATTLEFIELD', scanBattlefield: true, includeEventCard: true },
-  PERMANENT_DIED: { triggerEvent: 'ON_DIE', scanBattlefield: true, includeEventCard: true },
-  PERMANENT_DESTROYED: { triggerEvent: 'ON_DESTROY', scanBattlefield: true, includeEventCard: true },
-  ATTACK_DECLARED: { triggerEvent: 'ON_ATTACK', scanBattlefield: true, includeEventCard: true },
-  DAMAGE_TAKEN: { triggerEvent: 'ON_DAMAGE_TAKEN', scanBattlefield: true, includeEventCard: true },
-  DAMAGE_DEALT: { triggerEvent: 'ON_DAMAGE_DEALT', scanBattlefield: true, includeEventCard: false },
-  UPKEEP_STARTED: { triggerEvent: 'BEGIN_UPKEEP', scanBattlefield: true, includeEventCard: false },
-  END_STEP_STARTED: { triggerEvent: 'END_OF_TURN', scanBattlefield: true, includeEventCard: false },
-  LIFE_GAINED: { triggerEvent: 'ON_LIFE_GAIN', scanBattlefield: true, includeEventCard: false },
-  LIFE_LOST: { triggerEvent: 'ON_LIFE_LOSS', scanBattlefield: true, includeEventCard: false },
-  CARD_DRAWN: { triggerEvent: 'ON_DRAW', scanBattlefield: true, includeEventCard: false },
-  LIBRARY_SHUFFLED: { triggerEvent: 'ON_SHUFFLE', scanBattlefield: true, includeEventCard: false },
-  CARD_DISCARDED_FROM_HAND: { triggerEvent: 'ON_DISCARD_FROM_HAND', scanBattlefield: true, includeEventCard: false },
-  CARD_DISCARDED_FROM_LIBRARY: {
-    triggerEvent: 'ON_DISCARD_FROM_LIBRARY',
-    scanBattlefield: true,
-    includeEventCard: false,
-  },
-  COUNTER_CHANGED: { triggerEvent: 'ON_COUNTER_CHANGED', scanBattlefield: true, includeEventCard: false },
-  SPELL_CAST: { triggerEvent: 'ON_SPELL_CAST', scanBattlefield: true, includeEventCard: false },
-  BLOCK_DECLARED: { triggerEvent: 'ON_BLOCK', scanBattlefield: true, includeEventCard: true },
-  COMBAT_DAMAGE_RESOLVED: { triggerEvent: 'COMBAT_DAMAGE', scanBattlefield: true, includeEventCard: false },
-};
-
-/**
- * Collect the triggered abilities on a single card that match `triggerEvent`.
- */
-function matchingAbilities(card: CardInstance, triggerEvent: TriggerEvent, room?: GameRoom): TriggeredAbility[] {
-  const matches: TriggeredAbility[] = [];
-
-  for (const ability of room ? CardCharacteristicService.resolveAbilities(room, card) : card.blueprint.abilities) {
-    if (ability.type === 'triggered' && ability.triggerCondition === triggerEvent) {
-      matches.push(ability);
-    }
-  }
-
-  return matches;
-}
-
-/**
- * Build the deduplicated set of objects to scan for a given event.
- * Battlefield permanents (watchers) plus, when required, the event's own card
- * (which may not be on the battlefield at the moment the event fires).
- */
-function buildScanSet(event: GameEvent, context: TriggerContext, mapping: EventMapping): CardInstance[] {
-  const cards: CardInstance[] = mapping.scanBattlefield ? [...context.battlefield] : [];
-
-  if (mapping.includeEventCard) {
-    const eventCard = event.payload.card as CardInstance | undefined;
-
-    if (eventCard && !cards.some((c) => c.uuid === eventCard.uuid)) {
-      cards.push(eventCard);
-    }
-  }
-
-  return cards;
-}
-
-/**
- * Discover all triggers that fire in response to `event`, given the current
- * game state in `context`.
- *
- * This is a pure, read-only operation: it inspects abilities and returns
- * pending-trigger records. It does not mutate state, choose targets, resolve
- * effects, or push anything onto the stack.
- *
- * Discovery is intentionally a simple scan of the relevant objects rather than
- * a subscription/index registry — correctness first, optimize later.
- */
-export function discoverTriggers(event: GameEvent, context: TriggerContext): PendingTrigger[] {
-  const mapping = EVENT_MAP[event.eventId];
-
-  // Guard: an event with no mapping can never trigger anything.
-  if (!mapping) return [];
-
+/** All source families share matching, after-event predicates, deduplication and target eligibility. */
+export function discoverTriggers(
+  event: GameEvent,
+  context: TriggerContext,
+  reserved: GameMutation[] = [],
+): PendingTrigger[] {
+  const definition = TRIGGER_EVENTS[event.eventId];
+  if (!definition) return [];
+  const facts = createTriggerEventContext(event, context);
   const pending: PendingTrigger[] = [];
-  const shared = new Set<string>();
-  const scanSet = buildScanSet(event, context, mapping);
-  const triggeringEvent: TriggeringEvent = {
-    cause: event.cause,
-    eventId: event.eventId,
-    payload: event.payload,
-    eventUuid: event.eventUuid,
-    batchId: event.batchId,
-    commandId: event.commandId,
-  };
-
-  const discovered = new Set<string>();
-  // All routes converge here before usage reservation and target preparation.
-  const consider = (
-    card: CardInstance,
-    ability: TriggeredAbility,
-    controllerId: string,
-    rulesRoom = context.room,
-    sourceInfo?: CardSnapshot,
-    subject?: TriggeringEvent['subject'],
-  ): void => {
-    const key = JSON.stringify([card.uuid, card.state.zone, card.state.zoneRevision ?? 0, ability.id]);
-    if (ability.id !== undefined && discovered.has(key)) return;
-    const ownEvent = ability.trigger?.listener?.kind === 'event_card';
-    const matchingEvent = ownEvent ? { ...event, payload: { ...event.payload, card } } : event;
-    const filter = ownEvent ? { ...ability.trigger, subject: 'self' as const } : ability.trigger;
-    if (!triggerMatches(matchingEvent, card, filter, controllerId, rulesRoom, ownEvent ? sourceInfo : undefined))
-      return;
-    const trigger = subject ? { ...triggeringEvent, subject } : triggeringEvent;
-    if (ability.trigger?.condition || ability.interveningIf) {
-      const rules = createRuleContext(rulesRoom, card, controllerId, trigger, sourceInfo);
+  const discovered = new Set<string>(),
+    shared = new Set<string>();
+  for (const candidate of collectTriggerCandidates(event, definition, facts, context, reserved)) {
+    const { source, sourceInfo, ability, controllerId, subjectInfo, registration } = candidate;
+    let identity: (string | undefined)[] = ['entry'];
+    if (ability) identity = ['ability', ability.id];
+    if (registration) identity = ['delayed', registration.id];
+    const key = JSON.stringify([cardObjectKey(source), identity]);
+    if ((!ability || ability.id !== undefined || registration) && discovered.has(key)) continue;
+    const filter = subjectInfo ? { ...candidate.filter, subject: 'self' as const } : candidate.filter;
+    if (!triggerMatches(event, source, filter, controllerId, facts.watcherRoom, subjectInfo)) continue;
+    if (ability?.trigger?.condition || ability?.interveningIf) {
+      // Only source characteristics come from the listener snapshot. Board,
+      // player and history predicates observe the committed after-event state.
+      const rules = createRuleContext(
+        facts.conditionRoom,
+        sourceInfo?.card ?? source,
+        controllerId,
+        facts.event,
+        sourceInfo,
+      );
       if (!conditionMatches(ability.trigger?.condition, rules) || !conditionMatches(ability.interveningIf, rules))
-        return;
+        continue;
     }
-    const sharedKey = `${controllerId}:${card.blueprint.id}:${ability.id}`;
-    if (ability.sharedPerEvent && shared.has(sharedKey)) return;
-    if (ability.sharedPerEvent) shared.add(sharedKey);
-    discovered.add(key);
-    pending.push({
+    const effects = buildStackEffects(ability ? abilityEffects(ability) : candidate.effects, controllerId, source);
+    const trigger: PendingTrigger = {
       ability,
-      source: card,
-      ...(sourceInfo ? { sourceInfo } : {}),
+      source,
+      sourceInfo,
       controllerId,
-      effects: buildStackEffects(abilityEffects(ability), controllerId, card),
-      event: trigger,
-    });
-  };
-
-  for (const card of scanSet) {
-    const controllerId = context.room
-      ? CardCharacteristicService.resolveController(context.room, card)
-      : card.state.controllerId;
-    for (const ability of matchingAbilities(card, mapping.triggerEvent, context.room)) {
-      if (!ability.trigger?.listener) consider(card, ability, controllerId);
-    }
-
-    // Ordered onEnterEffects shorthand (PERMANENT_ENTERED only). No TriggeredAbility
-    // wrapper, so `ability` is left undefined.
-    const enterEffects = context.room
-      ? CardCharacteristicService.resolve(context.room, card).onEnterEffects
-      : card.blueprint.onEnterEffects;
-
+      effects,
+      event: facts.event,
+      ...(registration ? { registration } : {}),
+    };
     if (
-      mapping.selfEntryEffects &&
-      enterEffects?.length &&
-      triggerMatches(event, card, { subject: 'self' }, controllerId, context.room)
-    ) {
-      const entryEffects = buildStackEffects(enterEffects, controllerId, card);
-
-      if (entryEffects.length > 0) {
-        pending.push({ source: card, controllerId, effects: entryEffects, event: triggeringEvent });
-      }
-    }
+      facts.conditionRoom &&
+      !canPrepareTrigger(facts.conditionRoom, {
+        ...trigger,
+        type: 'triggered',
+        uuid: '',
+        triggeringEvent: facts.event,
+        countered: false,
+      })
+    )
+      continue;
+    const sharedKey = JSON.stringify([controllerId, source.blueprint.id, ability?.id]);
+    if (ability?.sharedPerEvent && shared.has(sharedKey)) continue;
+    if (ability?.sharedPerEvent) shared.add(sharedKey);
+    discovered.add(key);
+    pending.push(trigger);
   }
-
-  for (const candidate of explicitListenerCandidates(event, mapping.triggerEvent, context)) {
-    const { sourceInfo, ability, subject } = candidate;
-    // Snapshot characteristics use their own event window, but predicates see
-    // the same committed history and queued usage reservations as other routes.
-    const rulesRoom =
-      candidate.room && context.room ? { ...candidate.room, turnHistory: context.room.turnHistory } : candidate.room;
-    consider(sourceInfo.card, ability, sourceInfo.card.state.controllerId, rulesRoom, sourceInfo, subject);
-  }
-
   return pending;
 }
 
-// ============================================================================
-// TriggerManager — coordinator
-// ============================================================================
-
-/**
- * TriggerManager listens for game events (PERMANENT_ENTERED, etc.), runs
- * read-only trigger discovery against the current game state, and turns each
- * discovered trigger into a PUSH_STACK mutation in a shared collector.
- *
- * Responsibilities (per the trigger/stack separation):
- * - Detection: delegates to `discoverTriggers` (read-only).
- * - Coordination: converts pending triggers into stack mutations and hands
- *   them to the engine via the collector. It does NOT resolve effects or
- *   manage priority — the engine drains the collector and sequences the
- *   mutations through the pure reducer.
- *
- * UUID generation is injected via `generateUuid` so TriggerManager stays pure.
- *
- * `getRoom` is a getter (not a direct reference) because the engine reassigns
- * its `room` after each mutation application.
- */
+/** Converts eligible discoveries into queue mutations; the existing scheduler owns player choices. */
 export class TriggerManager {
   private collector: GameMutation[];
   private generateUuid: () => string;
@@ -287,7 +115,7 @@ export class TriggerManager {
     this.getRoom = getRoom;
 
     // Register a listener for every event that can produce triggers.
-    for (const eventId of Object.keys(EVENT_MAP)) {
+    for (const eventId of Object.keys(TRIGGER_EVENTS)) {
       const listener = (event: GameEvent, context?: EventContext) => this.onEvent(event, context);
       eventBus.on(eventId, listener);
       this.registered.push({ eventId, listener });
@@ -299,35 +127,20 @@ export class TriggerManager {
    * the mutation collector.
    */
   private onEvent(event: GameEvent, batch?: EventContext): void {
-    const departure =
-      event.eventId === 'PERMANENT_LEFT' ||
-      event.eventId === 'PERMANENT_DIED' ||
-      event.eventId === 'PERMANENT_DESTROYED' ||
-      event.eventId === 'CREATURE_KILLED';
-    let room = this.getRoom();
-    if (batch) room = batch.after;
-    if (batch && departure) room = { ...batch.before, turnHistory: batch.after.turnHistory };
-
-    // Discovery is read-only. Uses queued by earlier events become visible to
-    // this event's predicates, before any ability on this event is discovered.
-    const history = room.turnHistory ?? newTurnHistory(room.turnNumber ?? 1),
-      uses = { ...history.uses };
-
-    for (const mutation of this.collector) {
-      if (mutation.type === 'RECORD_ABILITY_USE' && (mutation.turnNumber ?? history.turnNumber) === history.turnNumber)
-        uses[mutation.key] = (uses[mutation.key] ?? 0) + 1;
-    }
-
-    const ruleRoom = { ...room, turnHistory: { ...history, uses } };
-    const context: TriggerContext = {
-      room: ruleRoom,
-      roomId: room.roomId,
-      battlefield: room.battlefield,
-      before: batch?.before,
-      after: batch?.after,
-    };
-
-    const pending = discoverTriggers(event, context);
+    const room = batch?.after ?? this.getRoom();
+    const baseline = { ...room, turnHistory: room.turnHistory ?? newTurnHistory(room.turnNumber ?? 1) };
+    const ruleRoom = withReservedAbilityUses(baseline, this.collector);
+    const pending = discoverTriggers(
+      event,
+      {
+        room: ruleRoom,
+        roomId: room.roomId,
+        battlefield: room.battlefield,
+        before: batch?.before,
+        after: ruleRoom,
+      },
+      this.collector,
+    );
 
     if (gameConfig.logging.appliedEvents) {
       engineLogger
@@ -336,71 +149,10 @@ export class TriggerManager {
     }
 
     for (const trigger of pending) {
-      this.pushTrigger(trigger, room);
-    }
-
-    // Registrations exist independently of whether their original source remains
-    // on the battlefield. Use the event's state, never a later registration.
-    for (const registration of room.delayedTriggers ?? []) {
-      // Guard: only registrations for this event, and not already removed, are considered.
-      if (
-        registration.ability.triggerCondition !== EVENT_MAP[event.eventId]?.triggerEvent ||
-        this.collector.some((mutation) => mutation.type === 'REMOVE_DELAYED_TRIGGER' && mutation.id === registration.id)
-      )
-        continue;
-
-      if (
-        !triggerMatches(event, registration.source, registration.ability.trigger, registration.controllerId, ruleRoom)
-      )
-        continue;
-
-      const info = resolveSourceInformation(room, {
-        type: 'triggered',
-        uuid: registration.id,
-        source: registration.source,
-        sourceInfo: registration.sourceInfo,
-        controllerId: registration.controllerId,
-        effects: [],
-        countered: false,
-      });
-      const triggeringEvent: TriggeringEvent = {
-        cause: event.cause,
-        eventId: event.eventId,
-        payload: event.payload,
-        eventUuid: event.eventUuid,
-        batchId: event.batchId,
-        commandId: event.commandId,
-      };
-      const rules = createRuleContext(ruleRoom, info.card, registration.controllerId, triggeringEvent, info);
-
-      if (
-        !conditionMatches(registration.ability.trigger?.condition, rules) ||
-        !conditionMatches(registration.ability.interveningIf, rules)
-      )
-        continue;
-
-      // A one-shot registration is removed once it has fired.
-      if (
-        this.pushTrigger(
-          {
-            ability: registration.ability,
-            source: registration.source,
-            controllerId: registration.controllerId,
-            effects: buildStackEffects(
-              abilityEffects(registration.ability),
-              registration.controllerId,
-              registration.source,
-            ),
-            event: triggeringEvent,
-          },
-          room,
-          info,
-          'delayed:' + registration.id,
-        ) &&
-        registration.lifetime === 'once'
-      ) {
+      const registration = trigger.registration;
+      const useKey = registration ? 'delayed:' + registration.id : undefined;
+      if (this.pushTrigger(trigger, room, useKey) && registration?.lifetime === 'once')
         this.collector.push({ type: 'REMOVE_DELAYED_TRIGGER', id: registration.id });
-      }
     }
   }
 
@@ -410,7 +162,6 @@ export class TriggerManager {
   private pushTrigger(
     trigger: PendingTrigger,
     room: GameRoom,
-    sourceInfo?: CardSnapshot,
     useKey = abilityUseKey(trigger.source, trigger.ability?.id ?? 'on-enter'),
   ): boolean {
     // Include registration identity: independent delayed listeners can share
@@ -423,6 +174,7 @@ export class TriggerManager {
             trigger.source.uuid,
             trigger.source.state.zone,
             trigger.source.state.zoneRevision ?? 0,
+            trigger.ability ? 'ability' : 'entry',
             useKey,
           ])
         : undefined;
@@ -437,22 +189,7 @@ export class TriggerManager {
       return false;
     if (
       trigger.ability &&
-      !abilityUsageAvailable(room, trigger.source, trigger.ability, this.collector, trigger.controllerId)
-    )
-      return false;
-    const limit = trigger.ability?.limitPerTurn;
-    const turnNumber = room.turnNumber ?? 1;
-    const reserved = this.collector.filter(
-      (mutation) =>
-        mutation.type === 'RECORD_ABILITY_USE' &&
-        mutation.key === useKey &&
-        (mutation.turnNumber ?? turnNumber) === turnNumber,
-    ).length;
-
-    // Guard: a per-turn limit that is already reached suppresses the trigger.
-    if (
-      limit !== undefined &&
-      (!Number.isSafeInteger(limit) || limit < 1 || (room.turnHistory?.uses[useKey] ?? 0) + reserved >= limit)
+      !abilityUsageAvailable(room, trigger.source, trigger.ability, this.collector, trigger.controllerId, useKey)
     )
       return false;
 
@@ -462,7 +199,7 @@ export class TriggerManager {
       ...(triggerKey ? { triggerKey } : {}),
       controllerId: trigger.controllerId,
       source: trigger.source,
-      sourceInfo: sourceInfo ?? trigger.sourceInfo ?? captureSourceInformation(room, trigger.source),
+      sourceInfo: trigger.sourceInfo ?? captureSourceInformation(room, trigger.source),
       ability: trigger.ability,
       effects: trigger.effects,
       triggeringEvent: trigger.event,
@@ -470,9 +207,7 @@ export class TriggerManager {
     };
 
     this.collector.push({ type: 'PUSH_STACK', stackObject: stackObj });
-    this.collector.push({ type: 'RECORD_ABILITY_USE', key: useKey, turnNumber });
-    if (trigger.ability)
-      this.collector.push(...recordAbilityUsage(room, trigger.source, trigger.ability, trigger.controllerId));
+    this.collector.push(...recordAbilityCommit(room, trigger.source, trigger.ability, trigger.controllerId, useKey));
 
     if (gameConfig.logging.appliedEvents) {
       engineLogger
