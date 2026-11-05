@@ -45,6 +45,9 @@ function expose(
           ...(object.resolutionReveals ?? []),
           {
             cards: structuredClone(revealed),
+            snapshots: observation.members
+              .filter((member) => revealed.some((card) => sameObservedCard(card, member.snapshot.card)))
+              .map((member) => structuredClone(member.snapshot)),
             sourceInfo: observation.sourceInfo,
             controllerId: object.controllerId,
           },

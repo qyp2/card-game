@@ -142,8 +142,13 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() =>
         });
         return;
       }
-      if (value.recordResult && !((action === 'DISCARD_FROM_LIBRARY' && value.recordResult.kind === 'milled') ||
-        (action === 'CAPTURE_WINDOW' && value.recordResult.kind === 'captured')))
+      if (
+        value.recordResult &&
+        !(
+          (action === 'DISCARD_FROM_LIBRARY' && value.recordResult.kind === 'milled') ||
+          (action === 'CAPTURE_WINDOW' && value.recordResult.kind === 'captured')
+        )
+      )
         ctx.addIssue({
           code: 'custom',
           path: ['recordResult'],
@@ -152,14 +157,24 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() =>
       if (action === 'CAPTURE_WINDOW' && !value.recordResult) {
         ctx.addIssue({ code: 'custom', path: ['recordResult'], message: 'Capture requires a named captured result' });
       }
-      if (['CAPTURE_WINDOW', 'SET_COLLECTION_VISIBILITY'].includes(action) &&
-        (value.choice || value.targetGroup || value.recordOutcome || value.onKill ||
-          (value.targeting && (value.targeting.type !== 'self' || value.targeting.required ||
-            Object.keys(value.targeting).some(key => !['type', 'required'].includes(key)))))) {
+      if (
+        ['CAPTURE_WINDOW', 'SET_COLLECTION_VISIBILITY'].includes(action) &&
+        (value.choice ||
+          value.targetGroup ||
+          value.recordOutcome ||
+          value.onKill ||
+          (value.targeting &&
+            (value.targeting.type !== 'self' ||
+              value.targeting.required ||
+              Object.keys(value.targeting).some((key) => !['type', 'required'].includes(key)))))
+      ) {
         ctx.addIssue({ code: 'custom', message: 'Collection instructions do not accept targeting or outcome choices' });
       }
-      if (action === 'CREATE_TOKEN' && value.targeting &&
-        (value.targeting.type !== 'player' && value.targeting.type !== 'self' || value.targeting.subject === 'source')) {
+      if (
+        action === 'CREATE_TOKEN' &&
+        value.targeting &&
+        ((value.targeting.type !== 'player' && value.targeting.type !== 'self') || value.targeting.subject === 'source')
+      ) {
         ctx.addIssue({ code: 'custom', path: ['targeting'], message: 'Token creation recipients must be players' });
       }
       const parsed = parameters[action as InstructionAction].safeParse(value.params ?? {});
@@ -213,14 +228,46 @@ export const ChoiceSchema: z.ZodType = z.lazy(() =>
     }),
   ]),
 );
-const TriggerFilterSchema = z.strictObject({
-  cause: z.enum(['self', 'controller', 'any']).optional(),
-  subject: z.enum(['self', 'another', 'any']).optional(),
-  controller: PlayerRelation.optional(),
-  cardTypes: z.array(Identifier).optional(),
-  subTypes: z.array(Identifier).optional(),
-  condition: ConditionSchema.optional(),
-});
+const ListenerZones = z
+  .array(Zone)
+  .min(1)
+  .refine((zones) => new Set(zones).size === zones.length, 'Duplicate listener zone');
+export const TriggerListenerSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('event_card'), state: z.enum(['before', 'after']), zones: ListenerZones }),
+  z.strictObject({ kind: z.literal('watcher'), activeZones: ListenerZones }),
+]);
+export type TriggerListener = z.infer<typeof TriggerListenerSchema>;
+const TriggerFilterSchema = z
+  .strictObject({
+    listener: TriggerListenerSchema.optional(),
+    cause: z.enum(['self', 'controller', 'any']).optional(),
+    subject: z.enum(['self', 'another', 'any']).optional(),
+    controller: PlayerRelation.optional(),
+    cardTypes: z.array(Identifier).optional(),
+    subTypes: z.array(Identifier).optional(),
+    condition: ConditionSchema.optional(),
+  })
+  .superRefine((filter, ctx) => {
+    if (filter.listener?.kind === 'event_card' && filter.subject !== undefined && filter.subject !== 'self')
+      ctx.addIssue({ code: 'custom', path: ['subject'], message: 'An event_card listener can only have subject self' });
+  });
+function validateListenerEvent(
+  ability: { type: string; triggerCondition?: string; trigger?: { listener?: { kind: string } } },
+  ctx: z.RefinementCtx,
+): void {
+  if (
+    ability.type === 'triggered' &&
+    ability.trigger?.listener?.kind === 'event_card' &&
+    ['ON_SHUFFLE', 'BEGIN_UPKEEP', 'END_OF_TURN', 'ON_LIFE_GAIN', 'ON_LIFE_LOSS', 'COMBAT_DAMAGE'].includes(
+      ability.triggerCondition ?? '',
+    )
+  )
+    ctx.addIssue({
+      code: 'custom',
+      path: ['trigger', 'listener'],
+      message: 'This event has no individual card subject; use a watcher',
+    });
+}
 export const AbilityUsageSchema = UsageSchema.extend({ consume: z.literal('on_commit') });
 export type AbilityUsage = z.infer<typeof AbilityUsageSchema>;
 const commonAbility = {
@@ -282,6 +329,7 @@ export const RawAbilitySchema: z.ZodType = z.lazy(() =>
       }),
     ])
     .superRefine((ability, ctx) => {
+      validateListenerEvent(ability, ctx);
       if (ability.type === 'static') {
         if (!ability.rules?.length)
           ctx.addIssue({
@@ -320,6 +368,7 @@ export const NormalizedAbilitySchema: z.ZodType = z.lazy(() =>
       }),
     ])
     .superRefine((ability, ctx) => {
+      validateListenerEvent(ability, ctx);
       if (ability.type === 'static') {
         if (!ability.rules?.length && !ability.effects?.length)
           ctx.addIssue({

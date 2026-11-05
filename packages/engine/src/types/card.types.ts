@@ -83,7 +83,11 @@ export type ActivatedAbility = ActivatedAbilityBase & (
     | { effects: EffectDefinition[]; effect?: never }
 );
 
+/** Discovery policy, independent from the event subject and its cause. */
+export type TriggerListener = import('../rules/schema/contracts').TriggerListener;
+
 export interface TriggerFilter {
+    listener?: TriggerListener;
     cause?: 'self' | 'controller' | 'any';
     condition?: import('./rule.types').RuleCondition;
     subject?: 'self' | 'another' | 'any';

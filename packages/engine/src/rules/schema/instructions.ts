@@ -67,9 +67,13 @@ export function instructionParameterSchemas(
     .strictObject(stats)
     .refine((v) => v.power !== undefined || v.toughness !== undefined, 'Stat change requires a value');
   return {
-    CREATE_TOKEN: z.strictObject({ tokenId: Identifier.refine(isTokenDefinition, 'Unknown token definition'),
-      amount: CountExpression.refine(value => typeof value !== 'number' || value <= tokenPolicy.maxCreatedPerInstruction,
-        'Token creation exceeds its work bound').optional() }),
+    CREATE_TOKEN: z.strictObject({
+      tokenId: Identifier.refine(isTokenDefinition, 'Unknown token definition'),
+      amount: CountExpression.refine(
+        (value) => typeof value !== 'number' || value <= tokenPolicy.maxCreatedPerInstruction,
+        'Token creation exceeds its work bound',
+      ).optional(),
+    }),
     CAPTURE_WINDOW: CaptureWindowSchema,
     SET_COLLECTION_VISIBILITY: CollectionVisibilitySchema,
     PAY_COST: z.strictObject({
@@ -81,8 +85,11 @@ export function instructionParameterSchemas(
     CLAIM_REVEALED_SELF: z.strictObject({ discard: z.boolean().optional() }),
     DISCARD_FROM_LIBRARY: z.union([
       z.strictObject({ amount: EffectCount }),
-      z.strictObject({ from: CardResultSourceSchema.extend({ view: z.literal('current').optional() }),
-        filter: CardFilterSchema.optional(), amount: EffectCount.optional() }),
+      z.strictObject({
+        from: CardResultSourceSchema.extend({ view: z.literal('current').optional() }),
+        filter: CardFilterSchema.optional(),
+        amount: EffectCount.optional(),
+      }),
     ]),
     DISCARD_FROM_HAND: z.strictObject({ amount: EffectCount }),
     DISCARD_HAND: empty,
@@ -152,9 +159,19 @@ export function instructionParameterSchemas(
     }),
     CREATE_REPLACEMENT_EFFECT: z.strictObject({ definition: AuthoredReplacementSchema }),
     REGENERATE: empty,
-    CREATE_DELAYED_TRIGGER: z.strictObject({
-      ability: z.lazy(ability),
-      lifetime: z.enum(['once', 'end_of_turn', 'permanent']).optional(),
-    }),
+    CREATE_DELAYED_TRIGGER: z
+      .strictObject({
+        ability: z.lazy(ability),
+        lifetime: z.enum(['once', 'end_of_turn', 'permanent']).optional(),
+      })
+      .superRefine((params, ctx) => {
+        const trigger = (params.ability as { trigger?: { listener?: unknown } }).trigger;
+        if (trigger?.listener !== undefined)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['ability', 'trigger', 'listener'],
+            message: 'Delayed registrations own their lifetime; source discovery listeners are not supported here',
+          });
+      }),
   } satisfies Record<InstructionAction, z.ZodType>;
 }

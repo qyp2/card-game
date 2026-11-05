@@ -94,6 +94,12 @@ Triggered abilities require `triggerCondition`. Optional `trigger` filters subje
 }
 ```
 
+### Explicit listener zones and snapshots
+
+Use `trigger.listener: { "kind": "event_card", "state": "before", "zones": ["library"] }` for a card responding to its own mill. Use `{ "kind": "watcher", "activeZones": ["hand"] }` for an ability listening from hand, such as a life-loss response. These are strict, separate policies; source zones do not alter visibility or casting permissions. Event-card listeners allow only a self subject. Abilities without a listener declaration retain existing discovery behavior.
+
+See [the listener contract and event windows](../../../../docs/trigger-listener-architecture.md) for complete JSON examples, retained reveal/death snapshots, shared usage and delayed-registration boundaries.
+
 ## Counter costs and optional paid branches
 
 An activation pays counters in `cost`, before entering the stack:

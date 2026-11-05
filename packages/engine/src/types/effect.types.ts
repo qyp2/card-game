@@ -212,12 +212,21 @@ export interface ActivatedStackObject {
   readonly uuid: string;
   readonly type: 'activated';
   readonly controllerId: string;
-  readonly source: CardInstance; // the permanent (stays on battlefield)
+  readonly source: CardInstance; // retained listener incarnation
   readonly ability: ActivatedAbility; // the ability being activated
   readonly effects: StackEffect[]; // resolves in order
   readonly timestamp?: number;
   countered: boolean;
   fizzled?: boolean;
+}
+
+/** Stable event-subject identity without retaining another whole room. */
+export interface TriggerSubject {
+  cardUuid: string;
+  zone: CardInstance['state']['zone'];
+  zoneRevision: number;
+  ownerId: string;
+  controllerId: string;
 }
 
 /**
@@ -232,6 +241,8 @@ export interface ActivatedStackObject {
 export interface TriggeringEvent {
   cause?: import('./change-cause.types').ChangeCause;
   eventId: string;
+  /** Event subject identity is separate from the listener and the cause. */
+  subject?: { before?: TriggerSubject; after?: TriggerSubject };
   payload: Record<string, unknown>;
   eventUuid?: string;
   batchId?: string;
@@ -239,19 +250,21 @@ export interface TriggeringEvent {
 }
 
 /**
- * A triggered ability (CR 603). Source is a permanent already on the battlefield.
+ * A triggered ability. Source is the listener incarnation that observed the event.
  * `ability` is optional to support the legacy `onEnterEffects` path, which has
- * no TriggeredAbility wrapper. Carried for future consumption (duration, fizzle,
- * cost verification) — not yet read by the resolution pipeline.
+ * no TriggeredAbility wrapper. The definition supports modes, target preparation,
+ * usage accounting and resolution-time condition checks.
  */
 export interface TriggeredStackObject {
+  /** Event/listener incarnation/ability identity; deduplicates pending delivery. */
+  readonly triggerKey?: string;
   readonly immediate?: boolean;
   readonly sourceInfo?: CardSnapshot;
   readonly targetGroups?: StackTargetGroup[];
   readonly uuid: string;
   readonly type: 'triggered';
   readonly controllerId: string;
-  readonly source: CardInstance; // the permanent (stays on battlefield)
+  readonly source: CardInstance; // retained listener incarnation
   readonly ability?: TriggeredAbility; // the ability that triggered (optional for legacy path)
   readonly effects: StackEffect[]; // resolves in order
   /** The event that caused this trigger (last-known info for resolve time). */
@@ -264,6 +277,7 @@ export interface TriggeredStackObject {
 /** Exact cards exposed by this resolution; expires with its continuation. */
 export interface ResolutionReveal {
   cards: CardInstance[];
+  snapshots?: CardSnapshot[];
   sourceInfo: CardSnapshot;
   controllerId: string;
 }

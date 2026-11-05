@@ -447,9 +447,14 @@ export function deriveAppliedEvents(
           const player = batchAfter.players[revealedCard.state.ownerId];
           const card = [...player.deck, ...player.hand].find((card) => card.uuid === revealedCard.uuid) ?? revealedCard;
 
+          const revealedSnapshot = reveal.snapshots?.find(snapshot =>
+            snapshot.card.uuid === revealedCard.uuid && snapshot.card.state.zone === revealedCard.state.zone &&
+            (snapshot.card.state.zoneRevision ?? 0) === (revealedCard.state.zoneRevision ?? 0));
+
           add('CARD_REVEALED', {
             card,
             revealedCard,
+            ...(revealedSnapshot ? { revealedSnapshot } : {}),
             sourceInfo: reveal.sourceInfo,
             controllerId: reveal.controllerId,
           });
