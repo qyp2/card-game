@@ -43,8 +43,11 @@ export function normalizeContinuousEntry(room: GameRoom, entry: ContinuousEffect
   const sequence = nextEffectSequence(room);
   const controller = entry.sourceControllerId ?? (source ? CardCharacteristicService.resolveController(room, source) : undefined);
 
-  // Resolved effects freeze the set of objects they affect at creation time.
-  const scope = origin === 'resolved' && entry.effect.type !== 'PERMISSION' && !entry.scope.objects
+  // Broad mill and permission rules keep matching current cards. Specific
+  // targets and other resolved characteristics stay tied to their objects.
+  const liveRule = entry.effect.type === 'PERMISSION' ||
+    (entry.effect.type === 'MILL_AMOUNT' && !entry.scope.cardUuid && !entry.scope.self);
+  const scope = origin === 'resolved' && !liveRule && !entry.scope.objects
     ? {
       objects: cards
         .filter((c) => scopeMatches(characteristicScope(entry.scope), c, CardCharacteristicService.resolve(room, c), source, controller))

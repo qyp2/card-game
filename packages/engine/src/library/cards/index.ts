@@ -102,6 +102,13 @@ import auroraIceDragon from './workbook/aurora-ice-dragon.json';
 import frostmoonGatekeeper from './workbook/frostmoon-gatekeeper.json';
 import dragonsBlessing from './workbook/dragons-blessing.json';
 
+import phantomSeaTassa from './workbook/phantom-sea-tassa.json';
+import seaGodCallerHaya from './workbook/sea-god-caller-haya.json';
+import sunkenShip from './workbook/sunken-ship.json';
+import demonSeaSpire from './workbook/demon-sea-spire.json';
+import seabornIllusionist from './workbook/seaborn-illusionist.json';
+import shiftingSeaTemple from './workbook/shifting-sea-temple.json';
+
 const cards: Record<string, unknown> = {
   'phantom-queen-hera': phantomQueenHera,
   'angel-emperor-aralaria': angelEmperorAralaria,
@@ -204,5 +211,11 @@ const cards: Record<string, unknown> = {
   'aurora-ice-dragon': auroraIceDragon,
   'frostmoon-gatekeeper': frostmoonGatekeeper,
   'dragons-blessing': dragonsBlessing,
+  'phantom-sea-tassa': phantomSeaTassa,
+  'sea-god-caller-haya': seaGodCallerHaya,
+  'sunken-ship': sunkenShip,
+  'demon-sea-spire': demonSeaSpire,
+  'seaborn-illusionist': seabornIllusionist,
+  'shifting-sea-temple': shiftingSeaTemple,
 };
 export default cards;

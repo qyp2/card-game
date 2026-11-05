@@ -119,28 +119,30 @@ export const EffectRegistry: Record<string, EffectHandler> = {
 
   'CREATE_TOKEN': (room, _stackObj, effect, context = defaultEffectContext) => planTokenCreation(room, effect, context),
 
-  'DISCARD_FROM_LIBRARY': (room, _stackObj, effect) => {
+  'DISCARD_FROM_LIBRARY': (room, stackObj, effect) => {
     const amount = effect.params.amount;
     if (effect.params.from) {
-      const members = collectCardSource(roomCards(room), effect.params.from as CardResultSource, _stackObj.resolutionResults);
+      const members = collectCardSource(roomCards(room), effect.params.from as CardResultSource, stackObj.resolutionResults);
       if (!members || (amount !== undefined && (!Number.isSafeInteger(amount) || (amount as number) < 0))) return [];
       return members.map(entry => entry.card).filter(card => card.state.zone === 'library' && matchesCardFilter(card,
-        CardCharacteristicService.resolve(room, card), effect.params.filter as CardFilter ?? {}, _stackObj.controllerId))
+        CardCharacteristicService.resolve(room, card), effect.params.filter as CardFilter ?? {}, stackObj.controllerId))
         .slice(0, amount as number | undefined).map(card => ({ type: 'MOVE_CARD' as const,
           cardUuid: card.uuid, playerId: card.state.ownerId, from: 'library' as const, to: 'graveyard' as const,
           zoneRevision: card.state.zoneRevision ?? 0, reason: 'discard' as const,
         }));
     }
 
-    // Guard: the amount must be a non-negative integer.
-    if (!Number.isSafeInteger(amount) || (amount as number) < 0) return [];
+    if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < 0) return [];
+
+    const { card: source } = resolveSourceInformation(room, stackObj);
+    const count = Math.min(Number.MAX_SAFE_INTEGER, amount + (source.lastKnownCharacteristics?.millBonus ?? 0));
 
     return effect.targets.flatMap(target => {
       const player = target.playerId ? room.players[target.playerId] : undefined;
 
-      if (!player || amount === 0) return [];
+      if (!player || count === 0) return [];
 
-      return player.deck.slice(-Math.min(amount as number, player.deck.length)).reverse().map(card => ({
+      return player.deck.slice(-Math.min(count, player.deck.length)).reverse().map(card => ({
         type: 'MOVE_CARD' as const,
         cardUuid: card.uuid,
         playerId: player.id,
@@ -633,36 +635,40 @@ export const EffectRegistry: Record<string, EffectHandler> = {
 function createContinuousEffect(room: GameRoom, object: StackObject, effect: StackEffect,
   operation: import('../types/card.types').ContinuousEffect): GameMutation[] {
   // Guard: only known characteristic operations are accepted.
-  if (!operation || !['COPY', 'CONTROL', 'TEXT', 'TYPE', 'COLOR', 'ABILITY', 'SET_STATS', 'STAT_DELTA', 'SWITCH_STATS', 'PERMISSION'].includes(operation.type)) return [];
+  if (!operation || !['COPY', 'CONTROL', 'TEXT', 'TYPE', 'COLOR', 'ABILITY', 'SET_STATS', 'STAT_DELTA', 'SWITCH_STATS', 'MILL_AMOUNT', 'PERMISSION'].includes(operation.type)) return [];
 
   const duration = effect.params.duration ?? 'PERMANENT';
 
   // Guard: the duration must be one the continuous-effect pool understands.
   if (!['END_OF_TURN', 'PERMANENT', 'WHILE_ON_BATTLEFIELD', 'WHILE_ATTACHED'].includes(duration as string)) return [];
 
+  const create = (scope: ContinuousEffectEntry['scope']): GameMutation => ({
+    type: 'ADD_CONTINUOUS_EFFECT',
+    entry: {
+      source: object.source.uuid,
+      sourceRevision: object.source.state.zoneRevision ?? 0,
+      origin: 'resolved',
+      sourceControllerId: object.controllerId,
+      requiredZone: effect.params.requiredZone as CardZone | null ?? null,
+      layer: 7,
+      effect: structuredClone(operation),
+      scope,
+      duration: duration as ContinuousEffectEntry['duration'],
+    },
+  });
+  const declaredScope = effect.params.scope as ContinuousEffectEntry['scope'] | undefined;
+  if (declaredScope) return [create(declaredScope)];
+
   return effect.targets.flatMap(target => {
     const card = target.cardUuid ? findTargetCard(room, target) : undefined;
 
-    // Guard: a target must be either an anthem filter or a resolvable card.
+    // A target must be a filter or a resolvable card.
     if (!target.all && !card) return [];
 
     const scope: ContinuousEffectEntry['scope'] = target.all
       ? { zones: ['battlefield'], cardTypes: target.cardTypes, subTypes: target.subTypes, controller: target.controller }
       : { cardUuid: card!.uuid, zoneRevision: card!.state.zoneRevision ?? 0 };
 
-    return [{
-      type: 'ADD_CONTINUOUS_EFFECT' as const,
-      entry: {
-        source: object.source.uuid,
-        sourceRevision: object.source.state.zoneRevision ?? 0,
-        origin: 'resolved' as const,
-        sourceControllerId: object.controllerId,
-        requiredZone: effect.params.requiredZone as import('../types/card.types').CardZone | null ?? null,
-        layer: 7,
-        effect: structuredClone(operation),
-        scope,
-        duration: duration as ContinuousEffectEntry['duration'],
-      },
-    }];
+    return [create(scope)];
   });
 }

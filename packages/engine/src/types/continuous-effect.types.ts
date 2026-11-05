@@ -29,6 +29,7 @@ export type ContinuousEffect =
   | { type: 'SET_STATS'; power: CharacteristicNumber; toughness: CharacteristicNumber }
   | { type: 'STAT_DELTA'; power?: CharacteristicNumber; toughness?: CharacteristicNumber }
   | { type: 'SWITCH_STATS' }
+  | { type: 'MILL_AMOUNT'; amount: number }
   | { type: 'PERMISSION'; rules: PermissionRule[] };
 export interface StaticEffectDefinition {
   condition?: import('./rule.types').RuleCondition;
@@ -61,6 +62,7 @@ export interface ContinuousEffectEntry extends StaticEffectDefinition {
   duration: 'END_OF_TURN' | 'WHILE_ATTACHED' | 'WHILE_ON_BATTLEFIELD' | 'PERMANENT';
 }
 export interface CardCharacteristics {
+  millBonus?: number;
   numericDeclarations?: import('./numeric-value.types').NumericDeclaration[];
   castRequirements: import('./effect.types').ActionRequirements;
   onCastEffects: import('./effect.types').EffectDefinition[];

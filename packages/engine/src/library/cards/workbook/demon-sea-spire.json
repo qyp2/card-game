@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "id": "demon-sea-spire",
+  "name": "魔海尖塔",
+  "manaCost": "{U}{U}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "colors": [
+    "blue"
+  ],
+  "rulesText": "① 我方攻擊階段，對手不能使用能量總值為3以下的魔法卡。② 每局一次，速：從我方墳墓特殊配置一張地界。",
+  "abilities": [
+    {
+      "id": "attack-cast-lock",
+      "type": "static",
+      "rules": [
+        {
+          "id": "small-spells",
+          "family": "permissions",
+          "scope": {
+            "controller": "opponent",
+            "zones": [
+              "hand",
+              "graveyard",
+              "exile",
+              "library"
+            ],
+            "cardTypes": [
+              "Spell"
+            ],
+            "manaValue": {
+              "max": 3
+            }
+          },
+          "condition": {
+            "all": [
+              {
+                "op": "eq",
+                "left": {
+                  "path": "room.activeTurnPlayerId"
+                },
+                "right": {
+                  "path": "controller.id"
+                }
+              },
+              {
+                "any": [
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "beginCombatStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareAttackersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "declareBlockersStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "combatDamageStep"
+                  },
+                  {
+                    "op": "eq",
+                    "left": {
+                      "path": "room.phase"
+                    },
+                    "right": "endCombatStep"
+                  }
+                ]
+              }
+            ]
+          },
+          "operation": {
+            "type": "PERMISSION",
+            "rules": [
+              {
+                "action": "cast",
+                "mode": "prohibit",
+                "players": "opponent"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "recover-land",
+      "type": "activated",
+      "castSpeed": "instant",
+      "cost": {},
+      "usage": {
+        "period": "game",
+        "limit": 1,
+        "identity": "source_card",
+        "consume": "on_commit"
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "move",
+        "params": {
+          "origin": "graveyard",
+          "destination": "battlefield"
+        },
+        "choice": {
+          "kind": "search",
+          "zone": "graveyard",
+          "cardTypes": [
+            "Land"
+          ],
+          "min": 1,
+          "max": 1
+        }
+      }
+    }
+  ]
+}

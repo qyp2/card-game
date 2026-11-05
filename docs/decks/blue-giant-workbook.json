@@ -1,0 +1,62 @@
+{
+  "name": "Blue Giant Mill (Workbook)",
+  "format": "standard",
+  "cards": [
+    {
+      "cardId": "sea-domain",
+      "quantity": 23
+    },
+    {
+      "cardId": "worlds-sea",
+      "quantity": 1
+    },
+    {
+      "cardId": "sea-city-noble",
+      "quantity": 3
+    },
+    {
+      "cardId": "sea-patrol",
+      "quantity": 3
+    },
+    {
+      "cardId": "phantom-sea-tassa",
+      "quantity": 3
+    },
+    {
+      "cardId": "phantom-sea-gotu",
+      "quantity": 3
+    },
+    {
+      "cardId": "sunken-ship",
+      "quantity": 3
+    },
+    {
+      "cardId": "shifting-sea-temple",
+      "quantity": 3
+    },
+    {
+      "cardId": "demon-sea-spire",
+      "quantity": 3
+    },
+    {
+      "cardId": "seaborn-illusionist",
+      "quantity": 3
+    },
+    {
+      "cardId": "abyss-illusionist",
+      "quantity": 3
+    },
+    {
+      "cardId": "sea-god-caller-haya",
+      "quantity": 3
+    },
+    {
+      "cardId": "phantom-sea-corporal",
+      "quantity": 3
+    },
+    {
+      "cardId": "raging-sea-power",
+      "quantity": 3
+    }
+  ]
+}

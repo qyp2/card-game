@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "sunken-ship",
+  "name": "沉沒的巨船",
+  "manaCost": "{1}{U}",
+  "cardTypes": [
+    "Artifact"
+  ],
+  "colors": [
+    "blue"
+  ],
+  "rulesText": "此卡被棄置時：生產一點海屬性能量。配置時：棄置對手牌組頂部三張牌。",
+  "abilities": [
+    {
+      "id": "discard-from-hand",
+      "type": "triggered",
+      "triggerCondition": "ON_DISCARD_FROM_HAND",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "event_card",
+          "state": "before",
+          "zones": [
+            "hand"
+          ]
+        }
+      },
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "blue",
+          "amount": 1
+        }
+      }
+    },
+    {
+      "id": "discard-from-library",
+      "type": "triggered",
+      "triggerCondition": "ON_DISCARD_FROM_LIBRARY",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "event_card",
+          "state": "before",
+          "zones": [
+            "library"
+          ]
+        }
+      },
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "blue",
+          "amount": 1
+        }
+      }
+    },
+    {
+      "id": "entry-mill",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": 3
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
+        }
+      }
+    }
+  ]
+}

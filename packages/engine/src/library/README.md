@@ -147,7 +147,7 @@ Author `rules`, never numeric layers. Each rule has a stable `id`, functional `f
 
 | Family | Operations / consumer |
 |---|---|
-| `characteristics` | `COPY`, `CONTROL`, `TEXT`, `TYPE`, `COLOR`, `ABILITY`, `SET_STATS`, `STAT_DELTA`, `SWITCH_STATS`; characteristic layers. |
+| `characteristics` | `COPY`, `CONTROL`, `TEXT`, `TYPE`, `COLOR`, `ABILITY`, `SET_STATS`, `STAT_DELTA`, `SWITCH_STATS`, `MILL_AMOUNT`; characteristic layers and numbered mill. |
 | `permissions` | `PERMISSION` for cast/activation prohibition or instant timing. Hexproof follows effective keywords and target legality. |
 | `costs` | Cast-only `mana.set_base`, `mana.waive_base`, `mana.increase`, `mana.reduce`; shared announcement/preview/payment pricing. |
 | `event-replacements` | Explicit event kinds and prevention/scaling/redirection/destination/cancellation/regeneration; proposed-event transaction. |

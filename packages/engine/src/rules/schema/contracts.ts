@@ -177,6 +177,9 @@ export const AuthoredEffectSchema: z.ZodType = z.lazy(() =>
       ) {
         ctx.addIssue({ code: 'custom', path: ['targeting'], message: 'Token creation recipients must be players' });
       }
+      if (action === 'CREATE_CONTINUOUS_EFFECT' && value.params?.scope && (value.targeting || value.targetGroup)) {
+        ctx.addIssue({ code: 'custom', path: ['params', 'scope'], message: 'Use either a scope or targeting' });
+      }
       const parsed = parameters[action as InstructionAction].safeParse(value.params ?? {});
       if (!parsed.success)
         for (const issue of parsed.error.issues)

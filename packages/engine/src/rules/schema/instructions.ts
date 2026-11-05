@@ -16,6 +16,7 @@ import {
   CardFilterSchema,
   CostSchema,
   CardResultSourceSchema,
+  ScopeSchema,
 } from './shared';
 import { AuthoredReplacementSchema } from './event-replacements';
 
@@ -154,6 +155,7 @@ export function instructionParameterSchemas(
     }),
     CREATE_CONTINUOUS_EFFECT: z.strictObject({
       effect: characteristic,
+      scope: ScopeSchema.omit({ from: true }).optional(),
       duration: LifetimeSchema.optional(),
       requiredZone: Zone.nullable().optional(),
     }),

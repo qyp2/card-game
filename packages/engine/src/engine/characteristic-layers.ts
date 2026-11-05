@@ -207,6 +207,10 @@ function transform(value: LayerValue, entry: ContinuousEffectEntry, cards: CardI
       toughness: value.toughness + numberValue(effect.toughness, entry, cards, board, target),
     };
     case 'SWITCH_STATS': return { ...value, power: value.toughness, toughness: value.power };
+    case 'MILL_AMOUNT': {
+      const millBonus = Math.min(Number.MAX_SAFE_INTEGER, (value.millBonus ?? 0) + effect.amount);
+      return { ...value, millBonus };
+    }
     case 'PERMISSION': return {
       ...value,
       permissions: [...value.permissions, ...effect.rules.map(rule => ({
@@ -368,7 +372,7 @@ function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: numbe
   const startedGroups = new Set<string>();
   const counters = counterEntries(cards);
 
-  for (const layer of [1, 2, 3, 4, 5, 5.5, 6, 70, 71, 72, 73, 80]) {
+  for (const layer of [1, 2, 3, 4, 5, 5.5, 6, 70, 71, 72, 73, 74, 80]) {
     if (layer > throughLayer) break;
 
     // Layer 73 also folds in +1/+1 and -1/-1 counters.

@@ -6,7 +6,7 @@ The continuous-effects engine is shared by server and client. Printed blueprints
 flowchart TD
     A[Spell or ability resolves] --> B[Generic continuous-effect proposal]
     B --> C[Capture ID, timestamp, source revision and controller]
-    C --> D[Freeze resolved characteristic recipients and numeric expressions]
+    C --> D[Capture fixed recipients or preserve a live scope]
     D --> E[Commit entry to the room effect pool]
     F[Characteristic query] --> G[Start from printed values]
     E --> F
@@ -19,13 +19,13 @@ flowchart TD
 
 ## Effect contracts
 
-`ContinuousEffect` is an extensible discriminated union in `packages/engine/src/types/continuous-effect.types.ts`. `CREATE_CONTINUOUS_EFFECT` accepts an operation in `params.effect`; `SET_STATS` accepts `params.power` and `params.toughness`. Both use the ordinary effect/target-resolution pipeline. Their default duration is `PERMANENT`; specify `END_OF_TURN` for a temporary effect. Existing `GRANT_STATS` remains explicitly end-of-turn.
+`ContinuousEffect` is an extensible discriminated union in `packages/engine/src/types/continuous-effect.types.ts`. `CREATE_CONTINUOUS_EFFECT` accepts an operation in `params.effect`; `SET_STATS` accepts `params.power` and `params.toughness`. An authored `characteristics/create_effect` can use `targeting` to pick recipients or `params.scope` to declare a shared filter. It accepts one or the other. Their default duration is `PERMANENT`; specify `END_OF_TURN` for a temporary effect. Existing `GRANT_STATS` remains explicitly end-of-turn.
 
 Each committed entry has a unique `id` and ordering `timestamp`. They serve separate purposes: equal timestamps do not merge identities. `REMOVE_CONTINUOUS_EFFECT` with `id` removes exactly one entry. Legacy source-based removal remains supported for old callers. `effectSequence` and `effectTimestamp` are room data and travel through deltas and snapshots.
 
-Resolved characteristic effects capture affected `{cardUuid, zoneRevision}` references and source controller at creation. Numeric count expressions are evaluated at that point. Later entrants and new incarnations are excluded. Source departure does not cancel these effects unless `requiredZone` or a source-dependent duration explicitly requires it. `origin: 'resolved'` defaults to `requiredZone: null`. `WHILE_ON_BATTLEFIELD` and `WHILE_ATTACHED` require the matching source incarnation on the battlefield; the latter also requires attachment state.
+Resolved effects with fixed recipients capture affected `{cardUuid, zoneRevision}` references and source controller at creation. Numeric count expressions are evaluated at that point. Later entrants and new incarnations are excluded. Source departure does not cancel these effects unless `requiredZone` or a source-dependent duration explicitly requires it. `origin: 'resolved'` defaults to `requiredZone: null`. `WHILE_ON_BATTLEFIELD` and `WHILE_ATTACHED` require the matching source incarnation on the battlefield; the latter also requires attachment state.
 
-Resolved `PERMISSION` effects retain dynamic scopes because they change game rules. A restriction can apply to a later card entering the relevant zone. Static scopes also match dynamically on each query, using the source's effective controller. Ordinary static abilities default to the battlefield; `activeZones` deliberately enables other zones. Characteristic-defining abilities default to all represented zones.
+Resolved `PERMISSION` effects and broad `MILL_AMOUNT` rules retain dynamic scopes. A restriction can apply to a later card entering the relevant zone. Static scopes also match dynamically on each query, using the source's effective controller. Ordinary static abilities default to the battlefield; `activeZones` deliberately enables other zones. Characteristic-defining abilities default to all represented zones.
 
 Static effects are derived from current abilities rather than stored copies in the room pool. Source zone-entry timestamps and grant timestamps determine their order. Parts with the same `group` are one effect across layers; the default is one group per static ability. Their affected set and remaining parts are retained once that effect starts applying, including if a later layer removes its generating ability. Give independent effects distinct groups. Unstarted definitions refresh after same-layer text or ability changes.
 
@@ -47,11 +47,18 @@ The operation determines its stage; the legacy `layer` field remains descriptive
 | 7b | Set base P/T |
 | 7c | Modify P/T and apply counters |
 | 7d | Switch P/T |
+| After P/T | Mill amount bonuses |
 | After characteristics | Casting/activation permission rules |
 
 Within a stage, defining effects precede ordinary effects. A dependency exists when another effect changes applicability, recipients or the operation's result. Dependencies are reevaluated after each application. Cyclic components use timestamp order internally while outside effects still wait for their prerequisites. With no dependency, timestamp order applies.
 
 `CardCharacteristicService.resolve` returns the complete effective value. Convenience queries expose types, subtypes, colors, keywords, abilities, controller and P/T. `resolveBlueprint` exposes effective spell costs/effects/modes to existing consumers. `resolveCopiableBlueprint` stops after copying, excluding counters and later-layer buffs. Retained source snapshots store effective and copiable last-known information separately.
+
+## Mill quantity
+
+`{ "type": "MILL_AMOUNT", "amount": 1 }` adds to the matching source card's effective `millBonus`. The amount is a nonnegative safe integer. Separate rules add together. A static rule follows its live source. A resolved rule with a broad scope follows the current matching cards for its duration, using the controller captured at resolution. A rule for a specific object stays tied to that incarnation.
+
+A numbered `cards/mill` reads the source's effective bonus before selecting cards from each affected deck, using the source's departure snapshot if it has left. `cards/mill` with a named `from` result follows the captured group and its filters. For example, 塔薩 reveals six and mills the remaining five after taking one, even with 幻變神殿 in play.
 
 ## Permissions and integration
 
