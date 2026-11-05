@@ -27,8 +27,10 @@ unblock a branch.
 The one exception is a merge that brings in code the budget was never measured
 against. A budget is a count over a file set; when the file set grows, the count
 is no longer comparable. Re-measure and record why in the budget comment, then
-pay the difference down like any other debt. That happened once, on 2026-11-03 —
-see [Current budgets](#current-budgets).
+pay the difference down like any other debt. That happened on 2026-11-03, when a
+long-lived branch added 36 engine files, and again on 2026-11-04, when that
+branch was merged and its own formatting pass brought the counts back down — see
+[Current budgets](#current-budgets).
 
 ---
 
@@ -66,39 +68,80 @@ than against the real tree.
 
 ### Current budgets
 
-Measured 2026-11-03 over `packages/engine/src`, after `main` was merged into
-`platform/foundation`:
+Measured 2026-11-04 over `packages/engine/src`, after `platform/foundation` was
+merged into `main` and the branch's own formatting pass landed:
 
 | Rule | Count | Budget |
 |---|---|---|
-| `max-line-length` | 380 | 380 |
-| `nested-ternary` | 46 | 46 |
+| `max-line-length` | 221 | 221 |
+| `nested-ternary` | 41 | 41 |
 | `else-after-return` | 0 | 0 |
-| `undocumented-export` | 33 | 33 |
+| `undocumented-export` | 20 | 20 |
 
-`max-line-length` was re-baselined from 264 to 380 in that merge. The branch
-added 36 engine files that had never been through a readability pass, so the
-raise is new code rather than a weakened rule. `nested-ternary` and
-`undocumented-export` were paid back to their original budgets in the same
-merge. The remaining long lines are concentrated in the new files:
+The previous baseline (380 / 46 / 0 / 33) was measured on `main` alone, which
+did not contain the 36 engine files the branch added. A budget is a count over a
+file set, so it stopped being comparable the moment the file set grew. Once the
+branch was merged and reformatted, the real counts came in well below that
+baseline, and the ratchet was lowered to match. Every number here is measured,
+never assumed.
+
+`rules/schema/contracts.ts` went from 39 long lines to zero in that pass. The
+remaining long lines are spread thinly across 52 files:
 
 | File | Long lines |
 |---|---|
-| `rules/schema/contracts.ts` | 39 |
-| `rules/schema/shared.ts` | 21 |
-| `rules/schema/instructions.ts` | 11 |
-| `rules/schema/characteristics.ts` | 7 |
-| `rules/schema/compile.ts` | 6 |
+| `engine/game-reducer.ts` | 21 |
+| `engine/game-engine.ts` | 20 |
+| `engine/state-based-planner.ts` | 17 |
+| `engine/characteristic-layers.ts` | 13 |
+| `rules/schema/characteristics.ts` | 8 |
+| `engine/trigger-manager.ts` | 8 |
+| `engine/effect-registry.ts` | 8 |
+| `engine/replacement-rules.ts` | 8 |
+| `engine/resolution-planning.ts` | 7 |
+| `shared/numeric-values.ts` | 7 |
+| `engine/trigger-scheduler.ts` | 7 |
+| `types/game-mutation.types.ts` | 6 |
+| `shared/target-legality.ts` | 6 |
 | `rules/schema/event-replacements.ts` | 5 |
-| `shared/card-query.ts` | 4 |
-| `engine/resolution-results.ts` | 4 |
+| `engine/announcement-values.ts` | 5 |
 | `rules/runtime/event-replacements.ts` | 4 |
+| `shared/action-modes.ts` | 4 |
+| `engine/trigger-matching.ts` | 4 |
+| `types/game-event.types.ts` | 4 |
+| `engine/handlers/play-card-handler.ts` | 3 |
+| `engine/combat-service.ts` | 3 |
 | `shared/rule-condition-matcher.ts` | 3 |
-| `engine/scenario-setup.ts` | 3 |
 | `rules/runtime/costs.ts` | 3 |
-| `shared/card-collections.ts` | 2 |
+| `engine/resolution-choices.ts` | 3 |
+| `rules/runtime/active-rules.ts` | 3 |
+| `engine/scenario-setup.ts` | 3 |
+| `types/proposed-event.types.ts` | 3 |
+| `shared/action-description.ts` | 3 |
+| `types/state-based.types.ts` | 2 |
+| `engine/target-groups.ts` | 2 |
+| `engine/handlers/declare-blockers-handler.ts` | 2 |
+| `engine/library-operations.ts` | 2 |
+| `types/trigger.types.ts` | 2 |
+| `engine/handlers/declare-attackers-handler.ts` | 2 |
+| `engine/choices.ts` | 2 |
+| `engine/combat-rules.ts` | 2 |
+| `types/numeric-value.types.ts` | 1 |
+| `engine/rule-conditions.ts` | 1 |
+| `engine/numeric-characteristics.ts` | 1 |
+| `engine/state-machine.ts` | 1 |
+| `types/continuous-effect.types.ts` | 1 |
 | `rules/operation-stage.ts` | 1 |
-| `rules/runtime/active-rules.ts` | 1 |
+| `shared/choice-diagnostics.ts` | 1 |
+| `shared/target-utils.ts` | 1 |
+| `config/index.ts` | 1 |
+| `engine/handlers/activate-ability-handler.ts` | 1 |
+| `shared/effect-scope-validation.ts` | 1 |
+| `engine/announced-distributions.ts` | 1 |
+| `engine/zone-transitions.ts` | 1 |
+| `engine/permission-registry.ts` | 1 |
+| `engine/turn-history.ts` | 1 |
+| `types/rule.types.ts` | 1 |
 
 Paying that debt down is tracked separately; the ratchet still prevents any
 further growth in the meantime.
