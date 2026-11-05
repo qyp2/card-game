@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "frostmoon-gatekeeper",
+  "name": "霜月門衛",
+  "manaCost": "{1}{W}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "霜巨人"
+  ],
+  "colors": [
+    "white"
+  ],
+  "rulesText": "① 召喚時：在我方一體裝備上放置一個霜器指示物。每張卡最多一個霜器指示物。裝備僕從攻擊時，抽一張牌。",
+  "power": 3,
+  "toughness": 4,
+  "abilities": [
+    {
+      "id": "summon-frost-gear",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        },
+        "subject": "self"
+      },
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "frost-gear",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "permanent",
+          "controller": "self",
+          "subTypes": [
+            "Equipment"
+          ],
+          "required": true,
+          "minTargets": 1,
+          "maxTargets": 1
+        }
+      }
+    }
+  ]
+}

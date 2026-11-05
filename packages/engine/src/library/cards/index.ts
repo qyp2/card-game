@@ -98,6 +98,10 @@ import card76 from './workbook/worlds-sea-lord.json';
 import card77 from './workbook/worlds-sin-emperor.json';
 import card78 from './workbook/worlds-traveler.json';
 
+import auroraIceDragon from './workbook/aurora-ice-dragon.json';
+import frostmoonGatekeeper from './workbook/frostmoon-gatekeeper.json';
+import dragonsBlessing from './workbook/dragons-blessing.json';
+
 const cards: Record<string, unknown> = {
   'phantom-queen-hera': phantomQueenHera,
   'angel-emperor-aralaria': angelEmperorAralaria,
@@ -197,5 +201,8 @@ const cards: Record<string, unknown> = {
   'worlds-sea-lord': card76,
   'worlds-sin-emperor': card77,
   'worlds-traveler': card78,
+  'aurora-ice-dragon': auroraIceDragon,
+  'frostmoon-gatekeeper': frostmoonGatekeeper,
+  'dragons-blessing': dragonsBlessing,
 };
 export default cards;

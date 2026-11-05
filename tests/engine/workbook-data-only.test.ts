@@ -3,6 +3,9 @@ import { GameEngine } from '@engine/game-engine';
 import { CardCharacteristicService as characteristics } from '@engine/card-characteristic-service';
 import { instantiateCard } from '@library/card-factory';
 import { OptionService } from '@engine/option-service';
+import { buildCatalog } from '@server/catalog/catalog';
+import { deckEligibility, validateDeck } from '@card-game/protocol';
+import auroraDeck from '../../docs/decks/aurora-workbook.json';
 import { creature } from '../helpers/combat-fixture';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
 import type { CardInstance, CardZone } from '@shared/card.types';
@@ -50,6 +53,9 @@ describe('additional workbook cards using existing primitives', () => {
     ['heavenly-patrol', '天域巡邏兵', 'yellow', { yellow: 2 }],
     ['heavenly-marquis-laila', '天域三侯 萊拉', 'yellow', { yellow: 1, generic: 1 }],
     ['heavenly-gate', '天域之門', 'yellow', { yellow: 2, generic: 1 }],
+    ['aurora-ice-dragon', '極光冰龍', 'white', { white: 2 }],
+    ['dragons-blessing', '巨龍的祝福', 'white', { white: 2, generic: 1 }],
+    ['frostmoon-gatekeeper', '霜月門衛', 'white', { white: 1, generic: 1 }],
     ['frost-soul', '冰霜之魂', 'white', { white: 1 }],
     ['frost-giant', '冰霜巨人', 'white', { white: 3, generic: 2 }],
     ['shadowwood-sword', '影木劍', 'black', { black: 2 }],
@@ -255,4 +261,82 @@ describe('additional workbook cards using existing primitives', () => {
     expect(engine.roomState.players.player1.exile ?? []).toHaveLength(0);
     expect(engine.roomState.players.player2.graveyard.map(c => c.uuid)).toContain(spell.uuid);
   });
+});
+
+describe('workbook counter card recipes', () => {
+  it('summons 極光冰龍 with an Aurora counter and taps it for cold mana', () => {
+    const { engine, source } = game('aurora-ice-dragon', 'hand');
+    cast(engine, source);
+    expect(engine.resolveTopOfStack().success).toBe(true);
+    const dragon = engine.roomState.battlefield.find(card => card.uuid === source.uuid)!;
+    expect(dragon.blueprint).toMatchObject({ name: '極光冰龍', power: 0, toughness: 4 });
+    expect(dragon.state.counters.aurora).toBe(1);
+
+    engine.applyMutations([{ type: 'SET_SUMMONING_SICKNESS', cardUuid: source.uuid, value: false }]);
+    const before = engine.roomState.players.player1.mana.white;
+    expect(engine.executePlayerAction('player1', 'tapForMana', { cardUuid: source.uuid }).success).toBe(true);
+    expect(engine.roomState.players.player1.mana.white).toBe(before + 1);
+  });
+
+  it('marks every friendly Ice Dragon and leaves other creatures and opposing dragons unmarked', () => {
+    const { engine, source } = game('dragons-blessing', 'hand');
+    const dragons = [card('winter-drake'), card('frost-soul')];
+    const others = [card('frost-giant'), card('winter-drake', 'battlefield', 'player2')];
+    engine.roomState.battlefield = [...dragons, ...others];
+    cast(engine, source);
+    for (const dragon of dragons)
+      expect(engine.roomState.battlefield.find(card => card.uuid === dragon.uuid)?.state.counters.aurora).toBe(1);
+    for (const other of others)
+      expect(engine.roomState.battlefield.find(card => card.uuid === other.uuid)?.state.counters.aurora).toBeUndefined();
+    expect(engine.roomState.players.player1.graveyard.some(card => card.uuid === source.uuid)).toBe(true);
+  });
+
+  it('lets 霜月門衛 mark only friendly equipment and grants the equipped attacker a draw', () => {
+    const { engine, source } = game('frostmoon-gatekeeper', 'hand');
+    const staff = card('vitality-wood-staff');
+    engine.roomState.battlefield = [staff, card('frost-giant'), card('vitality-wood-staff', 'battlefield', 'player2')];
+    cast(engine, source);
+    const choice = engine.roomState.pendingChoice;
+    expect(choice?.kind).toBe('targets');
+    if (!choice || choice.kind !== 'targets') throw new Error('Expected equipment targets');
+    expect(choice.options.map(option => (option.value as { cardUuid: string }).cardUuid)).toEqual([staff.uuid]);
+    choose(engine, [choice.options[0].id]);
+    expect(engine.resolveTopOfStack().success).toBe(true);
+    expect(engine.roomState.battlefield.find(card => card.uuid === staff.uuid)?.state.counters['frost-gear']).toBe(1);
+    const host = engine.roomState.battlefield.find(card => card.uuid === source.uuid)!;
+    const attacker = engine.roomState.battlefield.find(card => card.blueprint.id === 'frost-giant')!;
+    expect(host.blueprint).toMatchObject({ power: 3, toughness: 4 });
+    attach(engine, staff, attacker);
+    const handSize = engine.roomState.players.player1.hand.length;
+    attack(engine, attacker);
+    expect(engine.resolveTopOfStack().success).toBe(true);
+    expect(engine.roomState.players.player1.hand).toHaveLength(handSize + 1);
+  });
+
+  it('skips the gatekeeper’s trigger when only opposing equipment is available', () => {
+    const { engine, source } = game('frostmoon-gatekeeper', 'hand');
+    engine.roomState.battlefield = [card('vitality-wood-staff', 'battlefield', 'player2')];
+    cast(engine, source);
+    expect(engine.roomState.pendingChoice).toBeFalsy();
+    expect(engine.roomState.stack).toHaveLength(0);
+  });
+});
+
+it('validates the Aurora sample with workbook copy limits and a cold-only payment base', () => {
+  const standard = buildCatalog();
+  const workbook = new Map([...standard].map(([id, entry]) => [id, {
+    ...entry,
+    copyLimit: entry.copyLimit === null ? null : deckEligibility.copyLimits[id] ?? 3,
+  }]));
+  expect(validateDeck(auroraDeck, standard).valid).toBe(true);
+  expect(validateDeck(auroraDeck, workbook).valid).toBe(true);
+  expect(auroraDeck.cards.reduce((sum, card) => sum + card.quantity, 0)).toBe(60);
+  const landCount = auroraDeck.cards.reduce((sum, card) => {
+    return sum + (standard.get(card.cardId)?.cardTypes.includes('Land') ? card.quantity : 0);
+  }, 0);
+  expect(landCount).toBe(24);
+  for (const { cardId } of auroraDeck.cards) {
+    const card = instantiateCard(cardId);
+    expect(Object.keys(card.blueprint.castRequirements.cost?.mana ?? {}).every(color => ['white', 'generic'].includes(color))).toBe(true);
+  }
 });

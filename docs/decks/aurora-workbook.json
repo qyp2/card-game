@@ -1,0 +1,62 @@
+{
+  "name": "Aurora Equipment (Workbook)",
+  "format": "standard",
+  "cards": [
+    {
+      "cardId": "aurora-northland",
+      "quantity": 23
+    },
+    {
+      "cardId": "worlds-sea",
+      "quantity": 1
+    },
+    {
+      "cardId": "winter-drake",
+      "quantity": 3
+    },
+    {
+      "cardId": "aurora-ice-dragon",
+      "quantity": 3
+    },
+    {
+      "cardId": "frost-soul",
+      "quantity": 3
+    },
+    {
+      "cardId": "frostmoon-gatekeeper",
+      "quantity": 3
+    },
+    {
+      "cardId": "frost-giant",
+      "quantity": 3
+    },
+    {
+      "cardId": "dragons-blessing",
+      "quantity": 3
+    },
+    {
+      "cardId": "worlds-flameblade",
+      "quantity": 3
+    },
+    {
+      "cardId": "lesser-wind-fatigue",
+      "quantity": 3
+    },
+    {
+      "cardId": "worlds-merchant",
+      "quantity": 3
+    },
+    {
+      "cardId": "worlds-traveler",
+      "quantity": 3
+    },
+    {
+      "cardId": "worlds-rebel",
+      "quantity": 3
+    },
+    {
+      "cardId": "worlds-pyromancer",
+      "quantity": 3
+    }
+  ]
+}

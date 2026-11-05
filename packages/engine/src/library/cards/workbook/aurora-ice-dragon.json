@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora-ice-dragon",
+  "name": "極光冰龍",
+  "manaCost": "{W}{W}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "冰龍"
+  ],
+  "colors": [
+    "white"
+  ],
+  "rulesText": "① 召喚時：在此僕從上放置一個極光指示物。極光：每個場上實例一次，防止首次可防止傷害中的最多3點。\n② 橫置：生產一點寒屬性能量。",
+  "power": 0,
+  "toughness": 4,
+  "abilities": [
+    {
+      "id": "summon-aurora",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        },
+        "subject": "self"
+      },
+      "effect": {
+        "family": "counters",
+        "operation": "add",
+        "params": {
+          "counterType": "aurora",
+          "amount": 1
+        },
+        "targeting": {
+          "type": "self",
+          "subject": "source",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "produce-white",
+      "type": "activated",
+      "cost": {
+        "tap": true
+      },
+      "effect": {
+        "family": "resources",
+        "operation": "add_mana",
+        "params": {
+          "color": "white",
+          "amount": 1
+        }
+      }
+    }
+  ]
+}

@@ -37,17 +37,17 @@ These shared consumers now have focused proofs. A dependent card still needs a c
 
 ## Current coverage
 
-The explicit manifest contains **98 definitions**. The six included sheets have **142 named rows**, **72 with registered name matches** and **70 without a definition**. Of those 70, **2 are confirmed U and 68 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
+The explicit manifest contains **101 definitions**. The six included sheets have **142 named rows**, **75 with registered name matches** and **67 without a definition**. Of those 67, **2 are confirmed U and 65 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
 
 | Sheet | Named rows | Registered matches | No definition | Confirmed U | Deferred |
 |---|---:|---:|---:|---:|---:|
 | 炎獸 | 24 | 24 | 0 | 0 | 0 |
 | 幻影木偶 | 23 | 10 | 13 | 2 | 11 |
 | 風獸 | 23 | 12 | 11 | 0 | 11 |
-| 冰龍 | 25 | 4 | 21 | 0 | 21 |
+| 冰龍 | 25 | 7 | 18 | 0 | 18 |
 | 上使 | 23 | 12 | 11 | 0 | 11 |
 | 蒼巨人 | 24 | 10 | 14 | 0 | 14 |
-| **Total** | **142** | **72** | **70** | **2** | **68** |
+| **Total** | **142** | **75** | **67** | **2** | **65** |
 
 Matching uses NFKC normalization and ignores whitespace and asterisks; source row numbers remain workbook row numbers. Only JSON imports explicitly listed in `cards/index.ts` count. Untracked duplicate files and excluded-sheet rows do not inflate coverage.
 
@@ -151,13 +151,10 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 |---:|---|---|---|---|
 | 3 | 寒霜使者 | B | REVEAL | Capture and top/bottom ordering exist. A chosen card put on top stays in the same library incarnation, so current-set membership alone does not exclude it from the remainder. Need an explicit picked-subset/exclusion contract, not whole-library fallback. |
 | 4 | 封印的極光龍像 | B | COMBAT | Need authored attack/block prohibition conditional on counters. Cast/activate permission rules are not combat restrictions. Also establish the counter-placement event's subject for the threshold tracker. |
-| 5 | 極光冰龍 | P | COUNTER | The intrinsic one-time Aurora shield is implemented and covered by lifecycle tests. Author and verify this card’s complete summon and mana-ability recipe. |
 | 6 | 冰風守護者 | B/P | COUNTER, STACK | The one-time Aurora shield is available. Retargeting a pending effect to this creature still needs support. Protection keywords do not redirect a selected stack object. |
-| 7 | 霜月門衛 | P | COUNTER | 兵 is accepted as generic. The capped frost gear counter and equipped attack draw are implemented. Author and verify the gatekeeper’s summon-time equipment selection recipe. |
 | 9 | 冰龍魔杖 | W | — | Restricted attachment, attack counters, bounce and atomic counter payment now exist. Clarify whether 此卡 means the staff or equipped host for placement/payment before authoring the complete recipe. |
 | 10 | 冰龍呼喚 | B/W | REVEAL | Captured filtered selection/order exists. Conditional repetition of the whole workflow still needs a bounded repeat consumer and a ruling on once-again versus recursive repetition. |
 | 11 | 極光之盾 | B/W | DAMAGE | Need life-total floor across qualifying decreases, including direct life loss. Prevention alone is insufficient. Clarify behavior when life already starts below five. |
-| 12 | 巨龍的祝福 | P | COUNTER | Multi-recipient placement and separate one-time Aurora shields are supported. Verify the complete spell recipe and its friendly ice dragon scope. |
 | 14 | 霜月守護者 | B/W | COMBAT | Need cancel-this-attack semantics; spell/ability countering does not cancel combat. Define whether this removes one attacker or ends the whole battle when implementing. |
 | 15 | 冰陵之主 | B/W | DAMAGE | Counter/subtype-filtered rule scope and friendly attack/draw exist. True flat damage reduction is absent; prevention of one point is a different operation. Resolve friendly versus all marked ice dragons and reduction wording at implementation, as previously deferred. |
 | 16 | 極北王冠 | P | — | Ordinary once-per-game usage is implemented. Restricted attachment, life condition, tap payment and bottom moves already exist. Prove/register the complete Crown recipe before U. |
@@ -206,16 +203,20 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 | 23 | 蒼海帝 洛基 | B | VIEW, COST | Atomic four-counter payment is delivered. Need opponent-library draw into your hand with reveal and card-specific blue-as-any-color payment. Generic reductions/setters are not color-conversion permission. |
 | 24 | 諸界六皇 萬智之德步尼* | B | VALUE | Ten-card mill, count of creatures actually milled and proportional stat bonus are now supported by result queries. Still need floor(power/2) for attack mill; multiplication alone cannot divide/floor. Ordinary once-per-game usage is now available; the remaining listed behavior still needs implementation. |
 
+## Aurora and frost gear consumers
+
+極光冰龍, 巨龍的祝福, and 霜月門衛 are registered and verified through casting, trigger resolution, target selection, mana activation, and the equipped attack draw. Their mechanics use the [existing counter rules](counter-rules.md). The [60-card Aurora example](decks/aurora-workbook.json) combines 24 lands and 36 nonlands, uses the workbook's three-copy default and the printed land exceptions, and pays for every spell with cold or generic energy. Its Ice Dragon core has nine dragons and six Aurora placement cards. A single three-copy Equipment makes the frost gear draw a secondary plan.
+
 ## Gaps in registered cards and format policy
 
-The 72 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
+The 75 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
 
 - **Copy policy resolved:** all six basic lands are repeatable. 血炎山 already used the unlimited `land-red` definition; the five other missing unlimited mappings are now configured. 幻影魔城/諸界海 are singleton and the newly registered 幻影木偶 allows twenty copies, through the shared config/validator.
 - **Scorch on artifacts:** nine registered definitions explicitly retain `【暫緩：遺跡的灼熱破壞門檻】`. The accepted creature threshold uses current attack plus maximum life; the relic threshold still needs its own ruling. Their registration does not clear that caveat.
 - **Excluded dual lands:** six registered dual lands use an entry-tap trigger rather than atomic tapped entry. They belong to the excluded supplement, so the audit records the fidelity gap without silently widening implementation scope.
 - **Workbook format:** the workbook describes default three copies, at least sixty cards without an upper limit, and opening-seven/mulligan behavior. The current standard profile uses four copies and 60–250 cards; opening/setup rules are configured separately. Profile/setup alignment is separate work, not solved by registering definitions. U above is relative to the supported profile, not a claim that global workbook rules have been migrated.
 
-A complete fidelity certification of the 72 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
+A complete fidelity certification of the 75 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
 
 ## Next largest blocker and delivery order
 
