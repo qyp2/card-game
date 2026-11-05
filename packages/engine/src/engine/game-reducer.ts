@@ -1,3 +1,4 @@
+import { counterCountAfterPlacement } from '../rules/runtime/counter-rules';
 // src/engine/game-reducer.ts
 // Pure reducer: (state, mutation) => newState.
 // Returns a new GameRoom with shallow copies along the changed path.
@@ -496,16 +497,15 @@ function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | Ope
       };
 
     case 'ADD_COUNTER':
-      return updateCardOnBattlefield(state, mutation.cardUuid, card => ({
-        ...card,
-        state: {
-          ...card.state,
-          counters: {
-            ...card.state.counters,
-            [mutation.counterType]: (card.state.counters[mutation.counterType] || 0) + mutation.amount,
-          },
-        },
-      }));
+      return updateCardOnBattlefield(state, mutation.cardUuid, card => {
+        const current = card.state.counters[mutation.counterType] ?? 0;
+        const count = counterCountAfterPlacement(mutation.counterType, current, mutation.amount);
+        if (count === current) return card;
+        return {
+          ...card,
+          state: { ...card.state, counters: { ...card.state.counters, [mutation.counterType]: count } },
+        };
+      });
 
     case 'REMOVE_COUNTER':
       return updateCardOnBattlefield(state, mutation.cardUuid, card => ({

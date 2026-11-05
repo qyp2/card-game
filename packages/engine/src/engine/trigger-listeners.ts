@@ -1,3 +1,4 @@
+import { counterRulesFor } from '../rules/runtime/counter-rules';
 import type {
   CardInstance,
   CardSnapshot,
@@ -71,7 +72,10 @@ function discoveryHints(rooms: TriggerRooms, context: TriggerEventContext, trigg
   const definitions = new Set<object>();
   for (const room of new Set([rooms.room, rooms.before, rooms.after])) {
     if (!room) continue;
-    for (const card of roomCards(room)) definitions.add(card.blueprint);
+    for (const card of roomCards(room)) {
+      definitions.add(card.blueprint);
+      for (const counter of counterRulesFor(card)) definitions.add(counter.effects);
+    }
     for (const entry of room.continuousEffectPool) definitions.add(entry);
   }
   for (const info of [context.snapshots.before, context.snapshots.after]) if (info) definitions.add(info.card);

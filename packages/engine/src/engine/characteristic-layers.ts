@@ -1,3 +1,4 @@
+import { counterRuleKey, counterRulesFor } from '../rules/runtime/counter-rules';
 import { fixedManaValue } from '../shared/card-query';
 import type { CardBlueprint, CardInstance } from '../types/card.types';
 import { MANA_COLORS } from '../types/card.types';
@@ -70,6 +71,24 @@ function staticEntries(cards: CardInstance[], board: Board): ContinuousEffectEnt
       }));
     });
   });
+}
+
+/** Counter parts enter the same layers and group handling as printed static rules. */
+function counterEntries(cards: CardInstance[]): ContinuousEffectEntry[] {
+  return cards.flatMap(source => counterRulesFor(source).flatMap(counter => {
+    const key = counterRuleKey(source, counter.type);
+    return counter.effects.map((effect, index) => ({
+      ...effect,
+      id: `${key}:${index}`,
+      groupId: `${key}:${effect.group ?? 'effect'}`,
+      origin: 'static' as const,
+      source: source.uuid,
+      sourceRevision: source.state.zoneRevision ?? 0,
+      requiredZone: source.state.zone,
+      timestamp: source.state.characteristicTimestamp,
+      duration: 'PERMANENT' as const,
+    }));
+  }));
 }
 
 /** Evaluate a characteristic number (which may be a dynamic expression) in board context. */
@@ -274,7 +293,8 @@ function signature(entry: ContinuousEffectEntry, cards: CardInstance[], board: B
 
 /** Apply every entry of one layer, respecting dependency order and grouping. */
 function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Board, layer: number,
-  continuations: Map<string, ContinuousEffectEntry>, startedGroups: Set<string>, room: GameRoom): Board {
+  continuations: Map<string, ContinuousEffectEntry>, startedGroups: Set<string>, room: GameRoom,
+  counters: ContinuousEffectEntry[]): Board {
   const pending = [...entries].sort((a, b) => Number(!a.characteristicDefining) - Number(!b.characteristicDefining) || (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const seen = new Set(pending.map(e => e.id).filter(Boolean));
 
@@ -293,7 +313,7 @@ function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Bo
 
       const objects = affected(entry, cards, board, room).map(c => ({ cardUuid: c.uuid, zoneRevision: c.state.zoneRevision ?? 0 }));
 
-      for (const part of staticEntries(cards, board).filter(e => e.groupId === entry.groupId)) {
+      for (const part of [...staticEntries(cards, board), ...counters].filter(e => e.groupId === entry.groupId)) {
         continuations.set(part.id!, { ...part, condition: undefined, sourceAbilityId: undefined, scope: { objects } });
       }
 
@@ -346,6 +366,7 @@ function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: numbe
   const entries = room.continuousEffectPool.map((entry, index) => ({ ...entry, id: entry.id ?? `inline-effect:${index}`, timestamp: entry.timestamp ?? index }));
   const continuations = new Map<string, ContinuousEffectEntry>();
   const startedGroups = new Set<string>();
+  const counters = counterEntries(cards);
 
   for (const layer of [1, 2, 3, 4, 5, 5.5, 6, 70, 71, 72, 73, 80]) {
     if (layer > throughLayer) break;
@@ -358,11 +379,11 @@ function resolveBoard(room: GameRoom, cards: CardInstance[], throughLayer: numbe
       board.set(card.uuid, { ...value, power: value.power + delta, toughness: value.toughness + delta });
     }
 
-    const statics = new Map(staticEntries(cards, board).map(e => [e.id!, e]));
+    const statics = new Map([...staticEntries(cards, board), ...counters].map(e => [e.id!, e]));
 
     for (const [id, part] of continuations) statics.set(id, part);
 
-    board = fold([...entries, ...statics.values()].filter(e => stage(e) === layer), cards, board, layer, continuations, startedGroups, room);
+    board = fold([...entries, ...statics.values()].filter(e => stage(e) === layer), cards, board, layer, continuations, startedGroups, room, counters);
   }
 
   // Ability timestamps are bookkeeping only; strip them from the result.

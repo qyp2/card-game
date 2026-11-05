@@ -17,3 +17,6 @@ export type {
   EventModifierDefinition,
   TriggerListener,
 } from './schema/contracts';
+
+export { CounterDefinitionsSchema, parseCounterDefinitions } from './schema/counters';
+export type { CounterDefinitions } from './schema/counters';

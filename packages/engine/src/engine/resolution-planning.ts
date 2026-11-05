@@ -25,21 +25,23 @@ export function buildStackEffects(
 
   return definitions.map((def, index) => {
     const targets: TargetPointer[] = [];
+    // Granted instructions can omit targeting just like printed instructions.
+    const targeting = def.targeting ?? { type: 'self', required: false };
 
-    if (def.targeting.type === 'self') {
+    if (targeting.type === 'self') {
       // A self-target is either the source permanent or its controller.
-      targets.push(def.targeting.subject === 'source' && source
+      targets.push(targeting.subject === 'source' && source
         ? { targetType: 'permanent', cardUuid: source.uuid, zoneRevision: source.state.zoneRevision ?? 0 }
         : { targetType: 'player', playerId: controllerId });
-    } else if (def.targeting.all) {
+    } else if (targeting.all) {
       // "All matching permanents" — expanded into concrete cardUuid targets
       // at resolve time by expandTargets(). The filter fields are carried here.
       targets.push({
-        targetType: def.targeting.type,
+        targetType: targeting.type,
         all: true,
-        cardTypes: def.targeting.cardTypes,
-        subTypes: def.targeting.subTypes,
-        controller: def.targeting.controller,
+        cardTypes: targeting.cardTypes,
+        subTypes: targeting.subTypes,
+        controller: targeting.controller,
       });
     }
 
@@ -54,10 +56,10 @@ export function buildStackEffects(
       requiresOutcome: def.requiresOutcome,
       choice: def.choice,
       action: def.action,
-      params: def.params,
+      params: def.params ?? {},
       tags: def.tags || [],
       targets,
-      targeting: def.targeting,
+      targeting,
     };
   });
 }

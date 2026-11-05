@@ -1,0 +1,71 @@
+{
+  "frost-gear": {
+    "maxPerCard": 1,
+    "rules": [
+      {
+        "id": "equipped-attack-draw",
+        "family": "characteristics",
+        "scope": {
+          "attachedToSource": true
+        },
+        "operation": {
+          "type": "ABILITY",
+          "add": [
+            {
+              "id": "frost-gear-draw",
+              "type": "triggered",
+              "triggerCondition": "ON_ATTACK",
+              "trigger": {
+                "listener": {
+                  "kind": "watcher",
+                  "activeZones": [
+                    "battlefield"
+                  ]
+                },
+                "subject": "self"
+              },
+              "effect": {
+                "family": "cards",
+                "operation": "draw",
+                "params": {
+                  "amount": 1
+                }
+              },
+              "castSpeed": "instant"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "aurora": {
+    "rules": [
+      {
+        "id": "first-damage-shield",
+        "family": "event-replacements",
+        "events": [
+          "damage"
+        ],
+        "scope": {
+          "type": "card",
+          "filter": {
+            "self": true,
+            "cardTypes": [
+              "Creature"
+            ]
+          }
+        },
+        "operation": {
+          "type": "prevent_damage",
+          "amount": 3
+        },
+        "usage": {
+          "period": "game",
+          "limit": 1,
+          "identity": "source_incarnation",
+          "consume": "on_change"
+        }
+      }
+    ]
+  }
+}

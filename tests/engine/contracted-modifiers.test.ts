@@ -106,18 +106,18 @@ describe('contracted cast-cost modifiers', () => {
 });
 
 describe('contracted passive event replacements', () => {
-  const rule = (extra = {}) => ({ id: 'shield', family: 'event-replacements', events: ['damage'], scope: { type: 'card', filter: { cardTypes: ['Creature'], subTypes: ['冰龍'], counter: { type: 'aurora', min: 1 }, controller: 'self' } },
+  const rule = (extra = {}) => ({ id: 'shield', family: 'event-replacements', events: ['damage'], scope: { type: 'card', filter: { cardTypes: ['Creature'], subTypes: ['冰龍'], counter: { type: 'shield-marker', min: 1 }, controller: 'self' } },
     operation: { type: 'prevent_damage', amount: 1 }, ...extra });
   function fixture(extra = {}) {
     const source = aura([rule(extra)]), engine = start(source), target = creature('ice', 'player1', 2, 30);
-    target.blueprint = { ...target.blueprint, subTypes: ['冰龍'] }; target.state.counters.aurora = 1; engine.roomState.battlefield.push(target);
+    target.blueprint = { ...target.blueprint, subTypes: ['冰龍'] }; target.state.counters['shield-marker'] = 1; engine.roomState.battlefield.push(target);
     return { engine, source, target };
   }
   it('checks recipient filters on every damage event and stops when the counter or source leaves', () => {
     const { engine, source, target } = fixture(); damage(engine, target, 4); expect(engine.roomState.battlefield.find(c => c.uuid === target.uuid)?.state.damageTaken).toBe(3);
-    engine.applyMutations([{ type: 'REMOVE_COUNTER', cardUuid: target.uuid, counterType: 'aurora', amount: 1 }]); damage(engine, target, 4);
+    engine.applyMutations([{ type: 'REMOVE_COUNTER', cardUuid: target.uuid, counterType: 'shield-marker', amount: 1 }]); damage(engine, target, 4);
     expect(engine.roomState.battlefield.find(c => c.uuid === target.uuid)?.state.damageTaken).toBe(7);
-    engine.applyMutations([{ type: 'ADD_COUNTER', cardUuid: target.uuid, counterType: 'aurora', amount: 1 }, { type: 'MOVE_CARD', cardUuid: source.uuid, playerId: 'player1', from: 'battlefield', to: 'graveyard' }]);
+    engine.applyMutations([{ type: 'ADD_COUNTER', cardUuid: target.uuid, counterType: 'shield-marker', amount: 1 }, { type: 'MOVE_CARD', cardUuid: source.uuid, playerId: 'player1', from: 'battlefield', to: 'graveyard' }]);
     damage(engine, target, 4); expect(engine.roomState.battlefield.find(c => c.uuid === target.uuid)?.state.damageTaken).toBe(11);
   });
   it('shares per-turn usage and does not spend prevention on unpreventable damage', () => {

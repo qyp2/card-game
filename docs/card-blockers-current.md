@@ -75,7 +75,7 @@ Accepted rulings remain: 兵 is generic for now; unqualified life reduction is p
 
 ### Counter-owned behavior needs its own proof
 
-Generic counter storage and prevention are available. That does not certify the full Aurora/霜器 package. Counter-owned behavior must survive the giver leaving, belong to each recipient, have correct nonstacking/usage identity, and handle repeated placement, counter removal/reapplication, attachment changes and zone revisions. Static source-owned auras can expire too early. Repeated characteristic ability grants receive origin-qualified IDs, so matching authored IDs alone do not deduplicate them. Resolved grants can outlive the giver, but the complete lifecycle still needs evidence. Relevant rows are P rather than automatically U; where a consumer is demonstrably absent, B is also shown.
+The [counter rule schema](counter-rules.md) now gives marked cards intrinsic effects through the existing modifier, attachment, and trigger consumers. Aurora prevents up to three damage once per battlefield incarnation. Frost gear caps at one per card and grants the equipped creature an attack draw. Focused engine checks cover recipient ownership, removing and reapplying Aurora, spent uses across turns and reload, and equipment reattachment. The remaining statuses include full card recipes and their other mechanic dependencies.
 
 ## Remaining capability families
 
@@ -151,23 +151,23 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 |---:|---|---|---|---|
 | 3 | 寒霜使者 | B | REVEAL | Capture and top/bottom ordering exist. A chosen card put on top stays in the same library incarnation, so current-set membership alone does not exclude it from the remainder. Need an explicit picked-subset/exclusion contract, not whole-library fallback. |
 | 4 | 封印的極光龍像 | B | COMBAT | Need authored attack/block prohibition conditional on counters. Cast/activate permission rules are not combat restrictions. Also establish the counter-placement event's subject for the threshold tracker. |
-| 5 | 極光冰龍 | P | COUNTER | A self-only intrinsic, counter-conditioned prevention rule is expressible. Before full-card readiness, prove the parenthetical Aurora counter contract: recipient-owned once-per-turn shield, persistence, removal/reapplication and repeated placement. Generic prevention tests alone do not certify counter semantics. |
-| 6 | 冰風守護者 | B/P | COUNTER, STACK | Aurora proof requirements plus retargeting a pending effect to this creature. Protection keywords do not redirect a selected stack object. |
-| 7 | 霜月門衛 | B/P | COUNTER | 兵 is accepted as generic. Need a persistent counter-owned grant on the selected equipment, then its attack grant on the equipped host, with defined multiplicity/removal/reapplication. A static aura owned by the gatekeeper stops too early when it leaves. |
+| 5 | 極光冰龍 | P | COUNTER | The intrinsic one-time Aurora shield is implemented and covered by lifecycle tests. Author and verify this card’s complete summon and mana-ability recipe. |
+| 6 | 冰風守護者 | B/P | COUNTER, STACK | The one-time Aurora shield is available. Retargeting a pending effect to this creature still needs support. Protection keywords do not redirect a selected stack object. |
+| 7 | 霜月門衛 | P | COUNTER | 兵 is accepted as generic. The capped frost gear counter and equipped attack draw are implemented. Author and verify the gatekeeper’s summon-time equipment selection recipe. |
 | 9 | 冰龍魔杖 | W | — | Restricted attachment, attack counters, bounce and atomic counter payment now exist. Clarify whether 此卡 means the staff or equipped host for placement/payment before authoring the complete recipe. |
 | 10 | 冰龍呼喚 | B/W | REVEAL | Captured filtered selection/order exists. Conditional repetition of the whole workflow still needs a bounded repeat consumer and a ruling on once-again versus recursive repetition. |
 | 11 | 極光之盾 | B/W | DAMAGE | Need life-total floor across qualifying decreases, including direct life loss. Prevention alone is insufficient. Clarify behavior when life already starts below five. |
-| 12 | 巨龍的祝福 | P | COUNTER | Multi-recipient counter placement exists. Prove each recipient gets one shared Aurora shield per turn, including giver leaving, repeated placements and counter removal/reapplication; no evidence yet certifies the full package. |
+| 12 | 巨龍的祝福 | P | COUNTER | Multi-recipient placement and separate one-time Aurora shields are supported. Verify the complete spell recipe and its friendly ice dragon scope. |
 | 14 | 霜月守護者 | B/W | COMBAT | Need cancel-this-attack semantics; spell/ability countering does not cancel combat. Define whether this removes one attacker or ends the whole battle when implementing. |
 | 15 | 冰陵之主 | B/W | DAMAGE | Counter/subtype-filtered rule scope and friendly attack/draw exist. True flat damage reduction is absent; prevention of one point is a different operation. Resolve friendly versus all marked ice dragons and reduction wording at implementation, as previously deferred. |
 | 16 | 極北王冠 | P | — | Ordinary once-per-game usage is implemented. Restricted attachment, life condition, tap payment and bottom moves already exist. Prove/register the complete Crown recipe before U. |
-| 17 | 極光之壁 | B/P | COUNTER, COMBAT | Aurora contract needs proof. Spell countering exists; ending the attack phase after the current battle needs a scheduled combat transition. |
+| 17 | 極光之壁 | B/P | COUNTER, COMBAT | The one-time Aurora shield is available. Spell countering exists; ending the attack phase after the current battle needs a scheduled combat transition. |
 | 18 | 極北之指引者 萊莘德雅 | B/W | EVENT | Two independent captured-category selections are supported. Explicit off-battlefield listener discovery is delivered. Settle the departure/source-zone ruling and prove the self-summon plus complete reveal recipe when authoring. |
 | 19 | 極光封 | B/W | STACK | Creature-ability countering exists. Need resolving the selected stack ability's source for bottom movement and clarify whether 其 refers to that creature. Countering alone cannot select its associated source. |
-| 20 | 極光龍宮 | B/W/P | COUNTER | Aurora contract and an explicitly deferred special-summon origin remain. Shared selected-counter payment is delivered. |
+| 20 | 極光龍宮 | B/W/P | COUNTER | The one-time Aurora shield is available. The special-summon origin remains explicitly deferred. Shared selected-counter payment is delivered. |
 | 21 | 極光龍后 亞雅隆 | B/W/P | COUNTER | Need full per-recipient prevention grant semantics. Clarify the first ability's activation condition/timing; the workbook labels this apparent 4/8 creature as Land. Turn-long untargetability is already expressible. |
 | 22 | 極北龍帝 亞瑟 | B/W | DAMAGE, VALUE | Count and multiply exist. Need defined per-dragon damage assignment and half-damage arithmetic/rounding; clarify repeated five-damage packets versus one summed packet and odd damage. |
-| 23 | 巨龍之墓 | B/W/P | COUNTER, CAUSE | Aurora contract plus replacing a zero-life state-based departure with optional artifact destruction and healing. Ordinary damage regeneration is not this replacement; clarify what life recovery means after max-life reduction. |
+| 23 | 巨龍之墓 | B/W/P | COUNTER, CAUSE | The one-time Aurora shield is available. Replacing a zero-life state-based departure with optional artifact destruction and healing remains. Ordinary damage regeneration is not this replacement; clarify what life recovery means after max-life reduction. |
 | 24 | 寒巢之主 亞蕾雅 | B | EXPIRY | Charge, creature entry and atomic four-counter payment now exist. Need battle-lifetime protection for both players, rather than a turn-long approximation. |
 | 25 | 諸界六皇 冬機之卡斯拿斯 | B/W | IMMUNITY, EVENT | Need immunity against opposing spell/creature effects, not just targeting. Also tap-triggered recovery during opponent attack phase; clarify 回復 and qualifying source effects. |
 
@@ -224,7 +224,7 @@ The [captured-window and visibility foundation](card-window-design.md) is now de
 The remaining PAY rows stay at five: 亞拉里亞的終末 (selected exile), 天域三侯 坡加 / 天使的皇座 (binding/storage), and 蒼海王子 / 深淵巨人 (ritual materials). No new workbook definitions are registered by this infrastructure delivery; coverage remains **72/142** and the two Ghostfire recipes remain confirmed U.
 
 1. Prove full recipes newly supported by capture, then author/register those whose printed wording and all dependencies are settled.
-2. Address counter-owned Aurora/霜器 lifecycle. Explicit event-source discovery is delivered; prove dependent card recipes and add the remaining event/value/target consumers where needed.
+2. Prove the card recipes using the delivered Aurora/霜器 and event-source discovery infrastructure. Add the remaining event/value/target consumers where needed.
 3. Add explicit selected-subset identity/exclusion and distinct-name selection, then define bounded repetition with its owner ruling.
 4. Continue combat lifetimes, host storage, ritual/random/cross-owner and immunity behavior. 冰龍魔杖 still needs the staff/host wording ruling.
 
