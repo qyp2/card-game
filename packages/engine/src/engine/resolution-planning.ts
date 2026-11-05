@@ -31,7 +31,12 @@ export function buildStackEffects(
     if (targeting.type === 'self') {
       // A self-target is either the source permanent or its controller.
       targets.push(targeting.subject === 'source' && source
-        ? { targetType: 'permanent', cardUuid: source.uuid, zoneRevision: source.state.zoneRevision ?? 0 }
+        ? {
+            targetType: source.state.zone === 'battlefield' ? 'permanent' : 'card',
+            cardUuid: source.uuid,
+            zone: source.state.zone,
+            zoneRevision: source.state.zoneRevision ?? 0,
+          }
         : { targetType: 'player', playerId: controllerId });
     } else if (targeting.all) {
       // "All matching permanents" — expanded into concrete cardUuid targets

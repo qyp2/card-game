@@ -1,3 +1,4 @@
+import { planMaterialPayment } from './material-costs';
 import { planCounterCosts } from './counter-costs';
 import { attributeMutations } from './change-cause';
 import { captureSourceInformation } from './source-information';
@@ -220,6 +221,15 @@ function planDirectCost(
       cardUuid: source.uuid,
       zoneRevision: source.state.zoneRevision ?? 0,
     });
+  }
+
+  if (cost.destroyMaterials) {
+    const working = preview(room, mutations);
+    const materials = planMaterialPayment(working, playerId, cost.destroyMaterials, selections.materialPayments);
+    if (!materials.success) return materials;
+    mutations.push(...materials.mutations);
+  } else if (selections.materialPayments !== undefined) {
+    return reject('This action does not require materials');
   }
 
   return { success: true, mutations };

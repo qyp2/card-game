@@ -12,6 +12,9 @@ export function describeActionCost(cost?: AuthoredActionCost): string {
         const place = counter.from === 'source' ? 'this card' : 'matching cards you control';
         return `Remove ${counter.amount} ${counter.counterType} counters from ${place}`;
       }),
+      ...(cost.destroyMaterials
+        ? [`Destroy materials with total mana value greater than ${cost.destroyMaterials.manaValueGreaterThan}`]
+        : []),
       ...(cost.life ? [`${cost.life} life`] : []),
       ...(cost.tap ? ['Tap source'] : []),
       ...(cost.untap ? ['Untap source'] : []),

@@ -28,12 +28,15 @@ export function ChoiceForm({ choice, selected, allocations, onSelection, onAlloc
   }
   const allocating = choice.kind === 'distribution' || choice.kind === 'payment';
   const total = Object.values(allocations).reduce((sum, amount) => sum + amount, 0);
+  const weight = choice.options.reduce((sum, option) => sum + (selected.includes(option.id) ? option.weight ?? 0 : 0), 0);
   const valid = allocating ? total === choice.total && Object.entries(allocations).every(([id, amount]) =>
     Number.isSafeInteger(amount) && amount >= 0 && choice.options.some(option => option.id === id && amount <= (option.limit ?? Infinity))) && choice.options.every(option => (allocations[option.id] ?? 0) >= (choice.minimumPerOption ?? 0))
-    : selected.length >= choice.min && selected.length <= choice.max;
+    : selected.length >= choice.min && selected.length <= choice.max &&
+      (choice.weightGreaterThan === undefined || weight > choice.weightGreaterThan);
   return <section className="choice-panel" role="dialog" aria-label={choice.prompt}>
     <h3>{choice.prompt}</h3>
     <p>{allocating ? `Allocate ${choice.total} (${total} selected)` : choice.kind === 'ordering' ? 'Select items in the desired order' : `Choose ${choice.min === choice.max ? choice.min : `${choice.min}–${choice.max}`}.`}</p>
+    {choice.weightGreaterThan !== undefined && <p aria-live="polite">Selected mana value {weight}. Required above {choice.weightGreaterThan}.</p>}
     <div className="choice-options">
       {choice.options.map(option => allocating ? <label key={option.id}>{option.label}
         <input aria-label={option.label} type="number" min={choice.minimumPerOption ?? 0} max={option.limit ?? choice.total} step={1} value={allocations[option.id] ?? 0}

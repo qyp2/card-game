@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "abyss-giant",
+  "name": "深淵巨人",
+  "manaCost": "{U}{U}{U}{U}{U}{U}{U}{U}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "蒼巨人"
+  ],
+  "colors": [
+    "blue"
+  ],
+  "power": 4,
+  "toughness": 8,
+  "rulesText": "儀式5：破壞我方能量總值大於5的「蒼巨人」僕從以特殊召喚此卡。① 特殊召喚進場時：從對手牌組頂部棄置10張牌。",
+  "abilities": [
+    {
+      "id": "ritual",
+      "type": "activated",
+      "allowedZones": [
+        "hand"
+      ],
+      "castSpeed": "sorcery",
+      "cost": {
+        "destroyMaterials": {
+          "filter": {
+            "cardTypes": [
+              "Creature"
+            ],
+            "subTypes": [
+              "蒼巨人"
+            ]
+          },
+          "manaValueGreaterThan": 5
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "move",
+        "params": {
+          "origin": "hand",
+          "destination": "battlefield"
+        },
+        "targeting": {
+          "type": "self",
+          "subject": "source",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "special-summon-mill",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        },
+        "condition": {
+          "op": "eq",
+          "left": {
+            "path": "event.payload.card.state.summonKind"
+          },
+          "right": "effect"
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": 10
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
+        }
+      }
+    }
+  ]
+}

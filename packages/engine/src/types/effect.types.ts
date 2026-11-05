@@ -36,7 +36,13 @@ export type TargetType = 'self' | 'player' | 'card' | 'permanent' | 'spell' | 's
 // 3. Cost and Condition Definitions
 // ============================================================================
 
+export interface MaterialDestructionCost {
+  filter: import('./card-query.types').CardFilter;
+  manaValueGreaterThan: number;
+}
+
 export interface ActionCost {
+  destroyMaterials?: MaterialDestructionCost;
   removeCounters?: import('./counter-cost.types').CounterRemovalCost[];
   mana?: ManaCost;
   /** Presence identifies loyalty activation; it is not a mana ability. */

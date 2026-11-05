@@ -25,6 +25,14 @@ import { recordRuleUse } from '../rules/runtime/active-rules';
 export interface ProposedPlan {
   mutations: GameMutation[];
   pendingChoice?: PendingChoice;
+  paymentFailed?: true;
+}
+
+/** A proposed transaction could not perform every required payment. */
+export class UnpaidDestructionCost extends Error {
+  constructor() {
+    super('Every ritual material must be destroyed to pay the cost');
+  }
 }
 export type ProposedPlanOptions = Pick<
   ProposedTransaction,
@@ -71,6 +79,7 @@ function proposeBody(room: GameRoom, mutation: GameMutation): ProposedEvent[] | 
               to: 'graveyard',
               reason: mutation.type === 'DESTROY_CARD' ? 'destroy' : 'sacrifice',
               sourceSnapshot: captureSourceInformation(room, card),
+              zoneRevision: mutation.zoneRevision,
             },
           },
         ]
@@ -601,6 +610,17 @@ function run(room: GameRoom, transaction: ProposedTransaction): ProposedPlan {
     const moves = attributedLethalMoves(preview(room, transaction), causeId);
     if (moves.length) return run(room, { ...transaction, remaining: moves });
   }
+  if (transaction.requiredDestructions?.length) {
+    const after = preview(room, transaction);
+    const unpaid = transaction.requiredDestructions.some(reference =>
+      after.battlefield.some(card =>
+        card.uuid === reference.cardUuid && (card.state.zoneRevision ?? 0) === reference.zoneRevision) ||
+      !transaction.completed.some(mutation =>
+        mutation.type === 'MOVE_CARD' && mutation.reason === 'destroy' && mutation.to === 'graveyard' &&
+        mutation.cardUuid === reference.cardUuid && mutation.zoneRevision === reference.zoneRevision),
+    );
+    if (unpaid) return { mutations: [], paymentFailed: true };
+  }
   return { mutations: transaction.completed };
 }
 
@@ -610,10 +630,17 @@ export function planProposedMutations(
   mutations: readonly GameMutation[],
   options: ProposedPlanOptions = {},
 ): ProposedPlan {
+  const requiredDestructions = mutations.flatMap(mutation =>
+    mutation.type === 'DESTROY_CARD' && mutation.requiredPayment
+      ? [{ cardUuid: mutation.cardUuid, zoneRevision: mutation.zoneRevision }]
+      : [],
+  );
+
   return run(room, {
     completed: [],
     remaining: structuredClone([...mutations]),
     resumePriority: room.priorityPlayerId,
+    ...(requiredDestructions.length ? { requiredDestructions } : {}),
     ...options,
   });
 }

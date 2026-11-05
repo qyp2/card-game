@@ -104,10 +104,18 @@ Mana discovery is a bounded list of existing supported abilities, not an exhaust
 
 These clear two complete cards and the generic counter-cost dependencies of four others. 冰龍魔杖 still needs the staff/host wording ruling; 極光龍宮 needs its Aurora contract and summon origin; 寒巢之主 needs battle duration; 蒼海帝 needs cross-owner drawing and color-conversion permission. Optional ordinary payment also clears payment clauses on cards still missing draw-step, reveal provenance or result-card value support.
 
-Selected exile, ritual materials and binding/storage are still unsupported costs. No off-zone trigger discovery, Aurora lifecycle, combat lifetime or broad multi-source kill-credit ruling is supplied by this payment work. Captured reveal workflows are now the largest separate blocker, affecting thirteen missing rows.
+Selected exile and binding/storage are still unsupported costs. No off-zone trigger discovery, Aurora lifecycle, combat lifetime or broad multi-source kill-credit ruling is supplied by this payment work. Captured reveal workflows are now the largest separate blocker, affecting thirteen missing rows.
 
 ## Verification
 
 Focused logic verification covers payment inventory, atomicity, replacements, usage, cancellation, mana-source choices, reconstruction, production cards, projections and the related parser/cost/trigger/result/history boundaries. Architecture and readability gates pass without raising their budgets. All workspace typechecks pass. The original catalog/preset preservation check passes. No browser smoke test, long socket scenario or full suite is run.
 
 **272 distinct selected checks passed across 17 files**, counting the preservation check and the latest result for each repeated file. The other fifteen configuration tests were deliberately not run. Existing card definitions and all pre-extraction presets retain their baseline hashes.
+
+## Ritual materials
+
+An action cost can declare `destroyMaterials` with a shared card `filter` and a strict `manaValueGreaterThan` threshold. The player selects one or more controlled battlefield cards. The picker shows a running total. The server verifies distinct object references, control, current characteristics and combined effective mana value against the threshold before proposing payment.
+
+Material destruction uses the normal destruction and replacement transaction. The transaction pays only if every selected material is destroyed. A cancellation, regeneration or a replacement that sends a material elsewhere aborts the entire payment, including any other material destruction or costs. An optional replacement may pause payment for its usual decision.
+
+蒼海王子 and 深淵巨人 declare this cost on a sorcery-speed hand ability. Its movement uses ordinary special entry, which enables the printed special-summon triggers. Each card also keeps its printed mana cast. Material selection currently applies to announced actions.

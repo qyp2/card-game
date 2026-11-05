@@ -104,6 +104,8 @@ import dragonsBlessing from './workbook/dragons-blessing.json';
 
 import phantomSeaTassa from './workbook/phantom-sea-tassa.json';
 import seaGodCallerHaya from './workbook/sea-god-caller-haya.json';
+import blueSeaPrince from './workbook/blue-sea-prince.json';
+import abyssGiant from './workbook/abyss-giant.json';
 import sunkenShip from './workbook/sunken-ship.json';
 import demonSeaSpire from './workbook/demon-sea-spire.json';
 import seabornIllusionist from './workbook/seaborn-illusionist.json';
@@ -213,6 +215,8 @@ const cards: Record<string, unknown> = {
   'dragons-blessing': dragonsBlessing,
   'phantom-sea-tassa': phantomSeaTassa,
   'sea-god-caller-haya': seaGodCallerHaya,
+  'blue-sea-prince': blueSeaPrince,
+  'abyss-giant': abyssGiant,
   'sunken-ship': sunkenShip,
   'demon-sea-spire': demonSeaSpire,
   'seaborn-illusionist': seabornIllusionist,

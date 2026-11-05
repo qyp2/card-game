@@ -79,7 +79,7 @@ export function instructionParameterSchemas(
     CAPTURE_WINDOW: CaptureWindowSchema,
     SET_COLLECTION_VISIBILITY: CollectionVisibilitySchema,
     PAY_COST: z.strictObject({
-      cost: CostSchema,
+      cost: CostSchema.omit({ destroyMaterials: true }),
       then: z.array(z.lazy(instruction)).min(1).max(32),
       prompt: z.string().optional(),
     }),

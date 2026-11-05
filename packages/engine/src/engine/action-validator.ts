@@ -8,6 +8,7 @@ import type {
   TargetingDefinition,
   TargetPointer,
 } from '../types/effect.types';
+import { canAffordMaterials } from './material-costs';
 import { planCounterCosts } from './counter-costs';
 import { ManaPool } from './mana-pool';
 import { CardCharacteristicService } from './card-characteristic-service';
@@ -132,6 +133,7 @@ export class ActionValidator {
     }
 
     if (!planCounterCosts(room, playerId, card, cost.removeCounters, undefined, true).success) return false;
+    if (cost.destroyMaterials && !canAffordMaterials(room, playerId, cost.destroyMaterials)) return false;
 
     // Discard cost check
     if (cost.discard && player.hand.length < cost.discard) return false;

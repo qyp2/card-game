@@ -93,6 +93,9 @@ export function normalizeActionCost(
     discard: typeof cost.discard === 'number' ? cost.discard : 0,
     ...(cost.discardSelf !== undefined ? { discardSelf: cost.discardSelf as boolean } : {}),
     sacrifice: !!cost.sacrifice,
+    ...(cost.destroyMaterials
+      ? { destroyMaterials: structuredClone(cost.destroyMaterials) as AuthoredActionCost['destroyMaterials'] }
+      : {}),
     ...(cost.removeCounters
       ? {
           removeCounters: structuredClone(cost.removeCounters) as AuthoredActionCost['removeCounters'],

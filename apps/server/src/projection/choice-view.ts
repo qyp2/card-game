@@ -57,6 +57,7 @@ export function buildChoiceView(room: GameRoom, viewerId: string): ChoiceView | 
     max: choice.max,
     ...(choice.total !== undefined ? { total: choice.total } : {}),
     ...(choice.minimumPerOption !== undefined ? { minimumPerOption: choice.minimumPerOption } : {}),
+    ...(choice.weightGreaterThan !== undefined ? { weightGreaterThan: choice.weightGreaterThan } : {}),
     options: choice.options
       .map((option) => {
         const recipient = continuation.type === 'combat' ? (option.value as DamageRecipient) : undefined;
@@ -80,6 +81,7 @@ export function buildChoiceView(room: GameRoom, viewerId: string): ChoiceView | 
           id: optionId(room, choice.id, viewerId, option.id),
           label,
           ...(option.limit !== undefined ? { limit: option.limit } : {}),
+          ...(option.weight !== undefined ? { weight: option.weight } : {}),
         };
       })
       .sort((a, b) => (exposeSourceOrder ? 0 : a.id.localeCompare(b.id))),

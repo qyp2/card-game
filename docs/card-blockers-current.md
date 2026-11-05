@@ -37,7 +37,7 @@ These shared consumers now have focused proofs. A dependent card still needs a c
 
 ## Current coverage
 
-The explicit manifest contains **107 definitions**. The six included sheets have **142 named rows**, **81 with registered name matches** and **61 without a definition**. Of those 61, **2 are confirmed U and 59 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
+The explicit manifest contains **109 definitions**. The six included sheets have **142 named rows**, **83 with registered name matches** and **59 without a definition**. Of those 59, **2 are confirmed U and 57 remain deferred** for technical work, rulings or proof. The labels overlap, so they must not be added as mutually exclusive engine-blocker totals.
 
 | Sheet | Named rows | Registered matches | No definition | Confirmed U | Deferred |
 |---|---:|---:|---:|---:|---:|
@@ -46,8 +46,8 @@ The explicit manifest contains **107 definitions**. The six included sheets have
 | 風獸 | 23 | 12 | 11 | 0 | 11 |
 | 冰龍 | 25 | 7 | 18 | 0 | 18 |
 | 上使 | 23 | 12 | 11 | 0 | 11 |
-| 蒼巨人 | 24 | 16 | 8 | 0 | 8 |
-| **Total** | **142** | **81** | **61** | **2** | **59** |
+| 蒼巨人 | 24 | 18 | 6 | 0 | 6 |
+| **Total** | **142** | **83** | **59** | **2** | **57** |
 
 Matching uses NFKC normalization and ignores whitespace and asterisks; source row numbers remain workbook row numbers. Only JSON imports explicitly listed in `cards/index.ts` count. Untracked duplicate files and excluded-sheet rows do not inflate coverage.
 
@@ -63,7 +63,7 @@ Matching uses NFKC normalization and ignores whitespace and asterisks; source ro
 | Scoped mill amount | Additive quantity increases for matching sources, including later entrants for a turn-long rule | Milling cards outside an exact captured group |
 | Bounded reveal improvements | Filtered mandatory/optional selection in the existing one-to-three-card take-to-hand/order-bottom consumer | Five/six/eight-card windows, top-selected/take-all/deploy/exile/mill-remainder workflows, reveal provenance or conditional repetition |
 | Shared ordinary ability usage | Turn/game limits, physical/incarnation/controller identities, shared groups, immediate mana and trigger reservations | Dynamic numeric limits or changing another ability's declared limit |
-| Shared counter and optional costs | Atomic source/controlled-battlefield counter costs; optional `resources / pay_cost` branches with existing mana/life/discard/orientation/sacrifice costs | Selected exile, rituals, binding/storage and dynamic counter amounts |
+| Shared counter, ritual and optional costs | Atomic source/controlled-battlefield counter costs and selected material destruction; optional `resources / pay_cost` branches with existing mana/life/discard/orientation/sacrifice costs | Selected exile, binding/storage and dynamic counter amounts |
 | Captured windows and visibility | Up to configured 64 top-library cards for self/opponent, current/recorded queries, shared filters, independent selections, take-all, exact-remainder mill, per-viewer faces/count/order, reconnect history | Distinct-name selection, same-zone picked-card exclusion, recursive repetition and cross-owner hand destinations |
 | Explicit event-card and watcher listeners | Before/after self-discard/mill/entry/departure snapshots; declared-zone observers including hand life-loss; retained reveal observations; effective granted abilities and shared scheduling/usage | New tap/draw-step events, event-subject targeting, selected-result values, healing modifiers, private-trigger rules or complete workbook recipes |
 | Causal events and killed outcomes | Actual source/ability/root/parent data, contributor receipts, lethal-making causes, gated kill outcomes and source-scoped direct exile | Optional zero-life rescue; an owner ruling on every broad multi-source credit case |
@@ -88,7 +88,7 @@ The [counter rule schema](counter-rules.md) now gives marked cards intrinsic eff
 | REVEAL | Remaining distinct-name, same-zone selection/remainder and repetition consumers, plus complete recipe proofs; captured windows/visibility are delivered |
 | USAGE | Dynamic limits, modifying other ability limits or nonstacking composition proof |
 | EVENT | Remaining tap/draw-step events, event-subject targeting and card-specific event/provenance composition; explicit off-zone listener discovery is delivered |
-| PAY | Selected exile, ritual materials and binding/storage payments; ordinary counter and optional resolution payments are delivered |
+| PAY | Selected exile and binding/storage payments; ritual materials, ordinary counter and optional resolution payments are delivered |
 | ENTRY | Atomic tapped entry or summon-method provenance |
 | TOKEN | Complete card-specific token recipes/proof; predefined creation and board-only lifecycle are delivered |
 | EXPIRY | Battle/attack lifetime and skip-next-untap scheduling |
@@ -188,8 +188,6 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 
 | Row | Card | Status | Families | Current disposition |
 |---:|---|---|---|---|
-| 13 | 蒼海王子 | B/W | PAY, ENTRY | Need ritual material selection and summed mana-value destruction payment plus entry-method provenance for the optional draw. Clarify strict greater-than threshold/material combination. Normal special deployment and attack mill exist. |
-| 14 | 深淵巨人 | B/W | PAY, ENTRY | Same ritual/provenance gap as prince. Ten-card mill is already supported; the bounded reveal limit does not limit mill quantity. |
 | 15 | 深海之墓 | B | IMMUNITY | Own-hand-count conditions and graveyard targeting restriction are expressible. Conditional hand immunity must also cover untargeted opposing effects; Hexproof/Shroud alone do not. |
 | 16 | 永恆魔洋 | B/W | RANDOM, VALUE | Need server-authoritative random opposing-hand reveal and passing its exact name into a turn-long cast/deploy prohibition. Clarify what 使用 covers. Fixed authored cast restrictions already exist. |
 | 21 | 海神之怒 耶夢加得 | B | RANDOM | Name-substring conditions and whole effective-cost setters are supported. Authoritative random opposing-hand discard remains missing. |
@@ -201,7 +199,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 
 The [six new blue cards](../tests/engine/blue-workbook.test.ts) cover captured reveals, source discard triggers, combat-phase cast restrictions, game-once graveyard land recovery, and [scoped mill bonuses](continuous-effects-engine.md#mill-quantity). 塔薩 and 海耶 reveal six, take their chosen cards, and discard the remaining revealed cards as part of Reveal. The temple bonus applies to numbered mill instructions, including 海耶's separate opponent mill.
 
-The [60-card blue example](decks/blue-giant-workbook.json) uses 24 lands and 36 native blue nonlands under the workbook copy limits. 蒼海巡察組 supplies early mill, 幻變神殿 and 海歸的幻術者 increase it, and 深淵幻士 turns giant attacks into additional mill triggers. The workbook's blue sheet now supplies 14 nonland names, allowing 42 native nonland slots at three copies each.
+The [60-card blue example](decks/blue-giant-workbook.json) uses 24 lands and 36 native blue nonlands under the workbook copy limits. 蒼海巡察組 supplies early mill, 幻變神殿 and 海歸的幻術者 increase it, and 深淵幻士 turns giant attacks into additional mill triggers. The workbook's blue sheet now supplies 16 nonland names, allowing 48 native nonland slots at three copies each. 蒼海王子 and 深淵巨人 use the [shared ritual material payment](counter-payment-architecture.md#ritual-materials) and their special-summon entry triggers.
 
 ## Aurora and frost gear consumers
 
@@ -209,14 +207,14 @@ The [60-card blue example](decks/blue-giant-workbook.json) uses 24 lands and 36 
 
 ## Gaps in registered cards and format policy
 
-The 81 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
+The 83 registered matches are not a second list of fully faithful cards. Existing gaps remain visible here:
 
 - **Copy policy resolved:** all six basic lands are repeatable. 血炎山 already used the unlimited `land-red` definition; the five other missing unlimited mappings are now configured. 幻影魔城/諸界海 are singleton and the newly registered 幻影木偶 allows twenty copies, through the shared config/validator.
 - **Scorch on artifacts:** nine registered definitions explicitly retain `【暫緩：遺跡的灼熱破壞門檻】`. The accepted creature threshold uses current attack plus maximum life; the relic threshold still needs its own ruling. Their registration does not clear that caveat.
 - **Excluded dual lands:** six registered dual lands use an entry-tap trigger rather than atomic tapped entry. They belong to the excluded supplement, so the audit records the fidelity gap without silently widening implementation scope.
 - **Workbook format:** the workbook describes default three copies, at least sixty cards without an upper limit, and opening-seven/mulligan behavior. The current standard profile uses four copies and 60–250 cards; opening/setup rules are configured separately. Profile/setup alignment is separate work, not solved by registering definitions. U above is relative to the supported profile, not a claim that global workbook rules have been migrated.
 
-A complete fidelity certification of the 81 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
+A complete fidelity certification of the 83 registered matches is outside this missing-row audit. The historical inventory records their source text and coverage; the gaps above prevent interpreting coverage as a fidelity percentage.
 
 ## Next largest blocker and delivery order
 

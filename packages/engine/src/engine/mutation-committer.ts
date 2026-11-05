@@ -6,7 +6,7 @@ import { deriveAppliedEvents, sameStateValue, type AppliedMutation } from './app
 import { captureSourceInformation, retainDepartingSource } from './source-information';
 import { newTurnHistory, recordRuleEvent } from './turn-history';
 import { effectIsActive, roomCards } from './continuous-effect-state';
-import { planProposedMutations } from './proposed-events';
+import { planProposedMutations, UnpaidDestructionCost } from './proposed-events';
 import type { PendingChoice } from '../types/choice.types';
 import type { GameRoom } from '../types/game.room.types';
 import type { GameMutation } from '../types/game-mutation.types';
@@ -94,6 +94,8 @@ export class MutationCommitter {
         cause,
       );
     }
+
+    if (plan.paymentFailed) throw new UnpaidDestructionCost();
 
     return this.commitPreparedMutations(plan.mutations, cause, resolution);
   }

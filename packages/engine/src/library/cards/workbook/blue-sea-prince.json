@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "blue-sea-prince",
+  "name": "蒼海王子",
+  "manaCost": "{U}{U}",
+  "cardTypes": [
+    "Creature"
+  ],
+  "subTypes": [
+    "蒼巨人"
+  ],
+  "colors": [
+    "blue"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "rulesText": "儀式3：破壞我方能量總值大於3的「蒼巨人」僕從以特殊召喚此卡。① 特殊召喚進場時：可以抽兩張牌。② 攻擊時：從對手牌組頂部棄置4張牌。",
+  "abilities": [
+    {
+      "id": "ritual",
+      "type": "activated",
+      "allowedZones": [
+        "hand"
+      ],
+      "castSpeed": "sorcery",
+      "cost": {
+        "destroyMaterials": {
+          "filter": {
+            "cardTypes": [
+              "Creature"
+            ],
+            "subTypes": [
+              "蒼巨人"
+            ]
+          },
+          "manaValueGreaterThan": 3
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "move",
+        "params": {
+          "origin": "hand",
+          "destination": "battlefield"
+        },
+        "targeting": {
+          "type": "self",
+          "subject": "source",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "special-summon-draw",
+      "type": "triggered",
+      "triggerCondition": "ON_ENTER_BATTLEFIELD",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        },
+        "condition": {
+          "op": "eq",
+          "left": {
+            "path": "event.payload.card.state.summonKind"
+          },
+          "right": "effect"
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "draw",
+        "params": {
+          "amount": 2
+        },
+        "choice": {
+          "kind": "optional",
+          "prompt": "抽兩張牌？"
+        }
+      }
+    },
+    {
+      "id": "attack-mill",
+      "type": "triggered",
+      "triggerCondition": "ON_ATTACK",
+      "trigger": {
+        "subject": "self",
+        "listener": {
+          "kind": "watcher",
+          "activeZones": [
+            "battlefield"
+          ]
+        }
+      },
+      "effect": {
+        "family": "cards",
+        "operation": "mill",
+        "params": {
+          "amount": 4
+        },
+        "targeting": {
+          "type": "player",
+          "controller": "opponent",
+          "all": true,
+          "required": false
+        }
+      }
+    }
+  ]
+}

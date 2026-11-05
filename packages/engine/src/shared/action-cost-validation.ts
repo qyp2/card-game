@@ -1,3 +1,4 @@
+import { validCardFilter } from './card-filter-validation';
 import { validCounterRemoval } from './counter-cost-validation';
 import type { ActionCost, AuthoredActionCost, CostRoutes } from '../types/effect.types';
 import { validManaAmounts } from './mana-validation';
@@ -9,7 +10,7 @@ export function actionCostError(cost: ActionCost): string | undefined {
   if (
     !object(cost) ||
     Object.keys(cost).some(
-      (key) => !['mana', 'life', 'tap', 'untap', 'discard', 'discardSelf', 'sacrifice', 'removeCounters'].includes(key),
+      (key) => !['mana', 'life', 'tap', 'untap', 'discard', 'discardSelf', 'sacrifice', 'removeCounters', 'destroyMaterials'].includes(key),
     )
   )
     return 'Unsupported action cost';
@@ -30,6 +31,15 @@ export function actionCostError(cost: ActionCost): string | undefined {
       !cost.removeCounters.every(validCounterRemoval))
   )
     return 'Invalid counter removal cost';
+  const materials = cost.destroyMaterials;
+  if (materials !== undefined && (
+    !object(materials) ||
+    Object.keys(materials).some(key => !['filter', 'manaValueGreaterThan'].includes(key)) ||
+    !validCardFilter(materials.filter) ||
+    typeof materials.manaValueGreaterThan !== 'number' ||
+    !Number.isSafeInteger(materials.manaValueGreaterThan) ||
+    materials.manaValueGreaterThan < 0
+  )) return 'Invalid material destruction cost';
   if (cost.tap && cost.untap) return 'Cannot pay both tap and untap costs';
 }
 

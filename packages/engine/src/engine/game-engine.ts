@@ -2,6 +2,7 @@ import { captureSourceInformation as captureCommandSource } from './source-infor
 // src/engine/game-engine.ts
 import { EventBus } from './event-bus';
 import { MutationCommitter } from './mutation-committer';
+import { UnpaidDestructionCost } from './proposed-events';
 import { answerPendingChoice } from './choice-continuation';
 import { StateMachine } from './state-machine';
 import { ActionService } from './action-service';
@@ -398,6 +399,15 @@ export class GameEngine {
 
   /** Commit a previously planned action; no player packet validation here. */
   private commitAction(result: Extract<ActionResult, { success: true }>, prefix: GameMutation[] = []): ActionResult {
+    try {
+      return this.commitPlannedAction(result, prefix);
+    } catch (error) {
+      if (error instanceof UnpaidDestructionCost) return { success: false, phase: 'propose', reason: error.message };
+      throw error;
+    }
+  }
+
+  private commitPlannedAction(result: Extract<ActionResult, { success: true }>, prefix: GameMutation[]): ActionResult {
     // An immediate action resolves on the spot instead of using the stack.
     if (result.stackObject && isImmediateAction(this.room, result.stackObject)) {
       const object = immediateAction(this.room, result.stackObject);

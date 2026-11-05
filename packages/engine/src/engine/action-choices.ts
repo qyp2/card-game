@@ -1,3 +1,4 @@
+import { materialPaymentOptions, planMaterialPayment } from './material-costs';
 import { planCounterCosts, counterPaymentOptions, counterPaymentAnswer } from './counter-costs';
 import { CardCharacteristicService } from './card-characteristic-service';
 import { abilityEffects } from './ability-effects';
@@ -437,6 +438,28 @@ export function prepareActionChoice(
 
       working = planned.mutations.reduce(gameReducer, working);
     }
+  }
+
+  if (cost?.destroyMaterials && data.materialPayments === undefined) {
+    const materials = cost.destroyMaterials;
+    const options = materialPaymentOptions(working, playerId, materials);
+    const available = options.reduce((sum, option) => sum + option.weight, 0);
+    if (available <= materials.manaValueGreaterThan) return reject('Not enough eligible ritual materials');
+
+    return request({
+      kind: 'selection',
+      prompt: `Choose materials with total mana value greater than ${materials.manaValueGreaterThan}`,
+      options,
+      min: 1,
+      max: options.length,
+      weightGreaterThan: materials.manaValueGreaterThan,
+      continuation: continuation('materialPayments'),
+    });
+  }
+
+  if (cost?.destroyMaterials) {
+    const payment = planMaterialPayment(working, playerId, cost.destroyMaterials, data.materialPayments);
+    if (!payment.success) return reject(payment.reason);
   }
 
   const counterPlan = planCounterCosts(working, playerId, card, cost?.removeCounters, data.counterPayments, true);

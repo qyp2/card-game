@@ -54,6 +54,7 @@ export interface ReplacementDefinition {
 export interface TrackedProposedEvent { event: ProposedEvent; applied: string[] }
 export interface ProposedTransaction {
   killCheckCauseId?: string;
+  requiredDestructions?: { cardUuid: string; zoneRevision: number }[];
   completed: GameMutation[];
   remaining: GameMutation[];
   current?: { frames: TrackedProposedEvent[]; final: TrackedProposedEvent[]; damage?: DamageAssignment[]; resultPrimitives?: GameMutation[] };

@@ -132,6 +132,10 @@ export const CounterRemovalCostSchema = z.custom<CounterRemovalCost>(
   'Invalid counter removal cost',
 );
 export const CostSchema = z.strictObject({
+  destroyMaterials: z.strictObject({
+    filter: CardFilterSchema,
+    manaValueGreaterThan: Count,
+  }).optional(),
   removeCounters: z.array(CounterRemovalCostSchema).max(16).optional(),
   mana: z
     .strictObject({

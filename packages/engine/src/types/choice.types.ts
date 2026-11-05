@@ -7,6 +7,7 @@ export interface ChoiceOption {
   label: string;
   value: unknown;
   limit?: number;
+  weight?: number;
 }
 export interface ResolutionContinuation {
   type: 'resolution';
@@ -35,7 +36,8 @@ export interface ActionContinuation {
     | 'distributions'
     | 'numericBindings'
     | 'costRoute'
-    | 'counterPayments';
+    | 'counterPayments'
+    | 'materialPayments';
   groupId?: string;
   manaActivationIndex?: number;
   bindingName?: string;
@@ -61,6 +63,7 @@ export interface ListedChoice {
   max: number;
   total?: number;
   minimumPerOption?: number;
+  weightGreaterThan?: number;
   continuation:
     | ActionContinuation
     | ResolutionContinuation

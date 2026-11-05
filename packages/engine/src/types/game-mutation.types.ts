@@ -25,7 +25,8 @@ type GameMutationBody =
   | { type: 'UNATTACH_CARD'; cardUuid: string }
   | { type: 'ATTACH_CARD'; cardUuid: string; zoneRevision: number; hostUuid: string; hostRevision: number; controllerId: string }
   | { type: 'SET_BATTLE_PROTECTOR'; cardUuid: string; playerId: PlayerId }
-  | { type: 'DESTROY_CARD' | 'SACRIFICE_CARD'; cardUuid: string; zoneRevision: number }
+  | { type: 'DESTROY_CARD'; cardUuid: string; zoneRevision: number; requiredPayment?: true }
+  | { type: 'SACRIFICE_CARD'; cardUuid: string; zoneRevision: number }
   | { type: 'REGENERATE_CARD'; cardUuid: string; zoneRevision: number }
   | { type: 'CHANGE_LIFE'; playerId: PlayerId; amount: number; replacementProcessed?: boolean }
   | { type: 'SET_FAILED_DRAW'; playerId: PlayerId; value: boolean }

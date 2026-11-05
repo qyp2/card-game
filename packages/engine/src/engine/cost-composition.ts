@@ -32,6 +32,11 @@ export function composeActionCosts(costs: ActionCost[]): ActionCost {
       result.removeCounters = [...(result.removeCounters ?? []), ...structuredClone(cost.removeCounters)];
     }
 
+    if (cost.destroyMaterials) {
+      if (result.destroyMaterials) throw new Error('An action can declare one material destruction cost');
+      result.destroyMaterials = structuredClone(cost.destroyMaterials);
+    }
+
     // Numeric costs accumulate.
     for (const field of ['life', 'discard'] as const) {
       if (cost[field] !== undefined) result[field] = add(result[field], cost[field]);
