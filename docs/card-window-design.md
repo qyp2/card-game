@@ -59,7 +59,7 @@ To publicly reveal those six instead, use `all_players` for faces/count/order an
 
 These are strict data fields, not executable callbacks. Capture currently supports the top of self/opponent libraries, one to sixty-four cards, with short/empty libraries recording the actual available cards. Work bounds live in `packages/engine/src/config/observations.json`: `maxWindowCards` is 64 and `historyLimit` is 128 per viewer. Both values are validated at module load. Unsupported origins/positions, unknown fields, unsafe names, incorrect result kinds and contradictory audiences fail validation. Capture requires its named result and does not accept its own choice/target/outcome configuration; wrap optional capture in an ordinary modal or optional payment branch.
 
-Existing authored `cards / reveal_top` recipes now lower into this shared public capture/selection/remainder path. They retain their printed behavior and completion-time reveal events; the convenience recipe also accepts the configured capture bound. Its take-to-hand/bottom recipe does not become the behavior of every capture. Generated result names avoid existing declarations.
+Existing authored `cards / reveal_top` recipes now lower into this shared public capture/selection/remainder path. They retain their printed behavior and completion-time reveal events; the convenience recipe also accepts the configured capture bound. The convenience recipe takes to hand and orders the remainder on the bottom by default. Set `remainder: "discard"` to discard the current captured library members as part of Reveal. This uses `cards/discard_captured` and produces ordinary discard events without a milled result. Generated result names avoid existing declarations.
 
 ## Visibility is an explicit policy
 

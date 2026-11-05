@@ -25,6 +25,7 @@ export const InstructionNames = {
   ATTACH: ['attachments', 'attach'],
   CLAIM_REVEALED_SELF: ['cards', 'claim_revealed_source'],
   DISCARD_FROM_LIBRARY: ['cards', 'mill'],
+  DISCARD_CAPTURED: ['cards', 'discard_captured'],
   DISCARD_FROM_HAND: ['cards', 'discard'],
   DISCARD_HAND: ['cards', 'discard_hand'],
   DRAW: ['cards', 'draw'],
@@ -92,6 +93,9 @@ export function instructionParameterSchemas(
         amount: EffectCount.optional(),
       }),
     ]),
+    DISCARD_CAPTURED: z.strictObject({
+      from: CardResultSourceSchema.extend({ view: z.literal('current').optional() }),
+    }),
     DISCARD_FROM_HAND: z.strictObject({ amount: EffectCount }),
     DISCARD_HAND: empty,
     DRAW: z.strictObject({ amount: EffectCount }),
@@ -106,6 +110,7 @@ export function instructionParameterSchemas(
         subTypes: z.array(Identifier).optional(),
         excludedNames: z.array(z.string()).optional(),
         disposition: z.literal('scorch').optional(),
+        remainder: z.enum(['bottom', 'discard']).optional(),
         matchingClauses: z
           .array(
             z.strictObject({
@@ -116,6 +121,7 @@ export function instructionParameterSchemas(
           .optional(),
       })
       .refine((v) => !v.filter || (!v.subTypes && !v.excludedNames), 'Use one shared reveal filter')
+      .refine((v) => v.disposition !== 'scorch' || v.remainder !== 'discard', 'Scorch reveals order the remainder on the bottom')
       .refine((v) => (v.min ?? 0) <= (v.max ?? 1) && (v.max ?? 1) <= v.amount, 'Invalid reveal selection bounds'),
     MOVE_ZONE: z
       .strictObject({

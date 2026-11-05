@@ -6,7 +6,7 @@ import { CardCharacteristicService } from './card-characteristic-service';
 import type { CardFilter } from '../types/card-query.types';
 import { validCardFilter } from '../shared/card-filter-validation';
 
-/** Expand only the starter's bounded reveal instructions at the current cursor. */
+/** Expand the bounded reveal into capture, choice and remainder handling. */
 export function expandBoundedReveal(
   room: GameRoom,
   stack: StackObject,
@@ -46,8 +46,10 @@ export function expandBoundedReveal(
 
     // Count the revealed cards that satisfy any matching clause.
     const matchingCount = cards.filter((card) => {
+      if (!clauses?.length) return false;
+
       const value = CardCharacteristicService.resolve(room, card);
-      return clauses?.some(
+      return clauses.some(
         (clause) =>
           clause.cardTypes.some((type) => value.cardTypes.some((actual) => actual === type)) &&
           clause.subTypes.some((type) => value.subTypes.includes(type)),
@@ -87,7 +89,15 @@ export function expandBoundedReveal(
             },
           };
 
-    // Whatever is not taken is put on the bottom in the player's chosen order.
+    const remainder: EffectDefinition = effect.params.remainder === 'discard'
+      ? { action: 'DISCARD_CAPTURED', params: { from }, targeting: self }
+      : {
+          action: 'REORDER_LIBRARY',
+          params: { placement: 'bottom' },
+          targeting: self,
+          choice: { kind: 'search', zone: 'library', from, ordered: true, allAvailable: true },
+        };
+
     definitions = [
       {
         action: 'CAPTURE_WINDOW',
@@ -96,12 +106,7 @@ export function expandBoundedReveal(
         targeting: self,
       },
       first,
-      {
-        action: 'REORDER_LIBRARY',
-        params: { placement: 'bottom' },
-        targeting: self,
-        choice: { kind: 'search', zone: 'library', from, ordered: true, allAvailable: true },
-      },
+      remainder,
     ];
   } else {
     return;

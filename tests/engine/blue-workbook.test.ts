@@ -6,6 +6,7 @@ import { buildCatalog } from '@server/catalog/catalog';
 import { deckEligibility, validateDeck } from '@card-game/protocol';
 import blueDeck from '../../docs/decks/blue-giant-workbook.json';
 import { actionPermission } from '../../packages/engine/src/shared/action-permissions';
+import { describeStackObject } from '../../packages/engine/src/shared/action-description';
 import type { CardInstance, CardZone } from '@shared/card.types';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
 
@@ -65,8 +66,10 @@ describe('blue workbook cards', () => {
     player.deck = [outside, giant, otherTassa, ...rest];
 
     cast(engine, 'phantom-sea-tassa');
+    const ability = engine.roomState.stack.at(-1)!;
+    expect(describeStackObject(engine.roomState, ability, 'player1')).toContain('reveal 6');
     resolve(engine);
-    select(engine, accept ? ['reveal-six'] : []);
+    select(engine, [accept ? 'yes' : 'no']);
 
     if (accept) {
       const offered = options(engine);
@@ -79,6 +82,28 @@ describe('blue workbook cards', () => {
     expect(ids(result.graveyard)).toEqual(accept ? ids([otherTassa, ...rest].reverse()) : []);
     expect(result.deck).toHaveLength(accept ? 1 : 7);
     expect(result.deck[0].uuid).toBe(outside.uuid);
+
+    const events = engine.drainEventBatches().flatMap(batch => batch.events);
+    expect(events.filter(event => event.eventId === 'CARD_REVEALED')).toHaveLength(accept ? 6 : 0);
+    expect(events.filter(event => event.eventId === 'CARD_DISCARDED_FROM_LIBRARY')).toHaveLength(accept ? 5 : 0);
+    const effectIds = events.flatMap(event => event.eventId === 'STACK_ITEM_RESOLVED' ? [event.payload.effectId] : []);
+    if (accept) expect(effectIds).toContain('DISCARD_CAPTURED');
+    expect(effectIds).not.toContain('DISCARD_FROM_LIBRARY');
+  });
+
+  it('Tassa discards its captured remainder without a legal take and still triggers the Sunken Ship', () => {
+    const engine = game();
+    const ship = card('sunken-ship', 'library');
+    const land = card('sea-domain', 'library');
+    engine.roomState.players.player1.deck = [ship, land];
+
+    cast(engine, 'phantom-sea-tassa');
+    resolve(engine);
+    select(engine, ['yes']);
+    expect(engine.roomState.pendingChoice).toBeFalsy();
+    expect(ids(engine.roomState.players.player1.graveyard)).toEqual(ids([land, ship]));
+    resolve(engine);
+    expect(engine.roomState.players.player1.mana.blue).toBe(5);
   });
 
   it('Haya takes a giant and a relic, keeps equipment out of that choice and independently mills its opponent', () => {

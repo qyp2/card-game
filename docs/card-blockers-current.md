@@ -199,7 +199,7 @@ The tables distinguish a confirmed missing consumer from a ruling that might req
 
 ## Blue Giant mill consumers
 
-The [six new blue cards](../tests/engine/blue-workbook.test.ts) cover captured reveals, source discard triggers, combat-phase cast restrictions, game-once graveyard land recovery, and [scoped mill bonuses](continuous-effects-engine.md#mill-quantity). 塔薩 and 海耶 reveal six, take their chosen cards, and mill the remaining revealed cards. The temple bonus applies to numbered mill instructions, including 海耶's separate opponent mill.
+The [six new blue cards](../tests/engine/blue-workbook.test.ts) cover captured reveals, source discard triggers, combat-phase cast restrictions, game-once graveyard land recovery, and [scoped mill bonuses](continuous-effects-engine.md#mill-quantity). 塔薩 and 海耶 reveal six, take their chosen cards, and discard the remaining revealed cards as part of Reveal. The temple bonus applies to numbered mill instructions, including 海耶's separate opponent mill.
 
 The [60-card blue example](decks/blue-giant-workbook.json) uses 24 lands and 36 native blue nonlands under the workbook copy limits. 蒼海巡察組 supplies early mill, 幻變神殿 and 海歸的幻術者 increase it, and 深淵幻士 turns giant attacks into additional mill triggers. The workbook's blue sheet now supplies 14 nonland names, allowing 42 native nonland slots at three copies each.
 

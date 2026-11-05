@@ -23,6 +23,9 @@ function effectDescription(effect: StackEffect): string {
     case 'MODIFY_STATS': return effect.params.damage !== undefined ? `damage ${value(effect.params.damage)}` : 'modify stats';
     case 'DISCARD_FROM_HAND': return `discard ${value(amount)} from hand`;
     case 'DISCARD_FROM_LIBRARY': return `discard ${value(amount)} from library`;
+    case 'REVEAL_TOP': return `reveal ${value(amount)}`;
+    case 'CAPTURE_WINDOW': return effect.params.event === 'revealed' ? `reveal ${value(amount)}` : `capture window ${value(amount)}`;
+    case 'DISCARD_CAPTURED': return 'discard the remaining captured cards';
     case 'ADD_COUNTER': return `place ${value(amount)} ${value(effect.params.counterType)} ${amount === 1 ? 'counter' : 'counters'}`;
     case 'REMOVE_COUNTER': return `remove ${value(amount)} ${value(effect.params.counterType)} ${amount === 1 ? 'counter' : 'counters'}`;
     case 'ADD_MANA': return `add ${value(amount)} ${value(effect.params.color)} mana`;

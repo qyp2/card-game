@@ -125,7 +125,7 @@
                 },
                 {
                   "family": "cards",
-                  "operation": "mill",
+                  "operation": "discard_captured",
                   "params": {
                     "from": {
                       "kind": "result",

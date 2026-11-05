@@ -58,7 +58,7 @@ Within a stage, defining effects precede ordinary effects. A dependency exists w
 
 `{ "type": "MILL_AMOUNT", "amount": 1 }` adds to the matching source card's effective `millBonus`. The amount is a nonnegative safe integer. Separate rules add together. A static rule follows its live source. A resolved rule with a broad scope follows the current matching cards for its duration, using the controller captured at resolution. A rule for a specific object stays tied to that incarnation.
 
-A numbered `cards/mill` reads the source's effective bonus before selecting cards from each affected deck, using the source's departure snapshot if it has left. `cards/mill` with a named `from` result follows the captured group and its filters. For example, 塔薩 reveals six and mills the remaining five after taking one, even with 幻變神殿 in play.
+A numbered `cards/mill` reads the source's effective bonus before selecting cards from each affected deck, using the source's departure snapshot if it has left. `cards/mill` with a named `from` result follows the captured group and its filters. Reveal instructions use a separate `cards/discard_captured` operation for their remainder. 塔薩 reveals six, takes one eligible giant and discards the remaining five. Those discards can trigger effects that listen for a library discard.
 
 ## Permissions and integration
 

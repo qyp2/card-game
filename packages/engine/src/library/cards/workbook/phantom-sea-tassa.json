@@ -31,87 +31,27 @@
       },
       "effect": {
         "family": "cards",
-        "operation": "draw",
+        "operation": "reveal_top",
         "params": {
-          "amount": 0
+          "amount": 6,
+          "min": 1,
+          "max": 1,
+          "remainder": "discard",
+          "filter": {
+            "cardTypes": [
+              "Creature"
+            ],
+            "subTypes": [
+              "蒼巨人"
+            ],
+            "excludedNames": [
+              "幻海人 塔薩"
+            ]
+          }
         },
         "choice": {
-          "kind": "options",
-          "min": 0,
-          "max": 1,
-          "prompt": "公開牌組頂部六張牌？",
-          "options": [
-            {
-              "id": "reveal-six",
-              "label": "公開六張牌",
-              "effects": [
-                {
-                  "family": "cards",
-                  "operation": "capture_window",
-                  "params": {
-                    "zone": "library",
-                    "position": "top",
-                    "amount": 6,
-                    "visibility": {
-                      "faces": [
-                        "all_players"
-                      ],
-                      "count": [
-                        "all_players"
-                      ],
-                      "order": [
-                        "controller"
-                      ],
-                      "expires": "resolution_end"
-                    },
-                    "event": "revealed"
-                  },
-                  "recordResult": {
-                    "name": "revealed",
-                    "kind": "captured"
-                  }
-                },
-                {
-                  "family": "cards",
-                  "operation": "move",
-                  "params": {
-                    "origin": "library",
-                    "destination": "hand"
-                  },
-                  "choice": {
-                    "kind": "search",
-                    "zone": "library",
-                    "from": {
-                      "kind": "result",
-                      "name": "revealed"
-                    },
-                    "min": 1,
-                    "max": 1,
-                    "prompt": "選擇一張「蒼巨人」僕從",
-                    "cardTypes": [
-                      "Creature"
-                    ],
-                    "subTypes": [
-                      "蒼巨人"
-                    ],
-                    "excludedNames": [
-                      "幻海人 塔薩"
-                    ]
-                  }
-                },
-                {
-                  "family": "cards",
-                  "operation": "mill",
-                  "params": {
-                    "from": {
-                      "kind": "result",
-                      "name": "revealed"
-                    }
-                  }
-                }
-              ]
-            }
-          ]
+          "kind": "optional",
+          "prompt": "公開牌組頂部六張牌？"
         }
       }
     }

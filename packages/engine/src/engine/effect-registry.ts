@@ -67,6 +67,19 @@ function findCardInZone(room: GameRoom, uuid: string, zone: string): CardInstanc
   return undefined;
 }
 
+/** A library discard is the same zone move whether chosen by mill or reveal. */
+function discardLibraryCard(card: CardInstance, playerId = card.state.ownerId): GameMutation {
+  return {
+    type: 'MOVE_CARD',
+    cardUuid: card.uuid,
+    playerId,
+    from: 'library',
+    to: 'graveyard',
+    zoneRevision: card.state.zoneRevision ?? 0,
+    reason: 'discard',
+  };
+}
+
 export const EffectRegistry: Record<string, EffectHandler> = {
   'ATTACH': (room, stackObj, effect) => {
     const target = effect.targets[0];
@@ -119,6 +132,16 @@ export const EffectRegistry: Record<string, EffectHandler> = {
 
   'CREATE_TOKEN': (room, _stackObj, effect, context = defaultEffectContext) => planTokenCreation(room, effect, context),
 
+  'DISCARD_CAPTURED': (room, stackObj, effect) => {
+    const from = effect.params.from as CardResultSource | undefined;
+    if (!from || from.view === 'recorded') return [];
+
+    const members = collectCardSource(roomCards(room), from, stackObj.resolutionResults);
+    if (!members || stackObj.resolutionResults?.[from.name]?.kind !== 'captured') return [];
+
+    return members.filter(({ card }) => card.state.zone === 'library').map(({ card }) => discardLibraryCard(card));
+  },
+
   'DISCARD_FROM_LIBRARY': (room, stackObj, effect) => {
     const amount = effect.params.amount;
     if (effect.params.from) {
@@ -126,10 +149,7 @@ export const EffectRegistry: Record<string, EffectHandler> = {
       if (!members || (amount !== undefined && (!Number.isSafeInteger(amount) || (amount as number) < 0))) return [];
       return members.map(entry => entry.card).filter(card => card.state.zone === 'library' && matchesCardFilter(card,
         CardCharacteristicService.resolve(room, card), effect.params.filter as CardFilter ?? {}, stackObj.controllerId))
-        .slice(0, amount as number | undefined).map(card => ({ type: 'MOVE_CARD' as const,
-          cardUuid: card.uuid, playerId: card.state.ownerId, from: 'library' as const, to: 'graveyard' as const,
-          zoneRevision: card.state.zoneRevision ?? 0, reason: 'discard' as const,
-        }));
+        .slice(0, amount as number | undefined).map(card => discardLibraryCard(card));
     }
 
     if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < 0) return [];
@@ -142,15 +162,8 @@ export const EffectRegistry: Record<string, EffectHandler> = {
 
       if (!player || count === 0) return [];
 
-      return player.deck.slice(-Math.min(count, player.deck.length)).reverse().map(card => ({
-        type: 'MOVE_CARD' as const,
-        cardUuid: card.uuid,
-        playerId: player.id,
-        from: 'library' as const,
-        to: 'graveyard' as const,
-        zoneRevision: card.state.zoneRevision ?? 0,
-        reason: 'discard' as const,
-      }));
+      return player.deck.slice(-Math.min(count, player.deck.length)).reverse()
+        .map(card => discardLibraryCard(card, player.id));
     });
   },
 
