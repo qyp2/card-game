@@ -143,8 +143,14 @@ export function collectTriggerCandidates(
       if (card.state.zone === 'battlefield' || hints.zones.has(card.state.zone))
         inventory.set(cardObjectKey(card), card);
     // Old synthetic departure fixtures may retain the only copy in the payload.
-    // A live newer incarnation must never be replaced by that stale copy.
-    if (definition.implicit !== 'battlefield' && eventCard && !cards.some((card) => card.uuid === eventCard.uuid))
+    // A live newer incarnation must never be replaced by that stale copy, so the
+    // guard compares against the candidate inventory rather than every room card:
+    // a payload card that no zone hint admitted is still the only copy we have.
+    if (
+      definition.implicit !== 'battlefield' &&
+      eventCard &&
+      ![...inventory.values()].some((card) => card.uuid === eventCard.uuid)
+    )
       inventory.set(cardObjectKey(eventCard), eventCard);
     for (const card of inventory.values()) {
       const info = room
