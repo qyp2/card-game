@@ -134,9 +134,8 @@ export function setCollectionVisibility(room: GameRoom, object: StackObject, eff
   return expose(room, object, updated, cards, params.event);
 }
 
-/** Exact source-zone incarnations only; observation access never follows a card into a later zone. */
-export /** Captured-result choices require an active face grant for the actual chooser. */
-function canChooseCapturedCard(room: GameRoom, object: StackObject, name: string, card: CardInstance): boolean {
+/** Captured-result choices require an active face grant for the actual chooser. */
+export function canChooseCapturedCard(room: GameRoom, object: StackObject, name: string, card: CardInstance): boolean {
   const result = object.resolutionResults?.[name];
   if (result?.kind !== 'captured') return true;
   const observation = result.observationId ? room.cardObservations?.active[result.observationId] : undefined;
