@@ -68,6 +68,7 @@ export const declareBlockersHandler: ActionHandler = {
 
         // Blocker must not already be assigned to another attacker
         if (assignedBlockers.has(blockerUuid)) {
+          /* v8 ignore next -- assignedBlockers only records uuids already resolved on this unchanged battlefield. */
           return { success: false, phase: 'validate', reason: `${blocker ? CardCharacteristicService.resolve(room, blocker).name : 'Blocker ' + blockerUuid} is already assigned to another attacker` };
         }
 

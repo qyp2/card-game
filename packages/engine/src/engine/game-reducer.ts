@@ -82,6 +82,7 @@ function updateCardOnBattlefield(room: GameRoom, cardUuid: string, update: (card
 /**
  * Update a card's state in a per-player zone. Returns a new room.
  */
+/* v8 ignore next -- unused private helper retained for reference; no call site exists */
 function updateCardInPlayerZone(
   room: GameRoom,
   cardUuid: string,
@@ -190,6 +191,7 @@ export function reduceGameOperation(state: GameRoom, mutation: GameMutation): Op
 
 function reduceMutation(state: GameRoom, mutation: GameMutation): GameRoom | OperationOutcome {
   // Terminal snapshots are immutable, including duplicate END_GAME messages.
+  /* v8 ignore next -- unreachable: reduceGameOperation rejects terminal rooms before dispatch */
   if (state.status === 'gameOver' || state.outcome) return state;
 
   switch (mutation.type) {

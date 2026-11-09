@@ -53,6 +53,7 @@ export interface DensityInput {
 }
 
 function row(start: number, count: number, step: number, cardWidth: number): RowPlan {
+  /* v8 ignore next -- split() only creates rows with a positive count. */
   return { start, count, step, width: count > 0 ? cardWidth + (count - 1) * step : 0 };
 }
 

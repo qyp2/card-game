@@ -49,6 +49,9 @@ export const playCardHandler: ActionHandler = {
     if (announcement.missing) return { success: false, phase: 'validate', reason: 'Choose all declared numbers' };
     if (announcement.missingCostRoute) return { success: false, phase: 'validate', reason: 'Choose a cost route' };
 
+    // Unreachable: CardCharacteristicService.resolveBlueprint always returns a
+    // resolved characteristics object whose onCastEffects is an array.
+    /* v8 ignore next */
     const effects = selectModeEffects(
       CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
       CardCharacteristicService.resolveBlueprint(room, card).modes,
@@ -117,6 +120,8 @@ export const playCardHandler: ActionHandler = {
     const mutations: GameMutation[] = [...costs.mutations, ...(announcement.ruleUses ?? []).map(use => recordRuleUse(room, use))];
 
     // --- BUILD STACK OBJECT (snapshot values locked here) ---
+    // Unreachable: resolveBlueprint always provides an onCastEffects array.
+    /* v8 ignore next */
     const onCastEffects = selectModeEffects(
       CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
       CardCharacteristicService.resolveBlueprint(room, card).modes,

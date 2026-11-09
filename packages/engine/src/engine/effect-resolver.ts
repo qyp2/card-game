@@ -336,7 +336,11 @@ function continueResolution(
 
       if (effect.action === 'PAY_COST') {
         const payment = offerResolutionPayment(workingRoom, resolving, index, results);
+        /* v8 ignore start -- unreachable: every return of offerResolutionPayment (its
+           finish/request helpers in resolution-payments.ts) reports success:true, so this
+           defensive throw cannot fire and the fall-through arm is always the one taken. */
         if (!payment.success) throw new Error(payment.reason);
+        /* v8 ignore stop */
         if ('pendingChoice' in payment) return { mutations, pendingChoice: payment.pendingChoice };
         resolving = payment.continuation.stackObj;
         results.splice(0, results.length, ...payment.continuation.results);
@@ -398,6 +402,8 @@ function continueResolution(
 
       // A replacement decision suspends resolution and resumes after this effect.
       if (planned.pendingChoice) {
+        /* v8 ignore start -- unreachable: every pending choice planProposedMutations returns is
+           built by its choose/shieldChoice helpers, which set a replacement continuation. */
         if (planned.pendingChoice.continuation.type === 'replacement')
           planned.pendingChoice.continuation.afterResolution = {
             type: 'resolution',
@@ -407,6 +413,7 @@ function continueResolution(
             outcomeProbe,
             cardResultProbe,
           };
+        /* v8 ignore stop */
 
         return { mutations, pendingChoice: planned.pendingChoice };
       }

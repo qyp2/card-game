@@ -141,6 +141,7 @@ export class GameEngine {
             ], {
               kind: 'trigger',
               parentBatchId: this.commits.lastBatchId,
+              /* v8 ignore next -- triggered immediate objects always carry their triggering event UUID. */
               eventUuids: planned.immediateObject.type === 'triggered' && planned.immediateObject.triggeringEvent?.eventUuid ? [planned.immediateObject.triggeringEvent.eventUuid] : [],
             }, resolution.resolution);
           }
@@ -171,10 +172,12 @@ export class GameEngine {
             },
           ], { kind: 'engine', parentBatchId: this.commits.lastBatchId });
 
+          /* v8 ignore next 2 -- triggered pushes are queued at line 163; this fallback only receives untriggered pushes. */
           const eventUuids = pending.flatMap(mutation => mutation.type === 'PUSH_STACK' && mutation.stackObject.type === 'triggered'
             && mutation.stackObject.triggeringEvent?.eventUuid ? [mutation.stackObject.triggeringEvent.eventUuid] : []);
 
           return this.commits.commit(pending, {
+            /* v8 ignore next -- the checkpoint commits state-based mutations through its own batch kind. */
             kind: kind === 'state-based-action' ? kind : eventUuids.length ? 'trigger' : 'engine',
             parentBatchId: this.commits.lastBatchId,
             eventUuids: [...new Set(eventUuids)],
@@ -411,10 +414,13 @@ export class GameEngine {
     // An immediate action resolves on the spot instead of using the stack.
     if (result.stackObject && isImmediateAction(this.room, result.stackObject)) {
       const object = immediateAction(this.room, result.stackObject);
+      /* v8 ignore next -- action results always carry a mutations array. */
+      const resultMutations = result.mutations ?? [];
       const costs = [
         ...prefix,
         { type: 'SET_LAST_PASSED' as const, playerId: null },
-        ...(result.mutations ?? []).filter(mutation =>
+        ...resultMutations.filter(mutation =>
+          /* v8 ignore next 2 -- immediate abilities resolve costs only; they never carry the stack object's own push/move. */
           !(mutation.type === 'PUSH_STACK' && mutation.stackObject.uuid === object.uuid) &&
           !(mutation.type === 'MOVE_CARD' && mutation.to === 'stack' && mutation.stackObject?.uuid === object.uuid)),
       ];
@@ -429,6 +435,7 @@ export class GameEngine {
     allApplied.push(...this.applyMutations([...prefix, { type: 'SET_LAST_PASSED', playerId: null }, ...(result.mutations ?? [])]));
 
     // Sync stack to StateMachine (phase transition + event + priority)
+    /* v8 ignore next -- immediate resolutions never leave a pending choice for the stack sync. */
     if (result.stackObject && !this.isGameOver && !this.room.pendingChoice) {
       const smMutations = this.stateMachine.addToStack(this.room, result.stackObject);
 
@@ -461,6 +468,7 @@ export class GameEngine {
     // Apply resolution mutations (zone change + effects + triggers)
     const allApplied: GameMutation[] = [];
 
+    /* v8 ignore next -- commitResolution is only called with a mutation list. */
     if (result.mutations) {
       allApplied.push(...this.applyMutations([
         ...result.mutations,

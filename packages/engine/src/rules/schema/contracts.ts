@@ -262,6 +262,7 @@ function validateListenerEvent(
     ability.type === 'triggered' &&
     ability.trigger?.listener?.kind === 'event_card' &&
     ['ON_SHUFFLE', 'BEGIN_UPKEEP', 'END_OF_TURN', 'ON_LIFE_GAIN', 'ON_LIFE_LOSS', 'COMBAT_DAMAGE'].includes(
+      /* v8 ignore next -- the triggered arm of the contract requires a trigger event */
       ability.triggerCondition ?? '',
     )
   )

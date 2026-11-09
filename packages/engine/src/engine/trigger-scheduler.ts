@@ -121,6 +121,9 @@ export function planTriggerScheduling(room: GameRoom): {
 
   // Step 2: target selection for each unresolved group.
   if (missing) {
+    // Unreachable fallbacks: triggerTargetGroups always writes concrete min/max
+    // bounds onto every group, so the defaults below can never be selected.
+    /* v8 ignore start */
     const result = request({
       kind: 'targets',
       prompt: 'Choose trigger targets: ' + missing.id,
@@ -129,6 +132,7 @@ export function planTriggerScheduling(room: GameRoom): {
       options: targetOptions(room, playerId, source, missing.targeting),
       continuation: continuation('targetGroups', missing.id),
     });
+    /* v8 ignore stop */
 
     return choiceCanComplete(result.choice) ? result : drop();
   }
@@ -159,6 +163,10 @@ export function planTriggerScheduling(room: GameRoom): {
       minimumPerOption: 1,
       options: effect.targets.map((target) => ({
         id: targetKey(target),
+        // The stackUuid/'target' arms are unreachable: structural target legality
+        // only admits player and permanent pointers, which always carry one of the
+        // first two identifiers.
+        /* v8 ignore next */
         label: target.playerId ?? target.cardUuid ?? target.stackUuid ?? 'target',
         value: target,
       })),

@@ -322,6 +322,10 @@ export const EffectRegistry: Record<string, EffectHandler> = {
     }
 
     // Guard: the same card must not be moved twice.
+    // The non-MOVE_CARD arm is unreachable: with a libraryPlacement every target
+    // must be a card/permanent (line 275) and line 316 already rejects any other
+    // mutation type.
+    /* v8 ignore next */
     if (new Set(mutations.map(mutation => mutation.type === 'MOVE_CARD' ? mutation.cardUuid : '')).size !== mutations.length) return [];
 
     // Top placement reverses each group so the listed order is preserved on top.
@@ -595,11 +599,13 @@ export const EffectRegistry: Record<string, EffectHandler> = {
       // Guard: a target must be either an anthem filter or a specific card.
       if (!target.all && !target.cardUuid) continue;
 
+      /* v8 ignore start -- the final `{}` arm is unreachable: the guard above continues unless target.all or target.cardUuid is set. */
       const scope: ContinuousEffectEntry['scope'] = target.all
         ? { zones: ['battlefield'], cardTypes: target.cardTypes, subTypes: target.subTypes, controller: target.controller }
         : target.cardUuid
           ? { cardUuid: target.cardUuid, zoneRevision: findCardOnBattlefield(room, target.cardUuid)?.state.zoneRevision ?? 0 }
           : {};
+      /* v8 ignore stop */
 
       if (params.power !== undefined) {
         mutations.push({

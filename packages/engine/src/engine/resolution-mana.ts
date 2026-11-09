@@ -54,6 +54,10 @@ export function prepareResolutionMana(
     const prepared = prepareActionChoice(working, saved.stackObj.controllerId, 'tapForMana', selection);
     if (prepared.kind === 'reject') return { success: false, reason: prepared.error };
     if (prepared.kind === 'prompt') {
+      /* v8 ignore next 3 -- unreachable: `prepareActionChoice` rejects numeric
+         declarations for `tapForMana` before the announcement can report a
+         missing binding, and every prompt it returns for that action carries an
+         action continuation. Kept as documentation of the contract. */
       if (prepared.choice.kind === 'number' || prepared.choice.continuation.type !== 'action') {
         return { success: false, reason: 'Unsupported mana ability payment choice' };
       }

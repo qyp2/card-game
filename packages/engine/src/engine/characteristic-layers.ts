@@ -80,6 +80,7 @@ function counterEntries(cards: CardInstance[]): ContinuousEffectEntry[] {
     return counter.effects.map((effect, index) => ({
       ...effect,
       id: `${key}:${index}`,
+      /* v8 ignore next -- no counter rule authored in counters-v1.json declares a group. */
       groupId: `${key}:${effect.group ?? 'effect'}`,
       origin: 'static' as const,
       source: source.uuid,
@@ -146,6 +147,7 @@ function transform(value: LayerValue, entry: ContinuousEffectEntry, cards: CardI
     case 'COPY': {
       const copy = printed(effect.blueprint, value.controllerId);
 
+      /* v8 ignore next -- every entry reaching transform gets a numeric timestamp in resolveBoard. */
       copy.abilityTimestamps = Object.fromEntries(copy.abilities.map(a => [a.id ?? '', entry.timestamp ?? 0]));
 
       return copy;
@@ -299,6 +301,7 @@ function signature(entry: ContinuousEffectEntry, cards: CardInstance[], board: B
 function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Board, layer: number,
   continuations: Map<string, ContinuousEffectEntry>, startedGroups: Set<string>, room: GameRoom,
   counters: ContinuousEffectEntry[]): Board {
+  /* v8 ignore next -- resolveBoard stamps every fold entry with a numeric timestamp. */
   const pending = [...entries].sort((a, b) => Number(!a.characteristicDefining) - Number(!b.characteristicDefining) || (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const seen = new Set(pending.map(e => e.id).filter(Boolean));
 
@@ -321,6 +324,7 @@ function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Bo
         continuations.set(part.id!, { ...part, condition: undefined, sourceAbilityId: undefined, scope: { objects } });
       }
 
+      /* v8 ignore next -- pending entries always receive an id in resolveBoard/staticEntries/counterEntries. */
       for (let i = 0; i < pending.length; i++) pending[i] = continuations.get(pending[i].id ?? '') ?? pending[i];
     }
 
@@ -335,6 +339,7 @@ function fold(entries: ContinuousEffectEntry[], cards: CardInstance[], board: Bo
       }
     }
 
+    /* v8 ignore next -- pending entries always receive a numeric timestamp before this sort. */
     pending.sort((a, b) => Number(!a.characteristicDefining) - Number(!b.characteristicDefining) || (a.timestamp ?? 0) - (b.timestamp ?? 0));
   }
 

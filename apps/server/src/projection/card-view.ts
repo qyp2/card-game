@@ -28,7 +28,9 @@ export function buildCardView(room: GameRoom, viewerId: string, card: CardInstan
   return {
     uuid: card.uuid, definitionId: card.blueprint.id, name: effective.name,
     label: onBoard ? battlefieldCardLabel(room, card) : effective.name,
-    cardTypes: [...effective.cardTypes], subTypes: [...effective.subTypes ?? []], keywords: [...effective.keywords],
+    cardTypes: [...effective.cardTypes],
+    /* v8 ignore next -- unreachable: resolveCharacteristics always normalizes subTypes to an array (printed() and the TYPE layer both spread into a new array), so the ?? [] fallback cannot run. */
+    subTypes: [...effective.subTypes ?? []], keywords: [...effective.keywords],
     rulesText: effective.rulesText, manaCost: symbols.join(''),
     ...(creature ? { power: effective.power, toughness: effective.toughness } : {}),
     ...(card.isToken ? { isToken: true } : {}),

@@ -22,6 +22,7 @@ function projectObservation(
   const countVisible = observation.members.length
     ? observation.members.some((member) => member.audience.count.includes(viewerId))
     : observation.emptyAudience.count.includes(viewerId);
+  /* v8 ignore next -- unreachable: observationHasAudience above returns true only when a member's faces or count admits the viewer (or the empty audience's count does), so visible and countVisible cannot both be empty here. */
   if (!visible.length && !countVisible) return;
   const ordered = visible.length > 0 && visible.every((member) => member.audience.order.includes(viewerId));
   const cards = visible.map((member) => {

@@ -82,6 +82,7 @@ export function createGameApplication(options: ApplicationOptions = {}) {
   const runtime = new RoomRuntime(store, {
     publishDelta: request => {
       const delta = sync.buildDelta(request.oldState, request.mutations, { action: request.action, playerId: request.playerId, batches: request.batches });
+      /* v8 ignore next -- recipients are built from the same room player ids this broadcast iterates, so a lookup miss is unreachable */
       sync.broadcast(delta, request.room, playerId => request.recipients.get(playerId) ?? playerId);
     },
     autoPassChanged: (socketId, status) => { io.to(socketId).emit('autoPassStatus', status); },

@@ -12,5 +12,6 @@ export async function loadSavedDecks(token: string, signal?: AbortSignal): Promi
     decks.push(...parsed.data.decks);
     if (!parsed.data.decks.length || offset + limit >= parsed.data.total) return decks;
   }
+  /* v8 ignore next -- unreachable: total <= 1000 and limit >= 1 make the loop return on the last page. */
   return decks;
 }

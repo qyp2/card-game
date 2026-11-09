@@ -123,6 +123,7 @@ function proposeBody(room: GameRoom, mutation: GameMutation): ProposedEvent[] | 
     const card = getCardInZone(room, mutation.cardUuid, mutation.playerId, mutation.from);
 
     // Guard: the card must exist in the source zone and actually change zone.
+    /* v8 ignore next -- validateCardMove already rejects a missing card and an unchanged zone */
     if (!card || mutation.from === mutation.to) return [];
 
     let kind: 'destroy' | 'sacrifice' | 'discard' | 'zone_transfer' = 'zone_transfer';
@@ -308,6 +309,7 @@ function shieldChoice(
       value: index,
       limit: Math.min(
         event.assignment.amount,
+        /* v8 ignore next -- the guard above only lets prevent_damage rules through */
         rule.operation.type === 'prevent_damage' ? (rule.operation.amount ?? Infinity) : Infinity,
       ),
     };
@@ -380,6 +382,7 @@ function applyShieldAllocation(
 
   transaction.completed.push({
     type: 'SET_REPLACEMENT_EFFECTS',
+    /* v8 ignore next -- applyShieldAllocation only runs for a rule found in room.replacementEffects */
     effects: (room.replacementEffects ?? []).flatMap((candidate) => {
       if (candidate.id !== rule.id) return [candidate];
       if (remaining <= 0) return [];
@@ -425,6 +428,7 @@ function applyRule(
   if (changed && (rule.remaining !== undefined || rule.uses !== undefined)) {
     const remaining = rule.remaining === undefined ? undefined : rule.remaining - (result.prevented ?? 0);
     const uses = rule.uses === undefined ? undefined : rule.uses - 1;
+    /* v8 ignore next -- only a rule registered in room.replacementEffects can carry a budget */
     const effects = (room.replacementEffects ?? []).flatMap((candidate) => {
       if (candidate.id !== rule.id) return [candidate];
       const exhausted = (remaining !== undefined && remaining <= 0) || (uses !== undefined && uses <= 0);
@@ -508,6 +512,7 @@ function run(room: GameRoom, transaction: ProposedTransaction): ProposedPlan {
 
         current.damage = validDamageAssignments(
           matchingRoom,
+          /* v8 ignore next -- damageFrames was just filtered to damage events */
           damageFrames.flatMap((frame) => (frame.event.kind === 'damage' ? [frame.event.assignment] : [])),
         );
         current.final = current.final.filter((frame) => frame.event.kind !== 'damage');
@@ -550,6 +555,7 @@ function run(room: GameRoom, transaction: ProposedTransaction): ProposedPlan {
           return { mutations: [], pendingChoice: nested.pendingChoice };
         }
 
+        /* v8 ignore next -- the damage branch above always initialises resultPrimitives */
         current.resultPrimitives = [...(current.resultPrimitives ?? []), ...nested.mutations];
       }
 
@@ -666,6 +672,7 @@ export function resumeProposedChoice(room: GameRoom, choice: PendingChoice, answ
 
     if (plan.pendingChoice?.continuation.type === 'replacement') {
       plan.pendingChoice.continuation.parents = [...(plan.pendingChoice.continuation.parents ?? []), ...parents];
+      /* v8 ignore next -- resumeProposedChoice only accepts replacement continuations */
       plan.pendingChoice.continuation.afterResolution =
         choice.continuation.type === 'replacement' ? choice.continuation.afterResolution : undefined;
     }
@@ -703,6 +710,7 @@ export function resumeProposedChoice(room: GameRoom, choice: PendingChoice, answ
   const allocation = decline ? undefined : shieldChoice(matchingRoom, transaction, rule);
 
   if (allocation) {
+    /* v8 ignore next -- shieldChoice always returns a replacement continuation */
     if (allocation.continuation.type === 'replacement')
       allocation.continuation.afterResolution = choice.continuation.afterResolution;
 

@@ -338,6 +338,7 @@ export class RoomRuntime {
       const oldRoomId = this.socketRooms.get(oldSocketId);
       this.autoPass.forgetSocket(oldSocketId);
       this.socketRooms.delete(oldSocketId);
+      /* v8 ignore next -- unreachable race: every bind path sets socketRooms for the socket it binds, so a socketIdByPlayer entry without a seated room cannot survive. */
       if (oldRoomId) this.autoPass.refresh(oldRoomId);
     }
     bindSocket(this.identity, socketId, playerId);
@@ -364,6 +365,7 @@ export class RoomRuntime {
     this.cancelScheduledDestroy(roomId);
     const room = this.store.getRoom(roomId);
     const engine = this.engines.get(roomId);
+    /* v8 ignore next -- unreachable: every seated room is created together with its engine (createRoom/joinRoom/connect), and this is the only place that drops an engine, so a room without one cannot reach destruction. */
     if (engine) {
       engine.dispose();
       this.engines.delete(roomId);

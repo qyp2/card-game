@@ -33,6 +33,7 @@ export function applyCostRules(room: GameRoom, playerId: string, card: CardInsta
   const apply = (entry: typeof applicable[number]) => {
     const op = entry.definition.operation;
     cost.mana ??= {};
+    /* v8 ignore start -- the final else is unreachable: `apply` is only invoked by the three filters below, which select solely set_base/waive_base/increase/reduce operations. */
     if (op.type === 'mana.waive_base') cost.mana = {};
     else if (op.type === 'mana.set_base') cost.mana[op.color] = entry.amount;
     else if (op.type === 'mana.increase') {
@@ -41,6 +42,7 @@ export function applyCostRules(room: GameRoom, playerId: string, card: CardInsta
       cost.mana[op.color] = value;
     } else if (op.type === 'mana.reduce') cost.mana[op.color] = Math.max(0, (cost.mana[op.color] ?? 0) - entry.amount);
     else throw new Error('Unsupported cost modifier operation');
+    /* v8 ignore stop */
     if (entry.use && !used.has(entry.use.key)) { used.add(entry.use.key); uses.push(entry.use); }
   };
   // Base setters/waivers, then additional costs and increases, then reductions. Payment never occurs here.

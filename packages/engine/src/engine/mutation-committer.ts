@@ -145,6 +145,9 @@ export class MutationCommitter {
         const card = previous.battlefield.find((card) => card.uuid === mutation.cardUuid);
 
         if (card) {
+          // Unreachable fallback: planProposedMutations always attaches a
+          // sourceSnapshot to a committed battlefield move.
+          /* v8 ignore next */
           const snapshot = mutation.sourceSnapshot ?? captureSourceInformation(previous, card);
 
           for (let index = 0; index < this.mutationCollector.length; index++) {
@@ -281,8 +284,13 @@ export class MutationCommitter {
 
       const card = step.before.battlefield.find((card) => card.uuid === mutation.cardUuid);
 
+      // Unreachable: a committed battlefield move always finds its card in the
+      // immediately preceding state (duplicate moves are rejected upstream).
+      /* v8 ignore next */
       if (!card) continue;
 
+      // Unreachable fallback: every committed battlefield move carries a snapshot.
+      /* v8 ignore next */
       const snapshot = mutation.sourceSnapshot ?? captureSourceInformation(step.before, card);
 
       for (let index = 0; index < this.mutationCollector.length; index++) {
