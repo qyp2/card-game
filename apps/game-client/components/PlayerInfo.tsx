@@ -36,8 +36,8 @@ export default function PlayerInfo() {
         {isMyTurn && <span className="seat-turn">Active</span>}
       </div>
       <div className="seat-body">
-        <div className="life-seal">
-          <span className="life-value">{player.life}</span>
+        <div className={`life-seal${player.life <= 5 ? ' life-critical' : ''}`}>
+          <span className="life-value" key={player.life}>{player.life}</span>
           <span className="life-label">Life</span>
         </div>
         <dl className="seat-stats">
@@ -61,7 +61,7 @@ export default function PlayerInfo() {
         {mana.length > 0 ? (
           mana.map(([color, value]) => (
             <span
-              key={color}
+              key={`${color}-${value}`}
               className={`mana-pip mana-${color}`}
               title={`${value} ${color} mana`}
               aria-label={`${value} ${color} mana`}

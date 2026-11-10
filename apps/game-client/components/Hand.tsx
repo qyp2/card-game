@@ -16,6 +16,7 @@ function fanStyle(index: number, count: number) {
     '--rot': `${offset * spread}deg`,
     '--lift': `${Math.abs(offset) ** 2 * 1.2}px`,
     '--overlap': overlap,
+    '--deal-delay': `${Math.min(index, 14) * 42}ms`,
     zIndex: index + 1,
   } as React.CSSProperties;
 }

@@ -86,7 +86,7 @@ export default function PermanentHalf({ cards, side, onPreview }: PermanentHalfP
                   key={rowPlan.start}
                   style={{ ['--step' as string]: `${rowPlan.step}px` }}
                 >
-                  {slots.slice(rowPlan.start, rowPlan.start + rowPlan.count).map((slot) => {
+                  {slots.slice(rowPlan.start, rowPlan.start + rowPlan.count).map((slot, slotIndex) => {
                     const card = slot.cards[0];
                     const stacked = slot.cards.length > 1;
                     return (
@@ -94,6 +94,7 @@ export default function PermanentHalf({ cards, side, onPreview }: PermanentHalfP
                         className={`permanent-slot${stacked ? ' is-stack' : ''}`}
                         key={slot.key}
                         tabIndex={0}
+                        style={{ ['--enter-delay' as string]: `${Math.min(rowPlan.start + slotIndex, 16) * 34}ms` }}
                         onMouseEnter={(event) => preview(event, card)}
                         onMouseLeave={() => onPreview(null)}
                         onFocus={(event) => onPreview({ card, rect: event.currentTarget.getBoundingClientRect() })}

@@ -32,8 +32,8 @@ export default function OpponentInfo() {
         <h3>Opponent</h3>
       </div>
       <div className="seat-body">
-        <div className="life-seal">
-          <span className="life-value">{opponent.life}</span>
+        <div className={`life-seal${opponent.life <= 5 ? ' life-critical' : ''}`}>
+          <span className="life-value" key={opponent.life}>{opponent.life}</span>
           <span className="life-label">Life</span>
         </div>
         <dl className="seat-stats">

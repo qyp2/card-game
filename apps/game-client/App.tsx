@@ -12,6 +12,7 @@ import { getStoredRoomId, setStoredRoomId } from './session';
 import socket from './socket';
 import { useSocket } from './hooks/useSocket';
 import Home from './components/Home';
+import AmbientStage from './components/AmbientStage';
 
 export default function App() {
   const roomId = useGameStore((s) => s.roomId);
@@ -55,6 +56,7 @@ export default function App() {
   }, [roomId]);
 
   return <>
+    <AmbientStage />
     <WorkspaceHeader navigation={platform?.navigation ?? null} scenariosAvailable={!!platform?.capabilities.scenarios} current={route.kind === 'home' ? 'home' : 'play'} account={roomId ? session?.account ?? identity?.account ?? null : identity?.account ?? session?.account ?? null} activeRoomId={roomId} breadcrumb={roomId ? 'Play / Room ' + roomId : route.kind === 'home' ? 'Home' : 'Play / Lobby'} accountMenu={<AccountControls browserAccount={identity?.account} />} />
     {roomId&&testContext&&<p className="test-room-context" role="status">Test Lab · {testContext.name} · revision {testContext.revision} · source {testContext.scenarioId}</p>}
     {error && <div className="action-error" role="alert">

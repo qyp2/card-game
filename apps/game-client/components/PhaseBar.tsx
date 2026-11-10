@@ -40,7 +40,7 @@ export default function PhaseBar() {
     : towardCombat ? 'Play cards or continue toward combat.' : 'Take an action, or continue.';
 
   return (
-    <div className="phase-bar">
+    <div className={`phase-bar${isMyTurn ? ' is-my-turn' : ''}${ready ? ' is-ready' : ''}`} data-phase={phase ?? 'none'}>
       <p>Phase: <strong>{phaseLabel}</strong></p>
       {status === 'playing' && !outcome && <p className="action-owner" role="status">{prompt}</p>}
       {waitingForOpponent && <p className="rps-waiting">Waiting for opponent…</p>}

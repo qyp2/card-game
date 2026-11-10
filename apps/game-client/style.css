@@ -29,6 +29,8 @@ body {
 }
 
 #root {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -1773,6 +1775,794 @@ label {
   }
 }
 
+/* ── Motion layer ───────────────────────────────────────────────────────────
+   The table is a physical object: light moves across the felt, dust drifts
+   through the air, cards have thickness, and the numbers react when they
+   change. Everything here is decorative, so it is pointer-transparent,
+   aria-hidden and switched off under prefers-reduced-motion. */
+
+:root {
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.12);
+}
+
+.ambient-stage {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient-orb {
+  position: absolute;
+  width: min(58vw, 54rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.14;
+  mix-blend-mode: screen;
+  will-change: transform;
+  animation: ambient-orb-drift 24s ease-in-out infinite alternate;
+}
+
+.ambient-orb-a {
+  top: -26vw;
+  left: -16vw;
+  background: radial-gradient(circle, #2e7d5b 0%, transparent 66%);
+}
+
+.ambient-orb-b {
+  right: -20vw;
+  bottom: -28vw;
+  background: radial-gradient(circle, #8e6a25 0%, transparent 64%);
+  animation-duration: 31s;
+  animation-delay: -9s;
+}
+
+.ambient-orb-c {
+  left: 38%;
+  top: 28%;
+  width: min(38vw, 34rem);
+  background: radial-gradient(circle, #2f5878 0%, transparent 68%);
+  animation-duration: 37s;
+  animation-delay: -17s;
+}
+
+.ambient-sweep {
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(
+    from 20deg at 50% 50%,
+    transparent 0deg 34deg,
+    rgba(232, 203, 125, 0.04) 40deg,
+    transparent 48deg 360deg
+  );
+  animation: ambient-spin 70s linear infinite;
+}
+
+.ambient-embers {
+  position: absolute;
+  inset: 0;
+}
+
+.ambient-ember {
+  position: absolute;
+  left: var(--ember-left);
+  bottom: -2vh;
+  width: var(--ember-size);
+  height: var(--ember-size);
+  border-radius: 50%;
+  background: var(--brass-bright);
+  box-shadow: 0 0 7px 2px rgba(232, 203, 125, 0.45);
+  opacity: 0;
+  animation: ember-rise var(--ember-duration) linear infinite;
+  animation-delay: var(--ember-delay);
+}
+
+.ambient-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* The felt is lit from the pointer. The variables are written directly to the
+   board element, so tracking the mouse never triggers a React render. */
+.board-stage {
+  --table-light-x: 50%;
+  --table-light-y: 42%;
+}
+
+.board-stage::before,
+.board-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.board-stage::before {
+  background: radial-gradient(
+    560px circle at var(--table-light-x) var(--table-light-y),
+    rgba(232, 203, 125, 0.1),
+    rgba(42, 116, 82, 0.035) 42%,
+    transparent 70%
+  );
+}
+
+.board-stage::after {
+  background: radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(0, 0, 0, 0.42) 100%);
+}
+
+.board-stage > .board-top,
+.board-stage > .board-field,
+.board-stage > .board-bottom,
+.board-stage > .hand-dock {
+  position: relative;
+  z-index: 1;
+}
+
+.game-screen {
+  animation: screen-fade 0.45s ease backwards;
+}
+
+/* ── Card thickness ──────────────────────────────────────────────────────── */
+
+.hand .card,
+.battlefield .permanent-slot .card {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --glare-x: 50%;
+  --glare-y: 35%;
+  transform: perspective(760px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transform-style: preserve-3d;
+  transition:
+    transform 0.2s var(--ease-silk),
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.hand .card::before,
+.battlefield .permanent-slot .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      220px circle at var(--glare-x) var(--glare-y),
+      rgba(255, 248, 220, 0.3),
+      rgba(255, 248, 220, 0.05) 34%,
+      transparent 58%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 28%,
+      rgba(110, 166, 196, 0.12) 40%,
+      rgba(232, 203, 125, 0.2) 50%,
+      transparent 62%
+    );
+  background-size: 100% 100%, 240% 240%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.hand .card:hover::before,
+.battlefield .permanent-slot .card:hover::before {
+  opacity: 0.9;
+  animation: holo-shift 3.2s linear infinite;
+}
+
+.hand .card:hover,
+.battlefield .permanent-slot .card:hover {
+  will-change: transform;
+}
+
+.hand .card.tapped,
+.battlefield .permanent-slot .card.tapped {
+  transform: rotate(90deg) scale(0.82);
+}
+
+/* A card is dealt, not inserted. `translate` and `scale` are individual
+   properties so this entry animation composes with the card's 3D transform. */
+.hand-card .card {
+  animation: card-deal 0.52s var(--ease-silk) backwards;
+  animation-delay: var(--deal-delay, 0ms);
+}
+
+.permanent-slot {
+  animation: permanent-enter 0.48s var(--ease-silk) backwards;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+/* ── Living numbers ──────────────────────────────────────────────────────── */
+
+.life-seal {
+  position: relative;
+}
+
+.life-seal::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid rgba(232, 203, 125, 0.25);
+  border-top-color: var(--brass-bright);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: life-orbit 5s linear infinite;
+}
+
+.life-value {
+  display: inline-block;
+  animation: life-tick 0.45s var(--ease-spring) backwards;
+  transform-origin: 50% 60%;
+}
+
+.life-critical {
+  animation: life-threat 1.35s ease-in-out infinite;
+}
+
+.life-critical::after {
+  border-color: rgba(194, 90, 76, 0.42);
+  border-top-color: #e08a7c;
+  animation-duration: 1.6s;
+}
+
+.mana-pip {
+  animation: mana-bloom 0.34s var(--ease-spring) backwards;
+}
+
+.seat-turn {
+  animation: seat-pulse 2.2s ease-in-out infinite;
+}
+
+.phase-bar {
+  position: relative;
+}
+
+.phase-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    rgba(232, 203, 125, 0.13) 50%,
+    transparent 62%
+  );
+  background-size: 240% 100%;
+  pointer-events: none;
+  animation: phase-sweep 6.4s ease-in-out infinite;
+}
+
+.phase-bar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.phase-bar.is-my-turn {
+  border-color: rgba(232, 203, 125, 0.36);
+}
+
+.phase-bar.is-ready {
+  animation: phase-ready 2.8s ease-in-out infinite;
+}
+
+/* ── Stack, combat and choices ───────────────────────────────────────────── */
+
+.stack-display li {
+  animation: stack-snap 0.34s var(--ease-silk) backwards;
+}
+
+.stack-display li:nth-child(2) { animation-delay: 45ms; }
+.stack-display li:nth-child(3) { animation-delay: 90ms; }
+.stack-display li:nth-child(4) { animation-delay: 135ms; }
+.stack-display li:nth-child(5) { animation-delay: 180ms; }
+
+.combat-display {
+  position: relative;
+  overflow: hidden;
+}
+
+.combat-display::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 28px rgba(194, 90, 76, 0.15);
+  pointer-events: none;
+  animation: combat-breathe 2.6s ease-in-out infinite;
+}
+
+.choice-panel {
+  animation: panel-rise 0.36s var(--ease-silk) backwards;
+}
+
+.choice-options button {
+  transition:
+    transform 0.15s var(--ease-silk),
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.choice-options button:hover:not(:disabled) {
+  transform: translateX(3px);
+}
+
+/* ── Overlays ────────────────────────────────────────────────────────────── */
+
+.context-menu {
+  transform-origin: top left;
+  animation: menu-pop 0.16s var(--ease-silk) backwards;
+}
+
+.targeting-banner {
+  animation: banner-rise 0.34s var(--ease-silk) backwards;
+}
+
+.action-error {
+  animation: error-drop 0.34s var(--ease-silk) backwards;
+}
+
+.card-preview {
+  animation: preview-in 0.18s var(--ease-silk) backwards;
+}
+
+.log-drawer[open] .log-drawer-panel {
+  animation: drawer-slide 0.28s var(--ease-silk) backwards;
+}
+
+.log-drawer[open] .log-drawer-tab {
+  color: var(--parchment);
+  border-color: var(--brass-dim);
+}
+
+/* ── The final moment ────────────────────────────────────────────────────── */
+
+.board-field {
+  position: relative;
+}
+
+.game-finish {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-content: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, rgba(4, 9, 7, 0.28), rgba(4, 9, 7, 0.82) 78%);
+  backdrop-filter: blur(1.5px) saturate(0.8);
+  animation: finish-veil 0.65s ease backwards;
+}
+
+.game-finish-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(64vw, 42rem);
+  aspect-ratio: 1;
+  border: 1px solid rgba(232, 203, 125, 0.28);
+  border-radius: 50%;
+  box-shadow:
+    0 0 90px rgba(232, 203, 125, 0.16),
+    inset 0 0 70px rgba(232, 203, 125, 0.06);
+  transform: translate(-50%, -50%);
+  animation: finish-halo 3.4s ease-out infinite;
+}
+
+.game-finish-kicker {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.game-finish h2 {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(3rem, 7.4vw, 5.8rem);
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brass-bright);
+  text-shadow:
+    0 0 34px rgba(232, 203, 125, 0.26),
+    0 6px 0 rgba(0, 0, 0, 0.4);
+  animation: finish-title 0.8s var(--ease-spring) backwards;
+}
+
+.game-finish > p:last-child {
+  position: relative;
+  z-index: 1;
+  max-width: 36ch;
+  margin: 0.15rem auto 0;
+  font-size: 0.82rem;
+  color: var(--parchment-dim);
+}
+
+.game-finish-defeat h2 {
+  color: #e29a8d;
+  text-shadow:
+    0 0 34px rgba(194, 90, 76, 0.28),
+    0 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+.game-finish-defeat .game-finish-halo {
+  border-color: rgba(194, 90, 76, 0.34);
+  box-shadow:
+    0 0 90px rgba(194, 90, 76, 0.18),
+    inset 0 0 70px rgba(194, 90, 76, 0.07);
+}
+
+.game-finish-draw h2 {
+  color: var(--parchment);
+}
+
+/* ── Lobby theatre ───────────────────────────────────────────────────────── */
+
+.home-hero h1,
+.lobby-hero h1 {
+  background: linear-gradient(
+    108deg,
+    var(--parchment) 0%,
+    var(--parchment) 32%,
+    var(--brass-bright) 48%,
+    var(--parchment) 64%,
+    var(--parchment) 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: title-shimmer 9s linear infinite;
+}
+
+.home-hero > p,
+.home-hero nav,
+.home-decks {
+  animation: hero-rise 0.6s var(--ease-silk) backwards;
+}
+
+.home-hero > p { animation-delay: 70ms; }
+.home-hero nav { animation-delay: 130ms; }
+.home-decks { animation-delay: 190ms; }
+
+.home-decks li {
+  animation: row-in 0.4s var(--ease-silk) backwards;
+}
+
+.home-decks li:nth-child(2) { animation-delay: 60ms; }
+.home-decks li:nth-child(3) { animation-delay: 120ms; }
+.home-decks li:nth-child(4) { animation-delay: 180ms; }
+.home-decks li:nth-child(5) { animation-delay: 240ms; }
+
+.lobby-backs .card-back {
+  animation: card-back-float 6.5s ease-in-out infinite;
+}
+
+.lobby-backs .card-back:nth-child(1) { animation-delay: -1.2s; }
+.lobby-backs .card-back:nth-child(2) { animation-delay: -3.1s; }
+.lobby-backs .card-back:nth-child(3) { animation-delay: -4.6s; }
+
+/* A single bright pass across the one action that matters. */
+.lobby-block > button,
+.phase-actions .primary-action,
+.choice-panel > button[data-action="confirm"],
+.targeting-banner-actions button:last-child {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.lobby-block > button::after,
+.phase-actions .primary-action::after,
+.choice-panel > button[data-action="confirm"]::after,
+.targeting-banner-actions button:last-child::after {
+  content: "";
+  position: absolute;
+  inset: -20% -45%;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.34) 50%, transparent 62%);
+  transform: translateX(-120%) skewX(-16deg);
+  pointer-events: none;
+}
+
+.lobby-block > button:hover:not(:disabled)::after,
+.phase-actions .primary-action:hover:not(:disabled)::after,
+.choice-panel > button[data-action="confirm"]:hover:not(:disabled)::after,
+.targeting-banner-actions button:last-child:hover:not(:disabled)::after {
+  animation: button-sheen 0.7s var(--ease-silk);
+}
+
+@keyframes screen-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ambient-orb-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5vw, 4vh, 0) scale(1.1); }
+  100% { transform: translate3d(-4vw, 8vh, 0) scale(0.92); }
+}
+
+@keyframes ambient-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.4);
+  }
+  9% { opacity: var(--ember-opacity); }
+  68% { opacity: calc(var(--ember-opacity) * 0.7); }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--ember-drift), -108vh, 0) scale(1.35);
+  }
+}
+
+@keyframes holo-shift {
+  from { background-position: 0 0, -40% 50%; }
+  to { background-position: 0 0, 180% 50%; }
+}
+
+@keyframes card-deal {
+  from {
+    opacity: 0;
+    translate: 0 1.1rem;
+    scale: 0.86;
+    filter: brightness(0.65) saturate(0.7);
+  }
+  60% {
+    filter: brightness(1.1) saturate(1.1);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes permanent-enter {
+  from {
+    opacity: 0;
+    translate: 0 0.8rem;
+    scale: 0.93;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes life-tick {
+  from {
+    opacity: 0.3;
+    scale: 1.45;
+    color: #fff2c9;
+    text-shadow: 0 0 16px rgba(232, 203, 125, 0.8);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes life-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes life-threat {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 2px #0a1310,
+      0 0 0 1px #00000066,
+      0 0 10px rgba(194, 90, 76, 0.16);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px #0a1310,
+      0 0 0 1px #00000066,
+      0 0 22px rgba(194, 90, 76, 0.5);
+  }
+}
+
+@keyframes mana-bloom {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  70% { scale: 1.14; }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes seat-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 203, 125, 0.18); }
+  50% { box-shadow: 0 0 0 4px rgba(232, 203, 125, 0.04); }
+}
+
+@keyframes phase-sweep {
+  0%, 56% { background-position: 180% 0; }
+  100% { background-position: -80% 0; }
+}
+
+@keyframes phase-ready {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(232, 203, 125, 0.06); }
+  50% { box-shadow: 0 0 18px -6px rgba(232, 203, 125, 0.34); }
+}
+
+@keyframes stack-snap {
+  from {
+    opacity: 0;
+    translate: 0.7rem 0;
+    filter: brightness(1.4);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    filter: brightness(1);
+  }
+}
+
+@keyframes combat-breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.6rem;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes banner-rise {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes error-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes drawer-slide {
+  from {
+    opacity: 0;
+    transform: translate(1.2rem, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+@keyframes finish-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes finish-halo {
+  0% {
+    opacity: 0.35;
+    scale: 0.7;
+  }
+  70% { opacity: 0.8; }
+  100% {
+    opacity: 0;
+    scale: 1.24;
+  }
+}
+
+@keyframes finish-title {
+  from {
+    opacity: 0;
+    translate: 0 0.7rem;
+    scale: 0.9;
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes title-shimmer {
+  to { background-position: -220% center; }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.7rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    translate: -0.5rem 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes card-back-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -0.45rem; }
+}
+
+@keyframes button-sheen {
+  from { transform: translateX(-130%) skewX(-16deg); }
+  to { transform: translateX(130%) skewX(-16deg); }
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   .hand-card,
   .permanent-slot,
@@ -1792,8 +2582,84 @@ label {
   .card.targetable,
   .card.pending-blocker,
   .player-info.targetable,
-  .opponent-info.targetable {
-    animation: none;
+  .opponent-info.targetable,
+  .ambient-orb,
+  .ambient-sweep,
+  .ambient-ember,
+  .life-seal,
+  .life-value,
+  .mana-pip,
+  .seat-turn,
+  .phase-bar,
+  .phase-bar::before,
+  .stack-display li,
+  .combat-display::after,
+  .choice-panel,
+  .context-menu,
+  .targeting-banner,
+  .action-error,
+  .card-preview,
+  .log-drawer[open] .log-drawer-panel,
+  .game-finish,
+  .game-finish-halo,
+  .game-finish h2,
+  .home-hero h1,
+  .lobby-hero h1,
+  .home-hero > p,
+  .home-hero nav,
+  .home-decks,
+  .home-decks li,
+  .lobby-backs .card-back,
+  .hand-card .card,
+  .permanent-slot,
+  .game-screen {
+    animation: none !important;
+  }
+
+  .hand .card:not(.tapped),
+  .battlefield .permanent-slot .card:not(.tapped) {
+    transform: none !important;
+  }
+
+  .hand .card::before,
+  .battlefield .permanent-slot .card::before,
+  .ambient-embers {
+    display: none;
+  }
+
+  .lobby-block > button::after,
+  .phase-actions .primary-action::after,
+  .choice-panel > button[data-action="confirm"]::after,
+  .targeting-banner-actions button:last-child::after {
+    animation: none !important;
+  }
+}
+
+@media (hover: none) {
+  .hand .card,
+  .battlefield .permanent-slot .card {
+    transform: none;
+  }
+
+  .hand .card::before,
+  .battlefield .permanent-slot .card::before {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .ambient-orb-c,
+  .ambient-ember:nth-child(n + 13) {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .home-hero h1,
+  .lobby-hero h1 {
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
   }
 }
 

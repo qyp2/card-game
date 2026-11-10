@@ -101,6 +101,29 @@ export default function CardComponent({ card, zone }: CardComponentProps) {
     }
   };
 
+  // Pointer-tracked tilt is written straight to CSS variables: moving the mouse
+  // must not re-render the board. Touch devices keep the flat card.
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'touch') return;
+    const element = event.currentTarget;
+    const bounds = element.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+    element.style.setProperty('--tilt-x', `${(0.5 - y) * 9}deg`);
+    element.style.setProperty('--tilt-y', `${(x - 0.5) * 11}deg`);
+    element.style.setProperty('--glare-x', `${x * 100}%`);
+    element.style.setProperty('--glare-y', `${y * 100}%`);
+  };
+
+  const resetTilt = (event: React.PointerEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    element.style.setProperty('--tilt-x', '0deg');
+    element.style.setProperty('--tilt-y', '0deg');
+    element.style.setProperty('--glare-x', '50%');
+    element.style.setProperty('--glare-y', '35%');
+  };
+
   return (
     <CardSurface
       card={card}
@@ -108,6 +131,8 @@ export default function CardComponent({ card, zone }: CardComponentProps) {
       className={`${card.state.isTapped ? 'tapped' : ''} ${isTargetable ? 'targetable' : ''} ${isSelected ? 'selected' : ''} ${isCombatSelected ? 'combat-selected' : ''} ${isPendingBlocker ? 'pending-blocker' : ''} ${zone === 'battlefield' && hasStats && card.state.summoningSickness ? 'summoning-sick' : ''}`}
       onContextMenu={handleContextMenu}
       onClick={handleClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={resetTilt}
       title={card.rulesText}
     />
   );

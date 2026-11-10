@@ -20,12 +20,35 @@ export default function GameScreen() {
   const myPlayerId = useGameStore((s) => s.myPlayerId);
   const gameOver = room?.status === 'gameOver';
   const outcome = room?.outcome;
+  const finishTitle = outcome?.type === 'draw' ? 'Draw' : outcome?.type === 'win'
+    ? (outcome.winnerId === myPlayerId ? 'Victory' : 'Defeat') : 'Game over';
+  const finishDetail = outcome?.type === 'draw'
+    ? 'Both players reached zero or less life.'
+    : outcome?.losses.some(loss => loss.reason === 'concede') ? 'A player conceded.'
+    : outcome?.losses.some(loss => loss.reason === 'failed_draw') ? 'A player could not draw a card.'
+    : outcome ? 'A player reached zero or less life.' : '';
+
+  // A soft light follows the pointer across the felt. Writing CSS variables
+  // instead of state keeps the board's React tree completely still.
+  const trackTableLight = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'touch') return;
+    const element = event.currentTarget;
+    const bounds = element.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    element.style.setProperty('--table-light-x', `${((event.clientX - bounds.left) / bounds.width) * 100}%`);
+    element.style.setProperty('--table-light-y', `${((event.clientY - bounds.top) / bounds.height) * 100}%`);
+  };
+
+  const resetTableLight = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.style.setProperty('--table-light-x', '50%');
+    event.currentTarget.style.setProperty('--table-light-y', '42%');
+  };
 
   return (
     <>
       <RotateGate />
       <div className="game-screen">
-        <div className="board-stage">
+        <div className="board-stage" onPointerMove={trackTableLight} onPointerLeave={resetTableLight}>
           <div className="board-top">
             <OpponentInfo />
             <div className="board-banner">
@@ -46,6 +69,14 @@ export default function GameScreen() {
           </div>
           <div className="board-field" inert={gameOver || !!room?.pendingChoice}>
             <Battlefield center={<><StackDisplay /><CombatDisplay /></>} />
+            {gameOver && (
+              <div className={`game-finish game-finish-${outcome?.type === 'draw' ? 'draw' : outcome?.type === 'win' ? (outcome.winnerId === myPlayerId ? 'victory' : 'defeat') : 'neutral'}`} aria-hidden="true">
+                <span className="game-finish-halo" />
+                <p className="game-finish-kicker">{outcome?.type === 'draw' ? 'The table is level' : 'The final card is played'}</p>
+                <h2>{finishTitle}</h2>
+                <p>{finishDetail}</p>
+              </div>
+            )}
           </div>
           <div className="board-bottom">
             <PlayerInfo />
