@@ -19,8 +19,7 @@ export function buildStackView(room: GameRoom, viewerId: string, object: StackOb
   return { uuid: object.uuid, type: object.type, controllerId: object.controllerId,
     source: visible ? buildCardView(room, viewerId, source) : null,
     description: visible ? describeStackObject(room, object, viewerId) : 'Hidden source · ' + object.type,
-    /* v8 ignore next -- unreachable: countered is a required boolean on every StackObject variant, and every push site sets it, so the "undefined" arm cannot run. */
-    ...(object.countered !== undefined ? { countered: object.countered } : {}), ...(object.fizzled !== undefined ? { fizzled: object.fizzled } : {}),
+    countered: object.countered, ...(object.fizzled !== undefined ? { fizzled: object.fizzled } : {}),
     ...(visible && object.type !== 'spell' && object.ability?.id ? { abilityId: publicAbilityId(room.roomId, viewerId, object.ability.id) } : {}),
   };
 }

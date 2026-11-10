@@ -100,11 +100,6 @@ export class ActionValidator {
     if (cost.life && player.life < cost.life) return false;
     if (cost.tap && card.state.isTapped) return false;
     if (cost.untap && !card.state.isTapped) return false;
-    // Guard: a cost may not require both. The two state guards above already
-    // reject every `isTapped` value for a tap+untap pair, so this arm is
-    // unreachable and kept only as documentation of the invariant.
-    /* v8 ignore next */
-    if (cost.tap && cost.untap) return false;
     if (cost.loyalty !== undefined) return false;
     if (
       cost.discardSelf &&

@@ -109,8 +109,7 @@ export function setCollectionVisibility(room: GameRoom, object: StackObject, eff
   if (!result || result.kind !== 'captured' || !observation || observation.ownerStackUuid !== object.uuid) {
     throw new Error("Visibility updates require this resolution's active captured result");
   }
-  /* v8 ignore next -- unreachable: the guard above proves `resolutionResults[params.from.name]` exists and the schema-valid `from` can never make collectCardSource return undefined here. */
-  const current = collectCardSource(roomCards(room), params.from, object.resolutionResults) ?? [];
+  const current = collectCardSource(roomCards(room), params.from, object.resolutionResults)!;
   const cards = current
     .map((entry) => entry.card)
     .filter((card) =>

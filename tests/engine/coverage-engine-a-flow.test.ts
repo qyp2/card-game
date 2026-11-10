@@ -826,3 +826,14 @@ describe('mutation committer', () => {
     expect(applied).toHaveLength(1);
   });
 });
+
+it('leaves resolution bookkeeping untouched when a resolution carries no mutations', () => {
+  const engine = new GameEngine(createTestRoom());
+  engine.initRoom();
+  engines.push(engine);
+  const before = structuredClone(engine.roomState);
+  const result = (engine as unknown as { commitResolution(value: unknown): unknown }).commitResolution({ success: true });
+  expect(result).toMatchObject({ success: true });
+  expect(engine.roomState.stack).toEqual(before.stack);
+  expect(engine.roomState.pendingChoice).toEqual(before.pendingChoice);
+});

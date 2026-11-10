@@ -79,10 +79,7 @@ export class SessionService {
     if (!this.store.findSession(record.digest)) return;
     for (const child of this.store.sessions()) if (child.parentDigest === record.digest) this.revoke(child, reason);
     this.store.deleteSession(record.digest);
-    if (this.pending) this.pending.push({ session: record, reason });
-    /* v8 ignore start -- unreachable: the guard at the top of this method installs a pending event list before reaching here and no code in between clears it. */
-    else this.notify(record, reason);
-    /* v8 ignore stop */
+    this.pending!.push({ session: record, reason });
   }
   revokeSubject(subject: Subject, reason: RevocationReason, scope?: SessionScope): void {
     for (const record of this.store.sessions()) if (subjectKey(record.subject) === subjectKey(subject) && (!scope || record.scope === scope)) this.revoke(record, reason);

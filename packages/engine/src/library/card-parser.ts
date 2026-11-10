@@ -68,10 +68,7 @@ export function parseManaCost(raw: string): NonNullable<AuthoredActionCost['mana
         G: 'green',
       };
       const color = colorMap[symbol];
-      /* v8 ignore next -- the tokenizer rejects every symbol that has no colour entry */
-      if (color) {
-        cost[color] = (cost[color] ?? 0) + 1;
-      }
+      cost[color] = (cost[color] ?? 0) + 1;
     }
   }
 
@@ -128,8 +125,7 @@ export function parseInstructionDefinition(
     ...(typeof raw.requiresOutcome === 'string' ? { requiresOutcome: raw.requiresOutcome } : {}),
     ...(raw.choice ? { choice: raw.choice as EffectDefinition['choice'] } : {}),
     ...(typeof raw.targetGroup === 'string' ? { targetGroup: raw.targetGroup } : {}),
-    /* v8 ignore next -- the instruction contract requires a non-empty action */
-    action: (raw.action as string) || '',
+    action: raw.action as string,
     params: (raw.params as Record<string, unknown>) || {},
     tags: (raw.tags as string[]) || [],
     targeting: (raw.targeting as EffectDefinition['targeting']) || { type: 'self', required: false },
@@ -175,42 +171,26 @@ function normalizeCostRoutes(raw: Record<string, unknown>, declarations: Numeric
 export function parseAbilityDefinition(ability: Record<string, unknown>): CardAbility | null {
   ability = parseContract(RawAbilitySchema, ability, 'ability') as Record<string, unknown>;
 
-  /* v8 ignore next -- the ability contract always carries a discriminated type */
-  const type = (ability.type as string) || 'activated';
-  /* v8 ignore next -- only the activated arm of the strict union declares cost routes */
-  if (type !== 'activated' && (ability.alternativeCosts !== undefined || ability.additionalCost !== undefined))
-    /* v8 ignore next -- unreachable while the strict union keeps cost routes on activated abilities */
-    throw new Error('Only ordinary activated abilities support cost routes');
-  /* v8 ignore next -- only the activated arm of the strict union declares numeric bindings */
-  if (type !== 'activated' && ability.numericDeclarations !== undefined)
-    /* v8 ignore next -- unreachable while the strict union keeps bindings on activated abilities */
-    throw new Error('Only ordinary activated abilities declare numeric bindings');
+  const type = ability.type as string;
   const declarations =
     ability.numericDeclarations === undefined ? [] : (ability.numericDeclarations as NumericDeclaration[]);
   assertNumericDeclarations(declarations);
   if (type === 'static') {
-    const rules = (ability.rules as ModifierDefinition[] | undefined)?.map((rule, i) =>
+    const rules = (ability.rules as ModifierDefinition[]).map((rule, i) =>
       parseModifierDefinition(rule, `ability.${ability.id}.rules.${i}`),
     );
-    /* v8 ignore next -- the static arm of the contract always declares rules */
-    const effects = compileStaticRules(rules ?? []);
+    const effects = compileStaticRules(rules);
     const normalized: CardAbility = {
-      /* v8 ignore next -- the ability contract requires an identifier */
-      id: typeof ability.id === 'string' ? ability.id : '',
+      id: ability.id as string,
       type: 'static',
       ...(ability.activeZones ? { activeZones: structuredClone(ability.activeZones) as CardZone[] } : {}),
       ...(ability.characteristicDefining ? { characteristicDefining: true } : {}),
-      /* v8 ignore next -- the static arm of the contract always declares rules */
-      ...(rules ? { rules: structuredClone(rules) } : {}),
+      rules: structuredClone(rules),
       effects,
     };
     assertAbilityNumericDefinition(normalized);
     return normalized;
   }
-  /* v8 ignore next -- the contract only admits non-empty ordered effect lists */
-  if (ability.effects !== undefined && (!Array.isArray(ability.effects) || !ability.effects.length))
-    /* v8 ignore next -- unreachable while the contract enforces min(1) on effects */
-    throw new Error('Ability effects must be a nonempty list');
   const ordered = Array.isArray(ability.effects)
     ? ability.effects.map((raw) => parseInstructionDefinition(raw as Record<string, unknown>, declarations))
     : undefined;
@@ -248,8 +228,7 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
             interveningIf: structuredClone(ability.interveningIf) as TriggeredAbility['interveningIf'],
           }
         : {}),
-      /* v8 ignore next -- the triggered arm of the contract requires a trigger event */
-      triggerCondition: (ability.triggerCondition as TriggeredAbility['triggerCondition']) || 'ON_ENTER_BATTLEFIELD',
+      triggerCondition: ability.triggerCondition as TriggeredAbility['triggerCondition'],
       ...base,
     } as TriggeredAbility;
     assertAbilityNumericDefinition(normalized);
@@ -275,11 +254,6 @@ export function parseAbilityDefinition(ability: Record<string, unknown>): CardAb
 /** Build a normalized blueprint from an authored card definition. */
 export function parseCardDefinition(raw: Record<string, unknown>): CardBlueprint {
   raw = parseContract(RawCardSchema, raw, typeof raw?.id === 'string' ? raw.id : 'card') as Record<string, unknown>;
-  /* v8 ignore next -- the raw card contract requires a non-empty identifier */
-  if (!raw.id) {
-    /* v8 ignore next -- unreachable while the raw card contract requires an identifier */
-    throw new Error(`[CardParser] Missing absolute identifier 'id' on card name: ${raw.name}`);
-  }
 
   // Mana cost lives at the top level of the card JSON (e.g. "{4}{R}{R}"),
   // not inside castRequirements.cost. Parse it and inject into the cost.
@@ -366,16 +340,11 @@ function normalizeModes(modes: Record<string, unknown>[], declarations: NumericD
     if (typeof mode.id !== 'string' || !mode.id.trim() || ids.has(mode.id))
       throw new Error('Missing or duplicate mode ID');
     ids.add(mode.id);
-    /* v8 ignore start -- the mode contract restricts cast speed to the two supported values */
-    if (mode.castSpeed !== undefined && mode.castSpeed !== 'instant' && mode.castSpeed !== 'sorcery')
-      throw new Error('Invalid mode castSpeed');
-    /* v8 ignore stop */
     return {
       id: mode.id,
       label: typeof mode.label === 'string' ? mode.label : mode.id,
       ...(mode.castSpeed !== undefined ? { castSpeed: mode.castSpeed as 'instant' | 'sorcery' } : {}),
-      /* v8 ignore next -- the mode contract requires an effect list */
-      effects: ((mode.effects as Record<string, unknown>[]) ?? []).map((effect) =>
+      effects: (mode.effects as Record<string, unknown>[]).map((effect) =>
         parseInstructionDefinition(effect, declarations),
       ),
     };

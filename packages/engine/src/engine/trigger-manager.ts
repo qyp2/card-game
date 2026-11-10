@@ -63,8 +63,7 @@ export function discoverTriggers(
       // player and history predicates observe the committed after-event state.
       const rules = createRuleContext(
         facts.conditionRoom,
-        /* v8 ignore next -- every TriggerCandidate family (live, event-card, delayed) sets sourceInfo. */
-        sourceInfo?.card ?? source,
+        sourceInfo!.card,
         controllerId,
         facts.event,
         sourceInfo,

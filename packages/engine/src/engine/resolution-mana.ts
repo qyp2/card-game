@@ -2,7 +2,7 @@ import type { GameRoom } from '../types/game.room.types';
 import type { CardInstance } from '../types/card.types';
 import type { ActionCost } from '../types/effect.types';
 import type { ActionData } from './action-registry';
-import type { ListedChoice, PaymentContinuation } from '../types/choice.types';
+import type { ListedChoice, PaymentContinuation, PendingChoice, ActionContinuation } from '../types/choice.types';
 import { prepareActionChoice } from './action-choices';
 import { planActionCosts, planManaActivation } from './action-costs';
 import { planCounterCosts } from './counter-costs';
@@ -54,23 +54,19 @@ export function prepareResolutionMana(
     const prepared = prepareActionChoice(working, saved.stackObj.controllerId, 'tapForMana', selection);
     if (prepared.kind === 'reject') return { success: false, reason: prepared.error };
     if (prepared.kind === 'prompt') {
-      /* v8 ignore next 3 -- unreachable: `prepareActionChoice` rejects numeric
-         declarations for `tapForMana` before the announcement can report a
-         missing binding, and every prompt it returns for that action carries an
-         action continuation. Kept as documentation of the contract. */
-      if (prepared.choice.kind === 'number' || prepared.choice.continuation.type !== 'action') {
-        return { success: false, reason: 'Unsupported mana ability payment choice' };
-      }
+      const choice = prepared.choice as Exclude<PendingChoice, { kind: 'number' }> & {
+        continuation: ActionContinuation;
+      };
       return {
         success: true,
         working,
         pendingChoice: {
-          ...prepared.choice,
+          ...choice,
           continuation: {
             ...saved,
             paymentStage: 'mana_ability',
             manaActivationIndex: index,
-            manaChoice: prepared.choice.continuation,
+            manaChoice: choice.continuation,
           },
         },
       };

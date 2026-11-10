@@ -44,27 +44,25 @@ function* selections(
   }
 }
 
+type AllocatableChoice = Exclude<PendingChoice, { kind: 'number' }> & { total: number };
+
 function* allocations(
-  choice: Exclude<PendingChoice, { kind: 'number' }>, search: Search,
-  index = 0, remaining = choice.total!, values: Record<string, number> = {},
+  choice: AllocatableChoice, search: Search,
+  index = 0, remaining = choice.total, values: Record<string, number> = {},
 ): Generator<Record<string, number>> {
   if (!spend(search)) return;
   if (index === choice.options.length) {
-    /* v8 ignore next -- allocations only reaches the final index after assigning the whole total. */
-    if (!remaining) yield values;
-    /* v8 ignore next -- a successful allocation is returned before this generator resumes. */
-    return;
-  }
-  /* v8 ignore next -- the 32-option cap is defensive; ordinary prompts finish or exhaust the budget first. */
-  if (index >= 32) { search.incomplete = 'search_limit'; return; }
-  const option = choice.options[index];
-  /* v8 ignore next -- action-choices always supplies minimumPerOption (1 for effects, 0 for counters). */
-  const minimum = choice.minimumPerOption ?? 0;
-  const maximum = Math.min(option.limit ?? remaining, remaining - minimum * (choice.options.length - index - 1));
-  const start = index === choice.options.length - 1 ? remaining : minimum;
-  for (let amount = start; amount <= maximum; amount++) {
-    if (search.remaining <= 0) { search.incomplete = 'search_limit'; return; }
-    yield* allocations(choice, search, index + 1, remaining - amount, { ...values, [option.id]: amount });
+    yield values;
+  } else {
+    if (index >= 32) { search.incomplete = 'search_limit'; return; }
+    const option = choice.options[index];
+    const minimum = choice.minimumPerOption!;
+    const maximum = Math.min(option.limit ?? remaining, remaining - minimum * (choice.options.length - index - 1));
+    const start = index === choice.options.length - 1 ? remaining : minimum;
+    for (let amount = start; amount <= maximum; amount++) {
+      if (search.remaining <= 0) { search.incomplete = 'search_limit'; return; }
+      yield* allocations(choice, search, index + 1, remaining - amount, { ...values, [option.id]: amount });
+    }
   }
 }
 
@@ -76,23 +74,20 @@ function* answers(choice: PendingChoice, search: Search): Generator<ChoiceAnswer
     for (let number = choice.range.min; number <= end; number++) {
       if (!spend(search)) return;
       const answer = validateChoiceAnswer(choice, { number });
-      /* v8 ignore next -- schema-valid integer ranges always produce a valid number answer. */
-      if (answer) yield answer;
+      yield answer!;
     }
     return;
   }
   if (choice.kind === 'distribution' || choice.kind === 'payment') {
-    for (const allocation of allocations(choice, search)) {
+    for (const allocation of allocations(choice as AllocatableChoice, search)) {
       const answer = validateChoiceAnswer(choice, { allocations: allocation });
-      /* v8 ignore next -- allocations only yields sums within the choice limits, so the answer is always valid. */
-      if (answer) yield answer;
+      yield answer!;
     }
     return;
   }
   for (const ids of selections(choice.options.map(option => option.id), choice.min, choice.max, search)) {
     const answer = validateChoiceAnswer(choice, { choices: ids });
-    /* v8 ignore next -- selections only yields option ids within min/max, so the answer is always valid. */
-    if (answer) yield answer;
+    yield answer!;
   }
 }
 
@@ -107,9 +102,7 @@ function complete(
     if (candidate.handler.validate(room, playerId, data).success) return { actionId: candidate.actionId, data };
     return;
   }
-  const continuation = preparation.choice.continuation;
-  /* v8 ignore next -- prepareActionChoice only ever builds action continuations. */
-  if (continuation.type !== 'action') { search.incomplete = 'unsupported_choice'; return; }
+  const continuation = preparation.choice.continuation as Extract<PendingChoice['continuation'], { type: 'action' }>;
   for (const answer of answers(preparation.choice, search)) {
     const witness = complete(room, playerId, candidate, search, applyActionChoice(continuation, answer), depth + 1);
     if (witness) return witness;

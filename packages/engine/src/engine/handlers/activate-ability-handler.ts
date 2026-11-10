@@ -75,8 +75,7 @@ function plan(room: GameRoom, playerId: PlayerId, action: ActionData): ActionRes
       const live = findActivationSource(paymentRoom, playerId, card.uuid);
       // `discardSelf` is the only cost mutation that moves the source itself and it
       // is planned last, so the lookup above always finds the card still in place.
-      /* v8 ignore next */
-      if (live) sourceInfo = captureSourceInformation(paymentRoom, live);
+      sourceInfo = captureSourceInformation(paymentRoom, live!);
     }
 
     paymentRoom = gameReducer(paymentRoom, mutation);

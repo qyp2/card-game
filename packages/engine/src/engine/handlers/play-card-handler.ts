@@ -51,9 +51,8 @@ export const playCardHandler: ActionHandler = {
 
     // Unreachable: CardCharacteristicService.resolveBlueprint always returns a
     // resolved characteristics object whose onCastEffects is an array.
-    /* v8 ignore next */
     const effects = selectModeEffects(
-      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
+      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects!,
       CardCharacteristicService.resolveBlueprint(room, card).modes,
       action.modes,
       CardCharacteristicService.resolveBlueprint(room, card).modeCount,
@@ -121,9 +120,8 @@ export const playCardHandler: ActionHandler = {
 
     // --- BUILD STACK OBJECT (snapshot values locked here) ---
     // Unreachable: resolveBlueprint always provides an onCastEffects array.
-    /* v8 ignore next */
     const onCastEffects = selectModeEffects(
-      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects ?? [],
+      CardCharacteristicService.resolveBlueprint(room, card).onCastEffects!,
       CardCharacteristicService.resolveBlueprint(room, card).modes,
       action.modes,
       CardCharacteristicService.resolveBlueprint(room, card).modeCount,

@@ -11,6 +11,7 @@ import { createDefaultActionRegistry } from './default-action-registry';
 import { gameReducer } from './game-reducer';
 import { runRulesCheckpoint } from './rules-checkpoint';
 import type { GameMutation } from '../types/game-mutation.types';
+import type { StackObject } from '../types/effect.types';
 import type { GameRoom, PlayerId } from '../types/game.room.types';
 import { declarationPlayer } from '../shared/turn-utils';
 import { TURN_SEQUENCE, type Phase } from '../types/game.state.types';
@@ -141,8 +142,7 @@ export class GameEngine {
             ], {
               kind: 'trigger',
               parentBatchId: this.commits.lastBatchId,
-              /* v8 ignore next -- triggered immediate objects always carry their triggering event UUID. */
-              eventUuids: planned.immediateObject.type === 'triggered' && planned.immediateObject.triggeringEvent?.eventUuid ? [planned.immediateObject.triggeringEvent.eventUuid] : [],
+              eventUuids: [(planned.immediateObject as Extract<StackObject, { type: 'triggered' }>).triggeringEvent!.eventUuid!],
             }, resolution.resolution);
           }
 
@@ -172,15 +172,11 @@ export class GameEngine {
             },
           ], { kind: 'engine', parentBatchId: this.commits.lastBatchId });
 
-          /* v8 ignore next 2 -- triggered pushes are queued at line 163; this fallback only receives untriggered pushes. */
-          const eventUuids = pending.flatMap(mutation => mutation.type === 'PUSH_STACK' && mutation.stackObject.type === 'triggered'
-            && mutation.stackObject.triggeringEvent?.eventUuid ? [mutation.stackObject.triggeringEvent.eventUuid] : []);
-
+          // No triggered objects reach this point: they were queued above.
           return this.commits.commit(pending, {
-            /* v8 ignore next -- the checkpoint commits state-based mutations through its own batch kind. */
-            kind: kind === 'state-based-action' ? kind : eventUuids.length ? 'trigger' : 'engine',
+            kind: kind === 'state-based-action' ? kind : 'engine',
             parentBatchId: this.commits.lastBatchId,
-            eventUuids: [...new Set(eventUuids)],
+            eventUuids: [],
           });
         },
       }));
@@ -414,13 +410,11 @@ export class GameEngine {
     // An immediate action resolves on the spot instead of using the stack.
     if (result.stackObject && isImmediateAction(this.room, result.stackObject)) {
       const object = immediateAction(this.room, result.stackObject);
-      /* v8 ignore next -- action results always carry a mutations array. */
-      const resultMutations = result.mutations ?? [];
+      const resultMutations = result.mutations!;
       const costs = [
         ...prefix,
         { type: 'SET_LAST_PASSED' as const, playerId: null },
         ...resultMutations.filter(mutation =>
-          /* v8 ignore next 2 -- immediate abilities resolve costs only; they never carry the stack object's own push/move. */
           !(mutation.type === 'PUSH_STACK' && mutation.stackObject.uuid === object.uuid) &&
           !(mutation.type === 'MOVE_CARD' && mutation.to === 'stack' && mutation.stackObject?.uuid === object.uuid)),
       ];
@@ -435,13 +429,9 @@ export class GameEngine {
     allApplied.push(...this.applyMutations([...prefix, { type: 'SET_LAST_PASSED', playerId: null }, ...(result.mutations ?? [])]));
 
     // Sync stack to StateMachine (phase transition + event + priority)
-    /* v8 ignore next -- immediate resolutions never leave a pending choice for the stack sync. */
     if (result.stackObject && !this.isGameOver && !this.room.pendingChoice) {
       const smMutations = this.stateMachine.addToStack(this.room, result.stackObject);
-
-      if (smMutations.length > 0) {
-        allApplied.push(...this.applyMutations(smMutations));
-      }
+      allApplied.push(...this.applyMutations(smMutations));
     }
 
     return { ...result, mutations: allApplied };
@@ -468,7 +458,6 @@ export class GameEngine {
     // Apply resolution mutations (zone change + effects + triggers)
     const allApplied: GameMutation[] = [];
 
-    /* v8 ignore next -- commitResolution is only called with a mutation list. */
     if (result.mutations) {
       allApplied.push(...this.applyMutations([
         ...result.mutations,
