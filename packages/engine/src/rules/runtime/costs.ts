@@ -42,7 +42,7 @@ export function applyCostRules(room: GameRoom, playerId: string, card: CardInsta
         cost.mana[op.color] = value;
         break;
       }
-      case 'mana.reduce': cost.mana[op.color] = Math.max(0, cost.mana[op.color]! - entry.amount); break;
+      case 'mana.reduce': cost.mana[op.color] = Math.max(0, (cost.mana[op.color] ?? 0) - entry.amount); break;
     }
     if (entry.use && !used.has(entry.use.key)) { used.add(entry.use.key); uses.push(entry.use); }
   };

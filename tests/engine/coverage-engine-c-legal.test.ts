@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasLegalNonPassAction } from '@engine/legal-actions';
+import { hasLegalNonPassAction, allocations } from '@engine/legal-actions';
 import { parseCardDefinition } from '@library/card-parser';
 import { newTurnHistory } from '@engine/turn-history';
 import { createTestRoom, fillTestLibraries } from '../helpers/test-room-factory';
@@ -57,7 +57,17 @@ describe('legal action search limits', () => {
     expect(hasLegalNonPassAction(mid, 'player1', { maxNodes: 2 })).toEqual({ kind: 'unknown', reason: 'search_limit' });
   });
 
-  it('bounds battlefield counter payments across many holders', () => {
+  it('defaults absent allocation totals and minimums to zero', () => {
+    const missing = {
+      kind: 'distribution', id: 'missing', playerId: 'player1', prompt: '',
+      options: [{ id: 'a', label: 'a', value: 1 }],
+      min: 0, max: 1,
+      continuation: { type: 'resolution', resolutionId: 'r', effectId: 'e', field: 'distributions' },
+    } as unknown as Parameters<typeof allocations>[0];
+    expect([...allocations(missing, { remaining: 10 })]).toEqual([{ a: 0 }]);
+  });
+
+  it('bounds counter allocation payments at the 32-option cap across many holders', () => {
     const state = room();
     const source = card(state, {
       cardTypes: ['Creature'], power: 1, toughness: 2,

@@ -145,7 +145,7 @@ export class MutationCommitter {
         const card = previous.battlefield.find((card) => card.uuid === mutation.cardUuid);
 
         if (card) {
-          const snapshot = mutation.sourceSnapshot!;
+          const snapshot = mutation.sourceSnapshot ?? captureSourceInformation(previous, card);
 
           for (let index = 0; index < this.mutationCollector.length; index++) {
             const pending = this.mutationCollector[index];
@@ -279,9 +279,9 @@ export class MutationCommitter {
 
       if (mutation.type !== 'MOVE_CARD' || mutation.from !== 'battlefield') continue;
 
-      // Unreachable: a committed battlefield move always finds its card in the
-      // immediately preceding state (duplicate moves are rejected upstream).
-      const snapshot = mutation.sourceSnapshot!;
+      // A committed battlefield move always finds its card in the preceding state.
+      const card = step.before.battlefield.find((candidate) => candidate.uuid === mutation.cardUuid)!;
+      const snapshot = mutation.sourceSnapshot ?? captureSourceInformation(step.before, card);
 
       for (let index = 0; index < this.mutationCollector.length; index++) {
         const pending = this.mutationCollector[index];

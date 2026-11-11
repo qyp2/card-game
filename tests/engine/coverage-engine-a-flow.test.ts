@@ -8,6 +8,7 @@ import { canPrepareTrigger, availableTriggerModes, triggerTargetGroups } from '@
 import { planTriggerScheduling, applyTriggerChoice } from '@engine/trigger-scheduler';
 import { offerResolutionPayment, answerResolutionPayment } from '@engine/resolution-payments';
 import { MutationCommitter } from '@engine/mutation-committer';
+import { captureSourceInformation } from '@engine/source-information';
 import { EventBus } from '@engine/event-bus';
 import { newTurnHistory } from '@engine/turn-history';
 import { createTestRoom } from '../helpers/test-room-factory';
@@ -77,6 +78,17 @@ describe('cast cost rules', () => {
     const result = applyCostRules(room, 'player1', target, { mana: { red: 1 } });
     expect(result.cost.mana).toEqual({ red: 4 });
     expect(result.uses).toHaveLength(0);
+  });
+
+  it('reduces an absent mana colour from zero instead of producing NaN', () => {
+    const room = createTestRoom();
+    const target = handCard();
+    room.players.player1.hand = [target];
+    room.battlefield = [
+      battlefieldRule([rule('discount', { type: 'mana.reduce', color: 'blue', amount: 1 })]),
+    ];
+    const result = applyCostRules(room, 'player1', target, { mana: { red: 1 } });
+    expect(result.cost.mana).toEqual({ red: 1, blue: 0 });
   });
 
   it('skips rules whose condition is false', () => {
@@ -813,6 +825,62 @@ describe('mutation committer', () => {
         { kind: 'command' },
       ),
     ).toEqual([]);
+  });
+
+  it('prefers an attached source snapshot over recapturing the departing card', () => {
+    const room = createTestRoom();
+    const departing = creature('snapshotted', 'player1');
+    room.battlefield = [departing];
+    const collector: GameMutation[] = [
+      {
+        type: 'PUSH_STACK',
+        stackObject: {
+          uuid: 'pending-snapshot',
+          type: 'triggered',
+          controllerId: 'player1',
+          source: { ...departing },
+          effects: [],
+          countered: false,
+        } as StackObject,
+      } as GameMutation,
+    ];
+    const subject = committer(room, collector);
+    subject.commit(
+      [{
+        type: 'MOVE_CARD', cardUuid: departing.uuid, playerId: 'player1', from: 'battlefield', to: 'graveyard',
+        sourceSnapshot: captureSourceInformation(room, departing),
+      }],
+      { kind: 'command' },
+    );
+    const pending = collector.find((mutation) => mutation.type === 'PUSH_STACK');
+    expect(pending && pending.type === 'PUSH_STACK' && pending.stackObject.sourceInfo).toBeTruthy();
+  });
+
+  it('recaptures a departing source when the prepared batch omits its snapshot', () => {
+    const room = createTestRoom();
+    const departing = creature('prepared', 'player1');
+    room.battlefield = [departing];
+    const collector: GameMutation[] = [
+      {
+        type: 'PUSH_STACK',
+        stackObject: {
+          uuid: 'prepared-pending',
+          type: 'triggered',
+          controllerId: 'player1',
+          source: { ...departing },
+          effects: [],
+          countered: false,
+        } as StackObject,
+      } as GameMutation,
+    ];
+    const subject = committer(room, collector);
+    (subject as unknown as { commitPreparedMutations(value: unknown, cause: unknown): unknown })
+      .commitPreparedMutations(
+        [{ type: 'MOVE_CARD', cardUuid: departing.uuid, playerId: 'player1', from: 'battlefield', to: 'graveyard' }],
+        { kind: 'command' },
+      );
+    const pending = collector.find((mutation) => mutation.type === 'PUSH_STACK');
+    expect(pending && pending.type === 'PUSH_STACK' && pending.stackObject.sourceInfo).toBeTruthy();
   });
 
   it('rebuilds turn history when a batch replaces it and records uses without one', () => {

@@ -4,12 +4,12 @@ The Vitest coverage scope is fully covered:
 
 | Metric | Covered / total | Percentage |
 | --- | ---: | ---: |
-| Statements | 10,132 / 10,132 | 100% |
-| Branches | 10,468 / 10,468 | 100% |
-| Functions | 2,250 / 2,250 | 100% |
-| Lines | 7,895 / 7,895 | 100% |
+| Statements | 10,146 / 10,146 | 100% |
+| Branches | 10,486 / 10,486 | 100% |
+| Functions | 2,252 / 2,252 | 100% |
+| Lines | 7,903 / 7,903 | 100% |
 
-The suite reports **245 test files / 3,451 passing tests**. No file with executable
+The suite reports **245 test files / 3,458 passing tests**. No file with executable
 code is below 100%; eight files are type-only or re-export barrels and therefore
 have `0/0` executable statements.
 
@@ -67,6 +67,6 @@ The audit also drove three behaviour-equivalent refactors:
   accepts an unused token.
 - `packages/protocol/src/scenarios/scenario.ts` — `utf8Size` derives the code
   point once instead of four times.
-- `packages/engine/src/engine/legal-actions.ts` — allocatable choices carry a
-  required total, and the 32-option search cap is preserved and exercised by a
-  regression test.
+- `packages/engine/src/engine/legal-actions.ts` — allocation defaults for incomplete
+  runtime choices stay explicit (`?? 0`) and have direct unit tests; the 32-option
+  search cap is exercised by the many-holder counter-payment regression test.

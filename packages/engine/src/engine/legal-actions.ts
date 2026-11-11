@@ -44,11 +44,10 @@ function* selections(
   }
 }
 
-type AllocatableChoice = Exclude<PendingChoice, { kind: 'number' }> & { total: number };
-
-function* allocations(
-  choice: AllocatableChoice, search: Search,
-  index = 0, remaining = choice.total, values: Record<string, number> = {},
+/** Enumerate whole-total allocations, bounded by the node budget and option cap. */
+export function* allocations(
+  choice: Exclude<PendingChoice, { kind: 'number' }>, search: Search,
+  index = 0, remaining = choice.total ?? 0, values: Record<string, number> = {},
 ): Generator<Record<string, number>> {
   if (!spend(search)) return;
   if (index === choice.options.length) {
@@ -56,7 +55,7 @@ function* allocations(
   } else {
     if (index >= 32) { search.incomplete = 'search_limit'; return; }
     const option = choice.options[index];
-    const minimum = choice.minimumPerOption!;
+    const minimum = choice.minimumPerOption ?? 0;
     const maximum = Math.min(option.limit ?? remaining, remaining - minimum * (choice.options.length - index - 1));
     const start = index === choice.options.length - 1 ? remaining : minimum;
     for (let amount = start; amount <= maximum; amount++) {
@@ -79,7 +78,7 @@ function* answers(choice: PendingChoice, search: Search): Generator<ChoiceAnswer
     return;
   }
   if (choice.kind === 'distribution' || choice.kind === 'payment') {
-    for (const allocation of allocations(choice as AllocatableChoice, search)) {
+    for (const allocation of allocations(choice, search)) {
       const answer = validateChoiceAnswer(choice, { allocations: allocation });
       yield answer!;
     }

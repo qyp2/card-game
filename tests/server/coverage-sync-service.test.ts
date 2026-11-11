@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { SyncService, type StateDelta, type DeltaChange } from '@server/rooms/sync-service';
+import { SyncService, getAtPath, cardStatePath, type StateDelta, type DeltaChange } from '@server/rooms/sync-service';
 import { createTestRoom } from '../helpers/test-room-factory';
 import { creature } from '../helpers/combat-fixture';
 import { instantiateCard } from '@library/card-factory';
@@ -747,6 +747,31 @@ describe('SyncService coverage — delta metadata, filtering and notifications',
     const noOp = service.buildDelta(room, [{ type: 'TAP_CARD', cardUuid: 'absent' }], { action: 'no-op', playerId: P1 });
     expect(noOp.changes).toEqual([]);
     expect(noOp.seq).toBe(3);
+  });
+
+  it('reads nested paths and stops at missing intermediates', () => {
+    const room = createTestRoom();
+    expect(getAtPath(room, '')).toBe(room);
+    expect(getAtPath(room, 'players.player1.life')).toBe(room.players.player1.life);
+    expect(getAtPath(room, 'players.ghost.life')).toBeUndefined();
+  });
+
+  it('finds card state paths in every player zone and reports an absent card', () => {
+    const room = createTestRoom();
+    const onBoard = cardInZone('path-board', P1, 'battlefield');
+    const inGrave = cardInZone('path-grave', P2, 'graveyard');
+    room.battlefield = [onBoard];
+    room.players.player2.graveyard = [inGrave];
+
+    expect(cardStatePath(room, onBoard.uuid, 'damageTaken')).toBe('battlefield[0].state.damageTaken');
+    expect(cardStatePath(room, inGrave.uuid, 'isTapped')).toBe('players.player2.graveyard[0].state.isTapped');
+    expect(cardStatePath(room, 'path-absent', 'isTapped')).toBe('');
+  });
+
+  it('stops path lookup at a missing intermediate object', () => {
+    const room = createTestRoom();
+    const delta = service.buildDelta(room, [{ type: 'CHANGE_LIFE', playerId: 'ghost' as PlayerId, amount: -1 }], { action: 'test', playerId: P1 });
+    expect(delta.changes.every(change => change.path === 'players.ghost.life')).toBe(true);
   });
 
   it('creates synthetic snapshot deltas with their own sequence', () => {

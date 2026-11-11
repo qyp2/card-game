@@ -58,19 +58,29 @@ function findInZone(arr: any[], zone: CardZone, cardUuid: string): number {
 }
 
 /** Read a value at a dot/bracket path (e.g. "players.player1.mana.red"). */
-function getAtPath(obj: unknown, path: string): unknown {
+export function getAtPath(obj: unknown, path: string): unknown {
+  if (!path) return obj;
   const segments = path.split(/[.[\]]+/).filter(Boolean);
   let current: any = obj;
   for (const seg of segments) {
+    if (current == null) return undefined;
     current = current[seg];
   }
   return current;
 }
 
-/** Build the path to a card's state field. */
-function cardStatePath(room: GameRoom, cardUuid: string, field: string): string {
+/** Build the path to a card's state field, searching battlefield then player zones. */
+export function cardStatePath(room: GameRoom, cardUuid: string, field: string): string {
   const bfIdx = room.battlefield.findIndex(c => c.uuid === cardUuid);
-  return `battlefield[${bfIdx}].state.${field}`;
+  if (bfIdx !== -1) return `battlefield[${bfIdx}].state.${field}`;
+
+  for (const [pid, player] of Object.entries(room.players)) {
+    for (const zone of ['hand', 'graveyard', 'deck'] as const) {
+      const idx = player[zone].findIndex(c => c.uuid === cardUuid);
+      if (idx !== -1) return `players.${pid}.${zone}[${idx}].state.${field}`;
+    }
+  }
+  return '';
 }
 
 function updateChange(path: string, oldState: GameRoom, newState: GameRoom): DeltaChange {
